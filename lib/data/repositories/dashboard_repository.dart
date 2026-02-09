@@ -1,0 +1,218 @@
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../data/models/voice_query.dart';
+import '../models/caregiver_patient_link.dart';
+import '../models/dashboard_stats.dart';
+import '../models/reminder.dart';
+
+/// Dashboard Repository
+/// Handles data aggregation and caching for caregiver dashboard
+class DashboardRepository {
+  final SupabaseClient _supabase;
+  late Box<CaregiverPatientLink> _linksBox;
+  bool _isInit = false;
+
+  DashboardRepository(this._supabase);
+
+  /// Initialize Hive boxes
+  Future<void> init() async {
+    if (_isInit) return;
+    _linksBox =
+        await Hive.openBox<CaregiverPatientLink>('caregiver_patient_links');
+    _isInit = true;
+  }
+
+  /// Get all patients linked to a caregiver
+  Future<List<CaregiverPatientLink>> getLinkedPatients(
+      String caregiverId) async {
+    await init();
+
+    try {
+      // Fetch from Supabase
+      final data = await _supabase.from('caregiver_patients').select('''
+            id,
+            caregiver_id,
+            patient_id,
+            relationship,
+            is_primary,
+            created_at,
+            profiles!patient_id (
+              full_name,
+              avatar_url
+            )
+          ''').eq('caregiver_id', caregiverId);
+
+      final links = <CaregiverPatientLink>[];
+
+      for (var item in data) {
+        final profile = item['profiles'] as Map<String, dynamic>?;
+        final link = CaregiverPatientLink(
+          id: item['id'],
+          caregiverId: item['caregiver_id'],
+          patientId: item['patient_id'],
+          patientName: profile?['full_name'] ?? 'Unknown Patient',
+          patientPhotoUrl: profile?['avatar_url'],
+          relationship: item['relationship'],
+          isPrimary: item['is_primary'] ?? false,
+          createdAt: DateTime.parse(item['created_at']),
+        );
+
+        links.add(link);
+        await _linksBox.put(link.id, link);
+      }
+
+      return links;
+    } catch (e) {
+      print('Error fetching linked patients: $e');
+      // Return cached data
+      return _linksBox.values
+          .where((l) => l.caregiverId == caregiverId)
+          .toList();
+    }
+  }
+
+  /// Get dashboard statistics for a patient
+  Future<DashboardStats> getDashboardStats(String patientId) async {
+    try {
+      // Get today's date range
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final todayEnd = todayStart.add(const Duration(days: 1));
+
+      // Fetch reminder stats
+      final reminders = await _supabase
+          .from('reminders')
+          .select()
+          .eq('patient_id', patientId)
+          .gte('remind_at', todayStart.toIso8601String())
+          .lt('remind_at', todayEnd.toIso8601String());
+
+      int completed = 0;
+      int pending = 0;
+      int missed = 0;
+
+      for (var r in reminders) {
+        final status = r['status'] as String;
+        if (status == 'completed') {
+          completed++;
+        } else if (status == 'pending') {
+          if (DateTime.parse(r['remind_at']).isBefore(now)) {
+            missed++;
+          } else {
+            pending++;
+          }
+        } else if (status == 'missed') {
+          missed++;
+        }
+      }
+
+      final total = completed + pending + missed;
+      final adherence = total > 0 ? (completed / total) * 100 : 0.0;
+
+      // Fetch memory & people cards count
+      final memoryCards = await _supabase
+          .from('memory_cards')
+          .select()
+          .eq('patient_id', patientId);
+
+      final peopleCards = await _supabase
+          .from('people_cards')
+          .select()
+          .eq('patient_id', patientId);
+
+      // Fetch last voice interaction
+      final voiceQueries = await _supabase
+          .from('voice_queries')
+          .select('created_at')
+          .eq('patient_id', patientId)
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      DateTime? lastVoiceInteraction;
+      if (voiceQueries.isNotEmpty) {
+        lastVoiceInteraction = DateTime.parse(voiceQueries.first['created_at']);
+      }
+
+      // TODO: Fetch safe zone status from location_logs
+      // For now, using mock data
+      final isInSafeZone = true;
+      final safeZoneBreaches = 0;
+
+      // TODO: Fetch journal entries
+      // For now, using mock data
+      final lastJournalEntry = now.subtract(const Duration(days: 2));
+
+      // TODO: Fetch games played
+      final gamesPlayed = 5;
+
+      // Calculate memory journal consistency (mock)
+      final journalConsistency = 0.7;
+
+      return DashboardStats(
+        remindersCompleted: completed,
+        remindersPending: pending,
+        remindersMissed: missed,
+        adherencePercentage: adherence,
+        memoryCardsCount: memoryCards.length,
+        peopleCardsCount: peopleCards.length,
+        lastJournalEntry: lastJournalEntry,
+        lastVoiceInteraction: lastVoiceInteraction,
+        isInSafeZone: isInSafeZone,
+        safeZoneBreachesThisWeek: safeZoneBreaches,
+        lastLocationUpdate: now.subtract(const Duration(minutes: 15)),
+        gamesPlayedThisWeek: gamesPlayed,
+        memoryJournalConsistency: journalConsistency,
+        unreadAlerts: missed + safeZoneBreaches,
+      );
+    } catch (e) {
+      print('Error fetching dashboard stats: $e');
+      return DashboardStats();
+    }
+  }
+
+  /// Get recent voice interactions
+  Future<List<VoiceQuery>> getRecentVoiceInteractions(String patientId,
+      {int limit = 5}) async {
+    try {
+      final data = await _supabase
+          .from('voice_queries')
+          .select()
+          .eq('patient_id', patientId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return data.map((json) => VoiceQuery.fromJson(json)).toList();
+    } catch (e) {
+      print('Error fetching voice interactions: $e');
+      return [];
+    }
+  }
+
+  /// Get next upcoming reminder
+  Future<Reminder?> getNextReminder(String patientId) async {
+    try {
+      final now = DateTime.now();
+      final data = await _supabase
+          .from('reminders')
+          .select()
+          .eq('patient_id', patientId)
+          .eq('status', 'pending')
+          .gte('remind_at', now.toIso8601String())
+          .order('remind_at', ascending: true)
+          .limit(1);
+
+      if (data.isEmpty) return null;
+      return Reminder.fromJson(data.first);
+    } catch (e) {
+      print('Error fetching next reminder: $e');
+      return null;
+    }
+  }
+
+  /// Sync dashboard data
+  Future<void> syncDashboard(String caregiverId) async {
+    await init();
+    await getLinkedPatients(caregiverId);
+  }
+}

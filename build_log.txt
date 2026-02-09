@@ -1,0 +1,54 @@
+[INFO] Generating build script...
+[INFO] Generating build script completed, took 449ms
+
+[WARNING] Invalidated precompiled build script due to missing asset graph.
+[INFO] Precompiling build script......
+[INFO] Precompiling build script... completed, took 891ms
+
+[INFO] Initializing inputs
+[INFO] Building new asset graph...
+[INFO] Building new asset graph completed, took 7.1s
+
+[INFO] Checking for unexpected pre-existing outputs....
+[INFO] Checking for unexpected pre-existing outputs. completed, took 1ms
+
+[INFO] Running build...
+[INFO] Generating SDK summary...
+[INFO] 3.5s elapsed, 0/16 actions completed.
+[INFO] 5.6s elapsed, 0/16 actions completed.
+[WARNING] riverpod_generator on lib/core/config/env_config.dart:
+Your current `analyzer` version may not fully support your current SDK version.
+
+Analyzer language version: 3.4.0
+SDK language version: 3.9.0
+
+Please update to the latest `analyzer` version (10.0.2) by running
+`flutter packages upgrade`.
+
+If you are not getting the latest version by running the above command, you
+can try adding a constraint like the following to your pubspec to start
+diagnosing why you can't get the latest version:
+
+dev_dependencies:
+  analyzer: ^10.0.2
+
+[INFO] Generating SDK summary completed, took 7.5s
+
+[INFO] 8.5s elapsed, 37/65 actions completed.
+[WARNING] json_serializable on lib/models/user/profile.dart:
+The version constraint "^4.8.1" on json_annotation allows versions before 4.9.0 which is not allowed.
+[INFO] 10.1s elapsed, 46/76 actions completed.
+[INFO] 11.2s elapsed, 54/78 actions completed.
+[INFO] 12.3s elapsed, 68/91 actions completed.
+[INFO] 21.1s elapsed, 77/99 actions completed.
+[INFO] 23.5s elapsed, 98/113 actions completed.
+[INFO] 24.5s elapsed, 135/148 actions completed.
+[INFO] 26.0s elapsed, 139/149 actions completed.
+[INFO] 27.2s elapsed, 139/149 actions completed.
+[INFO] Running build completed, took 27.4s
+
+[INFO] Caching finalized dependency graph...
+[INFO] Caching finalized dependency graph completed, took 106ms
+
+[INFO] Succeeded after 27.5s with 103 outputs (284 actions)
+
