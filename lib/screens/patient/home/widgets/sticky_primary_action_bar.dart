@@ -28,23 +28,26 @@ class StickyPrimaryActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
+            blurRadius: 16 * scale,
+            offset: Offset(0, -4 * scale),
           ),
         ],
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(
+              horizontal: 20 * scale, vertical: 12 * scale),
           child: SizedBox(
-            height: 64,
+            height: 64 * scale,
             width: double.infinity,
             child: ElevatedButton(
               onPressed: onPressed,
@@ -54,21 +57,21 @@ class StickyPrimaryActionBar extends StatelessWidget {
                 elevation: 2,
                 shadowColor: (backgroundColor ?? Colors.teal).withOpacity(0.3),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(32), // Pill shape
+                  borderRadius: BorderRadius.circular(32 * scale), // Pill shape
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                padding: EdgeInsets.symmetric(
+                    horizontal: 28 * scale, vertical: 16 * scale),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 28),
-                  const SizedBox(width: 12),
+                  Icon(icon, size: 28 * scale),
+                  SizedBox(width: 12 * scale),
                   Flexible(
                     child: Text(
                       label,
-                      style: const TextStyle(
-                        fontSize: 20,
+                      style: TextStyle(
+                        fontSize: 20 * scale,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.3,
                       ),

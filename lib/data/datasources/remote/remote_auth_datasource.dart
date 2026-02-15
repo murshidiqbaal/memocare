@@ -42,6 +42,7 @@ class RemoteAuthDatasource {
         // Attempt manual profile insertion
         await _supabase.from('profiles').insert({
           'id': response.user!.id,
+          'email': email,
           'role': role,
           'full_name': fullName,
           'created_at': DateTime.now().toIso8601String(),

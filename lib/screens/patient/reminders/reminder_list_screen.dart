@@ -3,25 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../data/models/reminder.dart';
+import '../../../../providers/auth_provider.dart'; // Needed for profile
+import '../home/viewmodels/home_viewmodel.dart';
 import 'add_edit_reminder_screen.dart';
 import 'reminder_detail_screen.dart';
-import 'viewmodels/reminder_viewmodel.dart';
 import 'voice_reminder_screen.dart';
-// import 'widgets/reminder_list_item.dart'; // We'll verify this widget or inline it if it needs strict updates
-
-// Since ReminderListItem might be outdated, I'll inline the list item build logic or create a new widget here to ensure compliance.
-// Actually, let's create a new widget file or update the existing one.
-// I'll inline for now to guarantee correctness with the new model, as I haven't seen the widget file content yet (except list_dir).
-// Wait, I saw it in list_dir: `widgets/reminder_list_item.dart`.
-// I'll update the screen to build items directly for now to be safe.
 
 class ReminderListScreen extends ConsumerWidget {
   const ReminderListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reminderState = ref.watch(reminderViewModelProvider);
-    final viewModel = ref.read(reminderViewModelProvider.notifier);
+    // 1. Single Source of Truth: HomeViewModel
+    final homeState = ref.watch(homeViewModelProvider);
+    final viewModel = ref.read(homeViewModelProvider.notifier);
+
+    // Get user profile for reloading
+    final user = ref.watch(currentUserProvider);
 
     return DefaultTabController(
       length: 3,
@@ -39,6 +37,15 @@ class ReminderListScreen extends ConsumerWidget {
             ),
           ),
           actions: [
+            IconButton(
+              onPressed: () {
+                if (user != null) {
+                  viewModel.loadReminders(user.id);
+                }
+              },
+              icon: const Icon(Icons.refresh, color: Colors.teal),
+              tooltip: 'Refresh',
+            ),
             IconButton(
               onPressed: () {
                 Navigator.push(
@@ -59,6 +66,10 @@ class ReminderListScreen extends ConsumerWidget {
             ),
             IconButton(
               onPressed: () {
+                // Navigate to Add Screen
+                // Note: AddEditReminderScreen uses the provider internally to save,
+                // so we don't need to pass a callback here unless we want to override default behavior.
+                // The screen now uses HomeViewModel too.
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -89,23 +100,21 @@ class ReminderListScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: reminderState.isLoading
+        body: homeState.isLoading
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  _buildList(context, reminderState.todayReminders, viewModel),
-                  _buildList(
-                      context, reminderState.upcomingReminders, viewModel),
-                  _buildList(
-                      context, reminderState.completedReminders, viewModel),
+                  _buildList(context, homeState.todayReminders, viewModel),
+                  _buildList(context, homeState.upcomingReminders, viewModel),
+                  _buildList(context, homeState.completedReminders, viewModel),
                 ],
               ),
       ),
     );
   }
 
-  Widget _buildList(BuildContext context, List<Reminder> reminders,
-      ReminderViewModel viewModel) {
+  Widget _buildList(
+      BuildContext context, List<Reminder> reminders, HomeViewModel viewModel) {
     if (reminders.isEmpty) {
       return Center(
         child: Column(
@@ -133,14 +142,12 @@ class ReminderListScreen extends ConsumerWidget {
   }
 
   Widget _buildReminderCard(
-      BuildContext context, Reminder reminder, ReminderViewModel viewModel) {
+      BuildContext context, Reminder reminder, HomeViewModel viewModel) {
     final isDone = reminder.status == ReminderStatus.completed;
     final isMissed = reminder.status == ReminderStatus.missed;
 
-    Color statusColor = Colors.grey;
-    if (isDone) statusColor = Colors.green;
-    if (isMissed) statusColor = Colors.red;
-    if (reminder.status == ReminderStatus.pending) statusColor = Colors.orange;
+    // Determine status color (though UI uses icon color mainly)
+    // kept for logic parity
 
     return Card(
       elevation: 2,
@@ -196,7 +203,7 @@ class ReminderListScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.access_time,
+                            const Icon(Icons.access_time,
                                 size: 14, color: Colors.grey),
                             const SizedBox(width: 4),
                             Text(
@@ -208,7 +215,8 @@ class ReminderListScreen extends ConsumerWidget {
                             if (reminder.repeatRule !=
                                 ReminderFrequency.once) ...[
                               const SizedBox(width: 8),
-                              Icon(Icons.repeat, size: 14, color: Colors.grey),
+                              const Icon(Icons.repeat,
+                                  size: 14, color: Colors.grey),
                               const SizedBox(width: 4),
                               Text(
                                 reminder.repeatRule.name,
@@ -227,12 +235,19 @@ class ReminderListScreen extends ConsumerWidget {
                       icon: const Icon(Icons.check_circle_outline,
                           size: 32, color: Colors.grey),
                       onPressed: () {
-                        viewModel.markAsDone(reminder.id);
+                        // Calls HomeViewModel toggle
+                        viewModel.toggleReminder(reminder.id);
                       },
                     )
                   else
-                    const Icon(Icons.check_circle,
-                        size: 32, color: Colors.green),
+                    IconButton(
+                      icon: const Icon(Icons.check_circle,
+                          size: 32, color: Colors.green),
+                      onPressed: () {
+                        // Allow untoggling? Yes, toggleReminder supports it.
+                        viewModel.toggleReminder(reminder.id);
+                      },
+                    ),
                 ],
               ),
               // Optional: Voice Indicator if present
@@ -241,7 +256,7 @@ class ReminderListScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.mic, size: 16, color: Colors.teal),
+                    const Icon(Icons.mic, size: 16, color: Colors.teal),
                     const SizedBox(width: 4),
                     Text(
                       'Voice note attached',

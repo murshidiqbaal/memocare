@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_provider.dart';
 import 'viewmodels/home_viewmodel.dart';
-import 'widgets/dashboard_spacing.dart';
 import 'widgets/emergency_sos_card.dart';
 import 'widgets/memory_highlight_widget.dart';
 import 'widgets/offline_status_widget.dart';
@@ -13,7 +12,6 @@ import 'widgets/patient_app_bar_widget.dart';
 import 'widgets/quick_action_grid_widget.dart';
 import 'widgets/reminder_section_card.dart';
 import 'widgets/section_title.dart';
-import 'widgets/sticky_primary_action_bar.dart';
 
 /// Patient Dashboard Tab - Healthcare-grade dementia-friendly UI
 ///
@@ -46,138 +44,134 @@ class PatientDashboardTab extends ConsumerWidget {
     final homeState = ref.watch(homeViewModelProvider);
     final viewModel = ref.read(homeViewModelProvider.notifier);
     final profileAsync = ref.watch(userProfileProvider);
+    final scale = MediaQuery.of(context).size.width / 375.0;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-
-      // App Bar
+      // Minimal AppBar as requested
       appBar: const PatientAppBar(),
-
-      body: Column(
+      body: Stack(
         children: [
-          // // Time & Orientation Context Header
-          // profileAsync.when(
-          //   data: (profile) => TimeContextHeader(
-          //     patientName: profile?.fullName?.split(' ').first,
-          //   ),
-          //   loading: () => const TimeContextHeader(),
-          //   error: (_, __) => const TimeContextHeader(),
-          // ),
-
-          // Offline Status Indicator
-          OfflineStatusIndicator(isOffline: homeState.isOffline),
-
-          // Main scrollable content
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              clipBehavior: Clip.none,
-              padding: const EdgeInsets.only(
-                left: DashboardSpacing.horizontalPadding,
-                right: DashboardSpacing.horizontalPadding,
-                top: DashboardSpacing.topPadding + 8,
-                bottom: 20, // Space for sticky action bar
+          // Main Scrollable Content
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ========================================
-                  // SECTION 1: TODAY'S REMINDERS (PRIMARY FOCUS)
-                  // ========================================
+                  // Top Section Padding (if TimeHeader is inside padding)
+                  // User requested: "Body Structure: ... padding: 16.0"
+                  // But TimeHeader "at the very top".
+                  // I will apply padding to the Column itself as requested.
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0 * scale),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Offline Indicator
+                        if (homeState.isOffline) ...[
+                          OfflineStatusIndicator(
+                              isOffline: homeState.isOffline),
+                          SizedBox(height: 12 * scale),
+                        ],
 
-                  ReminderSectionCard(
-                    reminders: homeState.reminders,
-                    onAddPressed: () => _navigateToAddReminder(context),
-                    onViewAllPressed: () => _navigateToReminderList(context),
-                    onToggleReminder: viewModel.toggleReminder,
+                        // // Top Section: Time Context Header
+                        // profileAsync.when(
+                        //   data: (profile) => TimeContextHeader(
+                        //     patientName: profile?.fullName.split(' ').first,
+                        //   ),
+                        //   loading: () => const TimeContextHeader(),
+                        //   error: (_, __) => const TimeContextHeader(),
+                        // ),
+                        // const SizedBox(height: 24),
+
+                        // Reminder Section
+                        ReminderSectionCard(
+                          onAddPressed: () =>
+                              _navigateToAddReminder(context, ref),
+                          onViewAllPressed: () =>
+                              _navigateToReminderList(context, ref),
+                        ),
+                        SizedBox(height: 24 * scale),
+
+                        // Memory Section
+                        const SectionTitle(title: 'Memory of the Day'),
+                        SizedBox(height: 12 * scale),
+                        MemoryHighlightCard(
+                          onViewDay: () {
+                            // Navigate to day view
+                          },
+                        ),
+                        SizedBox(
+                            height: 24 * scale), // Spacing before Quick Actions
+
+                        // Quick Actions Grid
+                        // User requested "below Memory section"
+                        QuickActionGrid(
+                          onMemoriesTap: () {},
+                          onGamesTap: () {},
+                          onLocationTap: () {},
+                        ),
+                        SizedBox(height: 24 * scale),
+
+                        // Emergency SOS (Scrollable position above sticky bar area)
+                        EmergencySOSCard(
+                          onTap: () => _showSOSConfirmation(context, viewModel),
+                        ),
+
+                        // Extra spacing for Sticky Bar safe area
+                        SizedBox(height: 100 * scale),
+                      ],
+                    ),
                   ),
-
-                  // const SectionSpacing(),
-
-                  // ========================================
-                  // SECTION 2: QUICK ACTIONS (3 SAFE ACTIONS)
-                  // ========================================
-
-                  const SectionTitle(title: 'Quick Actions'),
-                  const SizedBox(height: DashboardSpacing.titleToContent),
-
-                  QuickActionGrid(
-                    onMemoriesTap: () {
-                      // TODO: Navigate to Memories screen
-                      debugPrint('Navigate to Memories');
-                    },
-                    onGamesTap: () {
-                      // TODO: Navigate to Games screen
-                      debugPrint('Navigate to Games');
-                    },
-                    onLocationTap: () {
-                      // TODO: Show location screen
-                      debugPrint('Navigate to Location/Safe Zone');
-                    },
-                  ),
-
-                  const SectionSpacing(),
-
-                  // ========================================
-                  // SECTION 3: EMERGENCY SOS (SEPARATED)
-                  // ========================================
-
-                  const SectionTitle(title: 'Emergency'),
-                  const SizedBox(height: DashboardSpacing.titleToContent),
-
-                  EmergencySOSCard(
-                    onTap: () => _showSOSConfirmation(context, viewModel),
-                  ),
-
-                  const SectionSpacing(),
-
-                  // ========================================
-                  // SECTION 4: MEMORY OF THE DAY (EMOTIONAL)
-                  // ========================================
-
-                  const SectionTitle(title: 'Memory of the Day'),
-                  const SizedBox(height: DashboardSpacing.titleToContent),
-
-                  MemoryHighlightCard(
-                    onViewDay: () {
-                      // TODO: Navigate to day view
-                      debugPrint('Navigate to Day View');
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
 
-          // ========================================
-          // STICKY PRIMARY ACTION BAR (REPLACES FAB)
-          // ========================================
-
-          StickyPrimaryActionBar(
-            onPressed: () => _navigateToAddReminder(context),
-            label: 'Add Reminder',
-            icon: Icons.add_alert,
-          ),
+          // Sticky Bottom Bar
+          // Positioned(
+          //   bottom: 0,
+          //   left: 0,
+          //   right: 0,
+          //   child: StickyPrimaryActionBar(
+          //     onPressed: () => _navigateToAddReminder(context, ref),
+          //     label: 'Add Reminder',
+          //     icon: Icons.add_alert,
+          //     // StickyPrimaryActionBar might need internal scaling updates too?
+          //     // Assuming it's responsive or I should update it.
+          //     // I'll update it later if needed.
+          //   ),
+          // ),
         ],
       ),
+      // Removed FAB as requested (Sticky Bar replaces it)
     );
   }
 
   /// Navigate to add/edit reminder screen
-  void _navigateToAddReminder(BuildContext context) {
-    Navigator.push(
+  Future<void> _navigateToAddReminder(
+      BuildContext context, WidgetRef ref) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const AddEditReminderScreen(),
+        builder: (context) => AddEditReminderScreen(
+          onSave: (reminder) {
+            ref.read(homeViewModelProvider.notifier).addReminder(reminder);
+          },
+        ),
       ),
     );
   }
 
   /// Navigate to full reminder list screen
-  void _navigateToReminderList(BuildContext context) {
-    Navigator.push(
+  Future<void> _navigateToReminderList(
+      BuildContext context, WidgetRef ref) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const ReminderListScreen(),
@@ -188,29 +182,31 @@ class PatientDashboardTab extends ConsumerWidget {
   /// Show emergency SOS confirmation dialog
   /// Healthcare-grade design with large touch targets and clear messaging
   void _showSOSConfirmation(BuildContext context, HomeViewModel viewModel) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(28 * scale),
         ),
         backgroundColor: Colors.red.shade50,
-        contentPadding: const EdgeInsets.all(28),
+        contentPadding: EdgeInsets.all(28 * scale),
         title: Row(
           children: [
             Icon(
               Icons.warning_rounded,
               color: Colors.red.shade700,
-              size: 36,
+              size: 36 * scale,
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16 * scale),
             Expanded(
               child: Text(
                 'Emergency Alert',
                 style: TextStyle(
                   color: Colors.red.shade900,
-                  fontSize: 24,
+                  fontSize: 24 * scale,
                   fontWeight: FontWeight.bold,
                   letterSpacing: -0.5,
                 ),
@@ -224,30 +220,31 @@ class PatientDashboardTab extends ConsumerWidget {
           child: Text(
             'Are you sure you want to send an emergency alert to your caregivers?',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 18 * scale,
               height: 1.5,
               color: Colors.black87,
             ),
           ),
         ),
         actionsAlignment: MainAxisAlignment.spaceEvenly,
-        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        actionsPadding:
+            EdgeInsets.fromLTRB(20 * scale, 0, 20 * scale, 20 * scale),
         actions: [
           // Cancel button
           Flexible(
             child: TextButton(
               onPressed: () => Navigator.pop(context),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 18,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 24 * scale,
+                  vertical: 18 * scale,
                 ),
-                minimumSize: const Size(110, 56),
+                minimumSize: Size(110 * scale, 56 * scale),
               ),
-              child: const Text(
+              child: Text(
                 'Cancel',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 18 * scale,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -264,14 +261,15 @@ class PatientDashboardTab extends ConsumerWidget {
                 // Show confirmation snackbar
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Row(
+                    content: Row(
                       children: [
-                        Icon(Icons.check_circle, color: Colors.white),
-                        SizedBox(width: 12),
+                        Icon(Icons.check_circle,
+                            color: Colors.white, size: 24 * scale),
+                        SizedBox(width: 12 * scale),
                         Expanded(
                           child: Text(
                             'Emergency Alert Sent!',
-                            style: TextStyle(fontSize: 17),
+                            style: TextStyle(fontSize: 17 * scale),
                           ),
                         ),
                       ],
@@ -280,7 +278,7 @@ class PatientDashboardTab extends ConsumerWidget {
                     behavior: SnackBarBehavior.floating,
                     duration: const Duration(seconds: 4),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16 * scale),
                     ),
                   ),
                 );
@@ -288,20 +286,20 @@ class PatientDashboardTab extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 18,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 32 * scale,
+                  vertical: 18 * scale,
                 ),
-                minimumSize: const Size(130, 56),
+                minimumSize: Size(130 * scale, 56 * scale),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20 * scale),
                 ),
                 elevation: 3,
               ),
-              child: const Text(
+              child: Text(
                 'SEND HELP',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 18 * scale,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),

@@ -16,12 +16,11 @@ class CaregiverAccessScreen extends ConsumerStatefulWidget {
 }
 
 class _CaregiverAccessScreenState extends ConsumerState<CaregiverAccessScreen> {
-  InviteCode? _currentCode;
-
   @override
   Widget build(BuildContext context) {
     final linksAsync = ref.watch(linkedProfilesProvider);
     final linkState = ref.watch(linkControllerProvider);
+    final activeCodeAsync = ref.watch(activeInviteCodeProvider);
 
     ref.listen(linkControllerProvider, (previous, next) {
       if (next is AsyncError) {
@@ -43,7 +42,7 @@ class _CaregiverAccessScreenState extends ConsumerState<CaregiverAccessScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildGenerateSection(linkState.isLoading),
+            _buildGenerateSection(activeCodeAsync, linkState.isLoading),
             const SizedBox(height: 32),
             const Text(
               'Linked Caregivers',
@@ -122,58 +121,67 @@ class _CaregiverAccessScreenState extends ConsumerState<CaregiverAccessScreen> {
     );
   }
 
-  Widget _buildGenerateSection(bool isLoading) {
-    if (_currentCode != null &&
-        !_currentCode!.isExpired &&
-        !_currentCode!.isUsed) {
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blue.shade100),
-        ),
-        child: Column(
-          children: [
-            const Text('Share this code with your caregiver',
-                style: TextStyle(color: Colors.blueGrey)),
-            const SizedBox(height: 16),
-            Text(
-              _currentCode!.code,
-              style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 8,
-                  color: Colors.blue),
+  Widget _buildGenerateSection(
+      AsyncValue<InviteCode?> activeCodeAsync, bool isGenerating) {
+    return activeCodeAsync.when(
+      data: (activeCode) {
+        if (activeCode != null && !activeCode.isExpired && !activeCode.isUsed) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.blue.shade100),
             ),
-            const SizedBox(height: 16),
-            QrImageView(
-              data: _currentCode!.code,
-              version: QrVersions.auto,
-              size: 150.0,
-              gapless: false,
+            child: Column(
+              children: [
+                const Text('Share this code with your caregiver',
+                    style: TextStyle(color: Colors.blueGrey)),
+                const SizedBox(height: 16),
+                Text(
+                  activeCode.code,
+                  style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 8,
+                      color: Colors.blue),
+                ),
+                const SizedBox(height: 16),
+                QrImageView(
+                  data: activeCode.code,
+                  version: QrVersions.auto,
+                  size: 150.0,
+                  gapless: false,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Expires in ${activeCode.expiresAt.difference(DateTime.now()).inHours} hours',
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: activeCode.code));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Copied to clipboard')));
+                  },
+                  icon: const Icon(Icons.copy),
+                  label: const Text('Copy Code'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Expires in ${_currentCode!.expiresAt.difference(DateTime.now()).inHours} hours',
-              style: const TextStyle(
-                  color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: _currentCode!.code));
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Copied to clipboard')));
-              },
-              icon: const Icon(Icons.copy),
-              label: const Text('Copy Code'),
-            ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
+        return _buildGenerateButton(isGenerating);
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('Error loading code: $e')),
+    );
+  }
+
+  Widget _buildGenerateButton(bool isGenerating) {
     return Column(
       children: [
         const Icon(Icons.security, size: 64, color: Colors.teal),
@@ -190,19 +198,17 @@ class _CaregiverAccessScreenState extends ConsumerState<CaregiverAccessScreen> {
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 24),
-        isLoading
+        isGenerating
             ? const CircularProgressIndicator()
             : SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final code = await ref
+                    await ref
                         .read(linkControllerProvider.notifier)
                         .generateCode();
-                    if (code != null) {
-                      setState(() => _currentCode = code);
-                    }
+                    // Provider invalidation handles UI update
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,

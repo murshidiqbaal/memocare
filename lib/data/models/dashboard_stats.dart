@@ -89,15 +89,15 @@ class DashboardStats {
   /// Get insight message based on stats
   String get insightMessage {
     if (adherencePercentage < 50) {
-      return "Reminder adherence is low. Consider reviewing medication schedule.";
+      return 'Reminder adherence is low. Consider reviewing medication schedule.';
     } else if (safeZoneBreachesThisWeek > 3) {
-      return "Multiple safe-zone exits this week. Review safety settings.";
+      return 'Multiple safe-zone exits this week. Review safety settings.';
     } else if (memoryJournalConsistency < 0.3) {
-      return "Memory journal usage is low. Encourage daily entries.";
+      return 'Memory journal usage is low. Encourage daily entries.';
     } else if (adherencePercentage > 80 && memoryJournalConsistency > 0.7) {
-      return "Great progress! Patient is maintaining good routines.";
+      return 'Great progress! Patient is maintaining good routines.';
     } else {
-      return "Patient is doing well. Continue monitoring daily activities.";
+      return 'Patient is doing well. Continue monitoring daily activities.';
     }
   }
 }

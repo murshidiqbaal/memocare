@@ -7,7 +7,6 @@ import 'package:uuid/uuid.dart';
 import '../../../../data/models/reminder.dart';
 import '../../../../providers/auth_provider.dart';
 import 'viewmodels/reminder_viewmodel.dart';
-import 'add_edit_reminder_screen.dart'; // Import to ensure enums are available if needed or just use models
 
 class VoiceReminderScreen extends ConsumerStatefulWidget {
   const VoiceReminderScreen({super.key});
@@ -273,7 +272,7 @@ class _VoiceReminderScreenState extends ConsumerState<VoiceReminderScreen> {
                   Text(
                     _parsedTime != null
                         ? "at ${_parsedTime!.hour > 12 ? _parsedTime!.hour - 12 : _parsedTime!.hour}:${_parsedTime!.minute.toString().padLeft(2, '0')} ${_parsedTime!.hour >= 12 ? 'PM' : 'AM'}"
-                        : "No time detected",
+                        : 'No time detected',
                     style: const TextStyle(fontSize: 16),
                   ),
                   Text(

@@ -1,26 +1,20 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
+import '../../../core/utils/profile_completion_helper.dart';
+import '../../../data/models/patient_profile.dart';
+import '../../../features/linking/presentation/controllers/link_controller.dart';
 import '../../../providers/auth_provider.dart';
-import '../settings/caregiver_access_screen.dart';
+import 'edit_patient_profile_screen.dart';
+import 'viewmodels/patient_profile_viewmodel.dart';
 
-/// Patient Profile Screen - Dementia-friendly healthcare-grade UI
-///
-/// Features:
-/// - Large profile photo with edit capability
-/// - Clear personal information display
-/// - Simple settings access
-/// - Caregiver access management
-/// - Easy logout
-/// - Large touch targets (56px minimum)
-/// - High contrast, readable typography
-/// - Calm, supportive design
+/// View-only Patient Profile Screen with Hero Animation and Profile Completion
+/// Navigates to EditPatientProfileScreen for editing
 class PatientProfileScreen extends ConsumerStatefulWidget {
-  const PatientProfileScreen({super.key});
+  final String? patientId;
+  const PatientProfileScreen({super.key, this.patientId});
 
   @override
   ConsumerState<PatientProfileScreen> createState() =>
@@ -28,434 +22,490 @@ class PatientProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
-  File? _selectedImage;
-  final ImagePicker _picker = ImagePicker();
+  final ScrollController _scrollController = ScrollController();
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
-      );
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-      if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
+  Future<void> _navigateToEdit(PatientProfile? profile) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => EditPatientProfileScreen(
+          existingProfile: profile,
+          patientId: widget.patientId,
+        ),
+      ),
+    );
 
-        // TODO: Upload to Supabase storage
-        // For now, just show the selected image
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('Photo selected! Upload coming soon.'),
-                ],
-              ),
-              backgroundColor: Colors.teal.shade600,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error selecting photo: $e'),
-            backgroundColor: Colors.red.shade600,
+    // Refresh profile if edit was successful
+    if (result == true && mounted) {
+      final provider = widget.patientId != null
+          ? patientMonitoringProvider(widget.patientId!)
+          : patientProfileProvider;
+      ref.invalidate(provider);
+    }
+  }
+
+  Future<void> _signOut() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-        );
-      }
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      ref.read(authControllerProvider.notifier).signOut();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final profileAsync = ref.watch(userProfileProvider);
+    final provider = widget.patientId != null
+        ? patientMonitoringProvider(widget.patientId!)
+        : patientProfileProvider;
+
+    final profileState = ref.watch(provider);
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final isCaregiver = userProfile?.role == 'caregiver';
+
+    // Calculate scale factor for responsive UI
+    final scale = MediaQuery.of(context).size.width / 375.0;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          'My Profile',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.white,
+        title:
+            Text(widget.patientId != null ? 'Patient Profile' : 'My Profile'),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: Colors.black87,
-        centerTitle: true,
-      ),
-      body: profileAsync.when(
-        data: (profile) => _buildProfileContent(context, profile),
-        loading: () => const Center(
-          child: CircularProgressIndicator(
-            color: Colors.teal,
-          ),
-        ),
-        error: (error, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red.shade300,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Unable to load profile',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please try again later',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
+        actions: [
+          if (!isCaregiver)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Edit Profile',
+              onPressed: () => _navigateToEdit(profileState.value),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileContent(BuildContext context, dynamic profile) {
-    final name = profile?.fullName ?? 'Patient';
-    final phone = profile?.phoneNumber ?? 'Not set';
-    final avatarUrl = profile?.avatarUrl;
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
-
-          // ========================================
-          // PROFILE PHOTO SECTION
-          // ========================================
-
-          _buildProfilePhoto(avatarUrl),
-
-          const SizedBox(height: 24),
-
-          // ========================================
-          // NAME SECTION
-          // ========================================
-
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-              letterSpacing: -0.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 8),
-
-          // Role badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade50,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.teal.shade200,
-                width: 1.5,
-              ),
-            ),
-            child: Text(
-              'PATIENT',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.teal.shade800,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // ========================================
-          // INFORMATION CARDS
-          // ========================================
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                // Phone number card
-                _buildInfoCard(
-                  icon: Icons.phone,
-                  iconColor: Colors.blue,
-                  title: 'Phone Number',
-                  value: phone,
-                ),
-
-                const SizedBox(height: 16),
-
-                // Caregiver access card
-                _buildActionCard(
-                  icon: Icons.security,
-                  iconColor: Colors.purple,
-                  title: 'Caregiver Access',
-                  subtitle: 'Manage who can help you',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CaregiverAccessScreen(),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // Emergency contacts card
-                _buildActionCard(
-                  icon: Icons.contacts,
-                  iconColor: Colors.orange,
-                  title: 'Emergency Contacts',
-                  subtitle: 'View your emergency contacts',
-                  onTap: () {
-                    // TODO: Navigate to emergency contacts
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Emergency contacts coming soon'),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // Settings card
-                _buildActionCard(
-                  icon: Icons.settings,
-                  iconColor: Colors.grey,
-                  title: 'Settings',
-                  subtitle: 'App preferences and options',
-                  onTap: () {
-                    // TODO: Navigate to settings
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Settings coming soon'),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 32),
-
-                // ========================================
-                // LOGOUT BUTTON
-                // ========================================
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 64,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showLogoutConfirmation(context),
-                    icon: const Icon(Icons.logout, size: 24),
-                    label: const Text(
-                      'Log Out',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade50,
-                      foregroundColor: Colors.red.shade700,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(
-                          color: Colors.red.shade200,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-              ],
-            ),
-          ),
         ],
       ),
-    );
-  }
+      body: profileState.when(
+        data: (profile) {
+          if (profile == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person_outline,
+                      size: 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No profile found',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => _navigateToEdit(null),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create Profile'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => ref.refresh(provider),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
 
-  Widget _buildProfilePhoto(String? avatarUrl) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Profile photo
-        Container(
-          width: 140,
-          height: 140,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.teal.shade50,
-            border: Border.all(
-              color: Colors.teal.shade200,
-              width: 4,
+          // Calculate profile completion
+          final completion =
+              ProfileCompletionHelper.calculateCompletion(profile);
+          final completionMessage =
+              ProfileCompletionHelper.getCompletionMessage(completion);
+
+          return SingleChildScrollView(
+            controller: _scrollController,
+            padding: EdgeInsets.all(20 * scale),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Profile Header with Hero Animation
+                _buildHeader(profile, scale),
+                SizedBox(height: 16 * scale),
+
+                // Profile Completion Indicator
+                if (completion < 100)
+                  _buildCompletionCard(completion, completionMessage, scale),
+                SizedBox(height: 24 * scale),
+
+                // Personal Information Section
+                _buildSectionTitle('Personal Information', scale),
+                _buildCard(
+                  scale,
+                  children: [
+                    _buildInfoRow('Full Name', profile.fullName,
+                        Icons.person_outline, scale),
+                    if (profile.dateOfBirth != null)
+                      _buildInfoRow(
+                        'Date of Birth',
+                        DateFormat('dd MMM yyyy').format(profile.dateOfBirth!),
+                        Icons.calendar_today_outlined,
+                        scale,
+                        subtitle:
+                            '${_calculateAge(profile.dateOfBirth!)} years old',
+                      ),
+                    if (profile.gender != null)
+                      _buildInfoRow('Gender', profile.gender!, Icons.wc, scale),
+                    if (profile.phoneNumber != null)
+                      _buildInfoRow('Phone', profile.phoneNumber!,
+                          Icons.phone_outlined, scale),
+                    if (profile.address != null)
+                      _buildInfoRow('Address', profile.address!,
+                          Icons.location_on_outlined, scale),
+                  ],
+                ),
+                SizedBox(height: 24 * scale),
+
+                // Emergency & Medical Section
+                _buildSectionTitle('Emergency & Medical', scale),
+                _buildCard(
+                  scale,
+                  children: [
+                    if (profile.emergencyContactName != null)
+                      _buildInfoRow(
+                        'Emergency Contact',
+                        profile.emergencyContactName!,
+                        Icons.contact_emergency_outlined,
+                        scale,
+                      ),
+                    if (profile.emergencyContactPhone != null)
+                      _buildInfoRow(
+                        'Emergency Phone',
+                        profile.emergencyContactPhone!,
+                        Icons.phone_in_talk_outlined,
+                        scale,
+                      ),
+                    if (profile.medicalNotes != null)
+                      _buildInfoRow(
+                        'Medical Notes',
+                        profile.medicalNotes!,
+                        Icons.medical_services_outlined,
+                        scale,
+                      ),
+                    // Show warning if critical info is missing
+                    if (!ProfileCompletionHelper.hasCriticalInfo(profile))
+                      Container(
+                        padding: EdgeInsets.all(12 * scale),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                color: Colors.orange.shade700, size: 20),
+                            SizedBox(width: 8 * scale),
+                            Expanded(
+                              child: Text(
+                                'Please add emergency contact information',
+                                style: TextStyle(
+                                  color: Colors.orange.shade900,
+                                  fontSize: 13 * scale,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 24 * scale),
+
+                // Caregiver Linking Section (Only visible to Patient)
+                if (!isCaregiver) ...[
+                  _buildSectionTitle('Caregiver Access', scale),
+                  _buildLinkingSection(scale),
+                  SizedBox(height: 24 * scale),
+                ],
+
+                // Settings / Sign Out (Only visible to Patient)
+                if (!isCaregiver) ...[
+                  _buildSettingsSection(scale),
+                ],
+
+                SizedBox(height: 100 * scale),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.teal.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: $err'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.refresh(provider),
+                child: const Text('Retry'),
               ),
             ],
           ),
-          child: ClipOval(
-            child: _selectedImage != null
-                ? Image.file(
-                    _selectedImage!,
-                    fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(PatientProfile profile, double scale) {
+    return Column(
+      children: [
+        // Hero animation for profile avatar
+        Hero(
+          tag: 'profile_avatar_${profile.id}',
+          child: Container(
+            width: 140 * scale,
+            height: 140 * scale,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.teal.shade50,
+              border: Border.all(color: Colors.teal.shade200, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.teal.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+              image: profile.profileImageUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(profile.profileImageUrl!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: profile.profileImageUrl == null
+                ? Icon(
+                    Icons.person,
+                    size: 70 * scale,
+                    color: Colors.teal.shade400,
                   )
-                : avatarUrl != null
-                    ? Image.network(
-                        avatarUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.person,
-                            size: 70,
-                            color: Colors.teal.shade400,
-                          );
-                        },
-                      )
-                    : Icon(
-                        Icons.person,
-                        size: 70,
-                        color: Colors.teal.shade400,
-                      ),
+                : null,
           ),
         ),
-
-        // Edit button
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _pickImage,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade600,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
+        SizedBox(height: 16 * scale),
+        Text(
+          profile.fullName,
+          style: TextStyle(
+            fontSize: 26 * scale,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade800,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        if (profile.dateOfBirth != null)
+          Text(
+            '${_calculateAge(profile.dateOfBirth!)} years old',
+            style: TextStyle(
+              fontSize: 16 * scale,
+              color: Colors.grey.shade600,
             ),
           ),
-        ),
       ],
     );
   }
 
-  Widget _buildInfoCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String value,
-  }) {
+  Widget _buildCompletionCard(int completion, String message, double scale) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(16 * scale),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.teal.shade400, Colors.teal.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16 * scale),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Profile Completion',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16 * scale,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '$completion%',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20 * scale,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12 * scale),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: completion / 100,
+              minHeight: 8,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+          SizedBox(height: 8 * scale),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 13 * scale,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(double scale, {required List<Widget> children}) {
+    return Container(
+      padding: EdgeInsets.all(16 * scale),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16 * scale),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: Column(
+        children: children.isEmpty
+            ? [
+                Padding(
+                  padding: EdgeInsets.all(16 * scale),
+                  child: Text(
+                    'No information available',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 14 * scale,
+                    ),
+                  ),
+                ),
+              ]
+            : children,
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, double scale) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12 * scale, left: 4 * scale),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 20 * scale,
+          fontWeight: FontWeight.bold,
+          color: Colors.teal.shade800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(
+    String label,
+    String value,
+    IconData icon,
+    double scale, {
+    String? subtitle,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16 * scale),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(10 * scale),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
+              color: Colors.teal.shade50,
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 28,
-            ),
+            child: Icon(icon, color: Colors.teal.shade700, size: 20 * scale),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 12 * scale),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  label,
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 12 * scale,
                     color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4 * scale),
                 Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                  style: TextStyle(
+                    fontSize: 15 * scale,
+                    color: Colors.grey.shade800,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
+                if (subtitle != null) ...[
+                  SizedBox(height: 2 * scale),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12 * scale,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -464,164 +514,155 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     );
   }
 
-  Widget _buildActionCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  shape: BoxShape.circle,
+  Widget _buildLinkingSection(double scale) {
+    final activeCode = ref.watch(activeInviteCodeProvider);
+    final linkedProfiles = ref.watch(linkedProfilesProvider);
+
+    return _buildCard(scale, children: [
+      activeCode.when(
+        data: (code) {
+          if (code != null) {
+            return Column(
+              children: [
+                const Text(
+                  'Share this code with your caregiver',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                SizedBox(height: 12 * scale),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 20 * scale, vertical: 12 * scale),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade50,
+                    borderRadius: BorderRadius.circular(12 * scale),
+                    border: Border.all(color: Colors.teal.shade200),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        code.code,
+                        style: TextStyle(
+                          fontSize: 28 * scale,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 4,
+                          color: Colors.teal.shade800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade600,
+                      SizedBox(width: 8 * scale),
+                      IconButton(
+                        icon: const Icon(Icons.copy, color: Colors.teal),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: code.code));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Code copied to clipboard!'),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+                SizedBox(height: 8 * scale),
+                Text(
+                  'Expires in ${code.expiresAt.difference(DateTime.now()).inHours} hours',
+                  style: TextStyle(fontSize: 12 * scale, color: Colors.red),
+                ),
+              ],
+            );
+          } else {
+            return Center(
+              child: ElevatedButton.icon(
+                onPressed: () =>
+                    ref.read(linkControllerProvider.notifier).generateCode(),
+                icon: const Icon(Icons.qr_code),
+                label: const Text('Generate Invite Code'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.all(16 * scale),
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey.shade400,
-                size: 28,
-              ),
-            ],
-          ),
+            );
+          }
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+      SizedBox(height: 24 * scale),
+      const Divider(),
+      SizedBox(height: 16 * scale),
+      Text(
+        'Linked Caregivers',
+        style: TextStyle(
+          fontSize: 16 * scale,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
         ),
       ),
-    );
+      SizedBox(height: 12 * scale),
+      linkedProfiles.when(
+        data: (links) {
+          if (links.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  'No caregivers linked yet.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            );
+          }
+          return Column(
+            children: links.map((link) {
+              final profile = link.relatedProfile;
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.teal.shade100,
+                  child: Text(
+                    (profile?.fullName ?? 'C')[0].toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.teal.shade800,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                title: Text(profile?.fullName ?? 'Unknown Caregiver'),
+                subtitle: const Text('Caregiver'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.link_off, color: Colors.red),
+                  onPressed: () => ref
+                      .read(linkControllerProvider.notifier)
+                      .removeLink(link.id),
+                ),
+              );
+            }).toList(),
+          );
+        },
+        loading: () => const Center(child: LinearProgressIndicator()),
+        error: (e, _) => Text('Error loading caregivers: $e'),
+      ),
+    ]);
   }
 
-  void _showLogoutConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        contentPadding: const EdgeInsets.all(28),
-        title: Row(
-          children: [
-            Icon(
-              Icons.logout,
-              color: Colors.red.shade600,
-              size: 32,
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Log Out?',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to log out?',
-          style: TextStyle(
-            fontSize: 18,
-            height: 1.4,
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.spaceEvenly,
-        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 16,
-              ),
-              minimumSize: const Size(100, 56),
-            ),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(authControllerProvider.notifier).signOut();
-              if (context.mounted) context.go('/login');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 28,
-                vertical: 16,
-              ),
-              minimumSize: const Size(120, 56),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            child: const Text(
-              'Log Out',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+  Widget _buildSettingsSection(double scale) {
+    return _buildCard(scale, children: [
+      ListTile(
+        leading: const Icon(Icons.logout, color: Colors.red),
+        title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+        onTap: _signOut,
       ),
-    );
+    ]);
+  }
+
+  int _calculateAge(DateTime birthDate) {
+    DateTime today = DateTime.now();
+    int age = today.year - birthDate.year;
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) age--;
+    return age;
   }
 }

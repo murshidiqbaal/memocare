@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../providers/auth_provider.dart';
-import 'viewmodels/reminder_viewmodel.dart';
+import '../home/viewmodels/home_viewmodel.dart';
 import 'widgets/voice_recorder_widget.dart';
 
 class AddEditReminderScreen extends ConsumerStatefulWidget {
@@ -68,8 +68,10 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
     }
   }
 
-  void _saveReminder() {
+  Future<void> _saveReminder() async {
     if (_formKey.currentState!.validate()) {
+      FocusScope.of(context).unfocus(); // Close keyboard
+
       final finalDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -87,6 +89,13 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
           widget.existingReminder?.patientId ??
           currentUserId;
 
+      // Generate stable notification ID
+      final int stableNotificationId =
+          widget.existingReminder?.notificationId ??
+              DateTime.now()
+                  .millisecondsSinceEpoch
+                  .remainder(2147483647); // Ensure positive int32 for safety
+
       final newReminder = Reminder(
         id: widget.existingReminder?.id ?? const Uuid().v4(),
         title: _titleController.text,
@@ -102,19 +111,41 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         status: widget.existingReminder?.status ?? ReminderStatus.pending,
         voiceAudioUrl: widget
             .existingReminder?.voiceAudioUrl, // preserve remote URL if exists
+        notificationId: stableNotificationId,
       );
 
-      if (widget.onSave != null) {
-        widget.onSave!(newReminder);
-      } else if (widget.existingReminder != null) {
-        ref
-            .read(reminderViewModelProvider.notifier)
-            .updateReminder(newReminder);
-      } else {
-        ref.read(reminderViewModelProvider.notifier).addReminder(newReminder);
-      }
+      try {
+        if (widget.onSave != null) {
+          widget.onSave!(newReminder);
+        } else if (widget.existingReminder != null) {
+          await ref
+              .read(homeViewModelProvider.notifier)
+              .updateReminder(newReminder);
+        } else {
+          await ref
+              .read(homeViewModelProvider.notifier)
+              .addReminder(newReminder);
+        }
 
-      Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reminder saved successfully'),
+              backgroundColor: Colors.teal,
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save reminder: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -166,7 +197,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
 
             // Type Dropdown (Replaces Priority)
             DropdownButtonFormField<ReminderType>(
-              value: _type,
+              initialValue: _type,
               decoration: InputDecoration(
                 labelText: 'Type',
                 border:
@@ -243,7 +274,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
 
             // Frequency
             DropdownButtonFormField<ReminderFrequency>(
-              value: _frequency,
+              initialValue: _frequency,
               decoration: InputDecoration(
                 labelText: 'Repeat',
                 border:

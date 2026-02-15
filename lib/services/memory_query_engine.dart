@@ -141,9 +141,9 @@ class MemoryQueryEngine {
       );
 
       final timeStr = _formatTime(nextReminder.remindAt);
-      return "Yes, you have ${nextReminder.title} at $timeStr today.";
+      return 'Yes, you have ${nextReminder.title} at $timeStr today.';
     } catch (e) {
-      return "Let me check your reminders. You have some tasks scheduled for today.";
+      return 'Let me check your reminders. You have some tasks scheduled for today.';
     }
   }
 
@@ -163,14 +163,14 @@ class MemoryQueryEngine {
       }).toList();
 
       if (yesterdayReminders.isEmpty) {
-        return "Yesterday was a quiet day. You rested and took care of yourself.";
+        return 'Yesterday was a quiet day. You rested and took care of yourself.';
       }
 
       final activities =
           yesterdayReminders.map((r) => r.title).take(3).join(', ');
-      return "Yesterday you completed: $activities. You had a productive day!";
+      return 'Yesterday you completed: $activities. You had a productive day!';
     } catch (e) {
-      return "Yesterday you had a good day and completed your tasks.";
+      return 'Yesterday you had a good day and completed your tasks.';
     }
   }
 
@@ -181,14 +181,14 @@ class MemoryQueryEngine {
       final people = _peopleRepo.getPeople(patientId);
 
       if (people.isEmpty) {
-        return "Your family and friends care about you. They visit regularly.";
+        return 'Your family and friends care about you. They visit regularly.';
       }
 
       // Get a random person to mention (or first person)
       final person = people.first;
       return "${person.name} is your ${person.relationship}. ${person.description ?? 'They care about you very much.'}";
     } catch (e) {
-      return "Your loved ones are thinking of you and will visit soon.";
+      return 'Your loved ones are thinking of you and will visit soon.';
     }
   }
 
@@ -215,7 +215,7 @@ class MemoryQueryEngine {
 
       final dateStr = _formatDate(next.remindAt);
       final timeStr = _formatTime(next.remindAt);
-      return "Your next appointment is ${next.title} on $dateStr at $timeStr.";
+      return 'Your next appointment is ${next.title} on $dateStr at $timeStr.';
     } catch (e) {
       return "Let me check your appointments. I'll help you remember.";
     }

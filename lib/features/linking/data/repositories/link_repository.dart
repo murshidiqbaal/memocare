@@ -13,6 +13,18 @@ class LinkRepository {
 
   // --- Patient Methods ---
 
+  Future<InviteCode?> getActiveInviteCode(String patientId) async {
+    final data = await _supabase
+        .from('invite_codes')
+        .select()
+        .eq('patient_id', patientId)
+        .eq('used', false)
+        .gt('expires_at', DateTime.now().toIso8601String());
+
+    if (data.isEmpty) return null;
+    return InviteCode.fromJson(data.first);
+  }
+
   Future<InviteCode> generateInviteCode(String patientId) async {
     final code = _generateRandomCode();
     final expiresAt = DateTime.now().add(const Duration(hours: 48));
@@ -42,7 +54,7 @@ class LinkRepository {
       String patientId) async {
     // Determine table relationship. Assuming 'profiles' is linked via 'caregiver_id'
     final data = await _supabase
-        .from('patient_caregiver_links')
+        .from('caregiver_patients')
         .select('*, related_profile:profiles!caregiver_id(*)')
         .eq('patient_id', patientId);
 
@@ -50,7 +62,7 @@ class LinkRepository {
   }
 
   Future<void> removeCaregiver(String linkId) async {
-    await _supabase.from('patient_caregiver_links').delete().eq('id', linkId);
+    await _supabase.from('caregiver_patients').delete().eq('id', linkId);
   }
 
   // --- Caregiver Methods ---
@@ -81,7 +93,7 @@ class LinkRepository {
 
     // 2. Check if already linked
     final existingLinks = await _supabase
-        .from('patient_caregiver_links')
+        .from('caregiver_patients')
         .select()
         .eq('caregiver_id', caregiverId)
         .eq('patient_id', patientId);
@@ -91,7 +103,7 @@ class LinkRepository {
     }
 
     // 3. Create Link
-    await _supabase.from('patient_caregiver_links').insert({
+    await _supabase.from('caregiver_patients').insert({
       'caregiver_id': caregiverId,
       'patient_id': patientId,
       'created_at': DateTime.now().toIso8601String(),
@@ -107,7 +119,7 @@ class LinkRepository {
       String caregiverId) async {
     // Determine table relationship. Assuming 'profiles' is linked via 'patient_id'
     final data = await _supabase
-        .from('patient_caregiver_links')
+        .from('caregiver_patients')
         .select('*, related_profile:profiles!patient_id(*)')
         .eq('caregiver_id', caregiverId);
 

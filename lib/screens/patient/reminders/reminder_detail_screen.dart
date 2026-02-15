@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart'; // Strict playback requirement
 
 import '../../../../data/models/reminder.dart';
-import 'viewmodels/reminder_viewmodel.dart';
+import '../home/viewmodels/home_viewmodel.dart';
 
 class ReminderDetailScreen extends ConsumerStatefulWidget {
   final String reminderId;
@@ -47,7 +47,9 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
 
   Future<void> _playAudio(String? url, String? localPath) async {
     if ((url == null || url.isEmpty) &&
-        (localPath == null || localPath.isEmpty)) return;
+        (localPath == null || localPath.isEmpty)) {
+      return;
+    }
 
     try {
       setState(() => _isLoadingAudio = true);
@@ -72,8 +74,11 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final reminderState = ref.watch(reminderViewModelProvider);
-    final reminder = reminderState.reminders.firstWhere(
+    // 1. Single Source of Truth
+    final homeState = ref.watch(homeViewModelProvider);
+
+    // Find reminder in the global list
+    final reminder = homeState.reminders.firstWhere(
       (r) => r.id == widget.reminderId,
       orElse: () => Reminder(
         id: 'error',
@@ -202,18 +207,18 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
                           color: Colors.teal),
                     ),
                     const SizedBox(width: 16),
-                    Column(
+                    const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Caregiver Voice Note',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.teal,
                               fontSize: 16),
                         ),
-                        const SizedBox(height: 4),
-                        const Text('Tap to listen',
+                        SizedBox(height: 4),
+                        Text('Tap to listen',
                             style: TextStyle(color: Colors.grey)),
                       ],
                     ),
@@ -254,9 +259,10 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
                 height: 60,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    // Use toggleReminder to mark done
                     ref
-                        .read(reminderViewModelProvider.notifier)
-                        .markAsDone(reminder.id);
+                        .read(homeViewModelProvider.notifier)
+                        .toggleReminder(reminder.id);
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -291,7 +297,7 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
                       lastSnoozedAt: DateTime.now(),
                     );
                     ref
-                        .read(reminderViewModelProvider.notifier)
+                        .read(homeViewModelProvider.notifier)
                         .updateReminder(updated);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Snoozed for 10 minutes')),

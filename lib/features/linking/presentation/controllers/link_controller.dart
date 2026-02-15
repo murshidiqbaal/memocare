@@ -10,10 +10,9 @@ final activeInviteCodeProvider =
     FutureProvider.autoDispose<InviteCode?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
-  // This would ideally just verify if there's an active one in DB without generating new one
-  // But for simple use, we don't have a 'get' method, only 'generate'.
-  // Let's assume the UI calls generate manually.
-  return null;
+
+  final repo = ref.watch(linkRepositoryProvider);
+  return repo.getActiveInviteCode(user.id);
 });
 
 final linkedProfilesProvider =
@@ -45,6 +44,7 @@ class LinkController extends StateNotifier<AsyncValue<void>> {
 
       final code = await _repo.generateInviteCode(user.id);
       state = const AsyncData(null);
+      _ref.invalidate(activeInviteCodeProvider);
       return code;
     } catch (e, st) {
       state = AsyncError(e, st);

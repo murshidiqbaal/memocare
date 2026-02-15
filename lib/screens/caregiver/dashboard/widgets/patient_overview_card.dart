@@ -73,7 +73,7 @@ class PatientOverviewCard extends StatelessWidget {
                       : null,
                   child: patient.patientPhotoUrl == null
                       ? Text(
-                          patient.patientName[0].toUpperCase(),
+                          (patient.patientName ?? 'Patient')[0].toUpperCase(),
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -89,7 +89,7 @@ class PatientOverviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      patient.patientName,
+                      patient.patientName ?? 'Patient',
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,

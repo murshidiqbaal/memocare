@@ -18,21 +18,23 @@ class MemoryHighlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(12 * scale),
         // Warm elevated shadow
         boxShadow: [
           BoxShadow(
             color: Colors.indigo.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 20 * scale,
+            offset: Offset(0, 8 * scale),
           ),
           BoxShadow(
             color: Colors.pink.withOpacity(0.08),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
+            blurRadius: 30 * scale,
+            offset: Offset(0, 12 * scale),
           ),
         ],
       ),
@@ -41,9 +43,10 @@ class MemoryHighlightCard extends StatelessWidget {
         children: [
           // Large rounded photo preview
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(12 * scale)),
             child: Container(
-              height: 220,
+              height: 220 * scale,
               decoration: BoxDecoration(
                 color: Colors.indigo.shade50,
                 image: const DecorationImage(
@@ -69,20 +72,20 @@ class MemoryHighlightCard extends StatelessWidget {
                   ),
                   // Memory title
                   Positioned(
-                    bottom: 20,
-                    left: 20,
-                    right: 20,
+                    bottom: 20 * scale,
+                    left: 20 * scale,
+                    right: 20 * scale,
                     child: Text(
                       'A beautiful day at the park with family.',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: 20 * scale,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.3,
                         shadows: [
                           Shadow(
-                            offset: Offset(0, 2),
-                            blurRadius: 4,
+                            offset: Offset(0, 2 * scale),
+                            blurRadius: 4 * scale,
                             color: Colors.black,
                           ),
                         ],
@@ -98,26 +101,26 @@ class MemoryHighlightCard extends StatelessWidget {
 
           // Supportive action section
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20 * scale),
             child: Column(
               children: [
                 // Supportive emotional text
                 Text(
                   '💝 Tap to relive this memory',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 16 * scale,
                     fontWeight: FontWeight.w600,
                     color: Colors.grey.shade700,
                     letterSpacing: 0.2,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16 * scale),
 
                 // View button
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 56 * scale,
                   child: ElevatedButton(
                     onPressed: onViewDay,
                     style: ElevatedButton.styleFrom(
@@ -125,18 +128,18 @@ class MemoryHighlightCard extends StatelessWidget {
                       foregroundColor: Colors.indigo.shade700,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(20 * scale),
                       ),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.history_edu, size: 24),
-                        const SizedBox(width: 10),
-                        const Text(
+                        Icon(Icons.history_edu, size: 24 * scale),
+                        SizedBox(width: 10 * scale),
+                        Text(
                           'View My Day',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 18 * scale,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.2,
                           ),

@@ -7,7 +7,9 @@ import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/role_selection_screen.dart';
+import '../screens/caregiver/connections/caregiver_connections_screen.dart';
 import '../screens/caregiver/dashboard/caregiver_dashboard_screen.dart';
+import '../screens/patient/connections/patient_connections_screen.dart';
 import '../screens/patient/home/patient_home_screen.dart';
 import '../screens/patient/reminders/reminder_alert_screen.dart';
 import '../screens/shared/splash_screen.dart';
@@ -58,6 +60,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return ReminderAlertScreen(reminderId: id);
         },
       ),
+      GoRoute(
+        path: '/patient-connections',
+        builder: (context, state) => const PatientConnectionsScreen(),
+      ),
+      GoRoute(
+        path: '/caregiver-connections',
+        builder: (context, state) => const CaregiverConnectionsScreen(),
+      ),
     ],
     redirect: (context, state) {
       if (authState.isLoading) return null;
@@ -80,7 +90,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       if (isSplash) return null;
 
       if (isAuthRoute) {
-        // Read the profile to determine where to go
         // We use 'read' safely because this callback runs reactively
         final profileAsync = ref.read(userProfileProvider);
 

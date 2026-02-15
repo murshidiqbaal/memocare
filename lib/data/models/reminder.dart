@@ -102,6 +102,11 @@ class Reminder extends HiveObject {
   @JsonKey(name: 'last_snoozed_at')
   final DateTime? lastSnoozedAt;
 
+  @HiveField(17)
+  @JsonKey(
+      name: 'notification_id', includeFromJson: false, includeToJson: false)
+  final int? notificationId;
+
   Reminder({
     required this.id,
     required this.patientId,
@@ -120,6 +125,7 @@ class Reminder extends HiveObject {
     this.isSnoozed = false,
     this.snoozeDurationMinutes,
     this.lastSnoozedAt,
+    this.notificationId,
   });
 
   factory Reminder.fromJson(Map<String, dynamic> json) =>
@@ -145,6 +151,7 @@ class Reminder extends HiveObject {
     bool? isSnoozed,
     int? snoozeDurationMinutes,
     DateTime? lastSnoozedAt,
+    int? notificationId,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -165,6 +172,7 @@ class Reminder extends HiveObject {
       snoozeDurationMinutes:
           snoozeDurationMinutes ?? this.snoozeDurationMinutes,
       lastSnoozedAt: lastSnoozedAt ?? this.lastSnoozedAt,
+      notificationId: notificationId ?? this.notificationId,
     );
   }
 

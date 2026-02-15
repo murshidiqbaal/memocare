@@ -3,8 +3,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'caregiver_patient_link.g.dart';
 
-/// Caregiver-Patient link model
-/// Represents the relationship between a caregiver and their assigned patients
+/// Caregiver-Patient link model for secure invite code flow
 @JsonSerializable(explicitToJson: true)
 @HiveType(typeId: 7)
 class CaregiverPatientLink extends HiveObject {
@@ -20,35 +19,35 @@ class CaregiverPatientLink extends HiveObject {
   final String patientId;
 
   @HiveField(3)
-  @JsonKey(name: 'patient_name')
-  final String patientName;
+  @JsonKey(name: 'linked_at')
+  final DateTime linkedAt;
 
+  // Optional fields for UI display (fetched via Supabase joins)
   @HiveField(4)
-  @JsonKey(name: 'patient_photo_url')
-  final String? patientPhotoUrl;
+  @JsonKey(name: 'patient_email')
+  final String? patientEmail;
 
   @HiveField(5)
-  @JsonKey(name: 'relationship')
-  final String?
-      relationship; // e.g., "Son", "Daughter", "Professional Caregiver"
+  @JsonKey(name: 'caregiver_email')
+  final String? caregiverEmail;
 
   @HiveField(6)
-  @JsonKey(name: 'created_at')
-  final DateTime createdAt;
+  @JsonKey(name: 'patient_name')
+  final String? patientName;
 
   @HiveField(7)
-  @JsonKey(name: 'is_primary')
-  final bool isPrimary; // Primary caregiver flag
+  @JsonKey(name: 'caregiver_name')
+  final String? caregiverName;
 
   CaregiverPatientLink({
     required this.id,
     required this.caregiverId,
     required this.patientId,
-    required this.patientName,
-    this.patientPhotoUrl,
-    this.relationship,
-    required this.createdAt,
-    this.isPrimary = false,
+    required this.linkedAt,
+    this.patientEmail,
+    this.caregiverEmail,
+    this.patientName,
+    this.caregiverName,
   });
 
   factory CaregiverPatientLink.fromJson(Map<String, dynamic> json) =>
@@ -60,21 +59,26 @@ class CaregiverPatientLink extends HiveObject {
     String? id,
     String? caregiverId,
     String? patientId,
+    DateTime? linkedAt,
+    String? patientEmail,
+    String? caregiverEmail,
     String? patientName,
-    String? patientPhotoUrl,
-    String? relationship,
-    DateTime? createdAt,
-    bool? isPrimary,
+    String? caregiverName,
   }) {
     return CaregiverPatientLink(
       id: id ?? this.id,
       caregiverId: caregiverId ?? this.caregiverId,
       patientId: patientId ?? this.patientId,
+      linkedAt: linkedAt ?? this.linkedAt,
+      patientEmail: patientEmail ?? this.patientEmail,
+      caregiverEmail: caregiverEmail ?? this.caregiverEmail,
       patientName: patientName ?? this.patientName,
-      patientPhotoUrl: patientPhotoUrl ?? this.patientPhotoUrl,
-      relationship: relationship ?? this.relationship,
-      createdAt: createdAt ?? this.createdAt,
-      isPrimary: isPrimary ?? this.isPrimary,
+      caregiverName: caregiverName ?? this.caregiverName,
     );
   }
+
+  /// Convenience getters for UI compatibility
+  bool get isPrimary => false;
+  String? get patientPhotoUrl => null;
+  String? get relationship => null;
 }

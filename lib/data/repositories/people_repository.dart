@@ -73,9 +73,7 @@ class PeopleRepository {
       // Or assume if local path provided during edit, it's new.
       // For simplicity, if photoUrl is null or different?
       // We'll trust the caller to clear photoUrl if replacing.
-      if (photoUrl == null) {
-        photoUrl = await _uploadPhoto(person.localPhotoPath!, person.id);
-      }
+      photoUrl ??= await _uploadPhoto(person.localPhotoPath!, person.id);
     }
 
     final updatedPerson = person.copyWith(

@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VoiceService {
@@ -17,7 +18,7 @@ class VoiceService {
       }
 
       final fileExt = filePath.split('.').last;
-      final fileName = '${reminderId}_voice.${fileExt}';
+      final fileName = '${reminderId}_voice.$fileExt';
       // Using reminderId_voice to avoid folders if possible, or use folders based on preference.
       // User asked for "bucket voice-reminders".
       // Let's use a flat structure or patientId folder?

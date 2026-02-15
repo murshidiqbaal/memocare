@@ -1,13 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../data/repositories/reminder_repository.dart';
+import '../../../../providers/auth_provider.dart';
 import '../../../../providers/service_providers.dart';
-// import 'package:audioplayers/audioplayers.dart'; // Or just_audio if desired, but VM might not play audio directly?
-// VM creates reminders. UI plays audio.
 
 class ReminderState {
   final List<Reminder> reminders;
@@ -34,24 +30,14 @@ class ReminderState {
       return r.remindAt.year == now.year &&
           r.remindAt.month == now.month &&
           r.remindAt.day == now.day &&
-          r.status !=
-              ReminderStatus
-                  .missed; // Or include missed? Prompt says "Today, Upcoming, Completed". Usually Today includes pending.
+          r.status != ReminderStatus.missed;
     }).toList();
   }
 
   List<Reminder> get upcomingReminders {
     final now = DateTime.now();
-    // upcoming means after today? or just future time?
-    // "Today" tab handles today. "Upcoming" usually means tomorrow onwards or later today?
-    // Let's say strictly after today for separation, or just future.
-    // Common pattern: Today = starts today. Upcoming = starts tomorrow onwards.
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
-    return reminders
-        .where((r) =>
-            r.remindAt.isAfter(tomorrow) &&
-            r.status != ReminderStatus.completed)
-        .toList();
+    return reminders.where((r) => r.remindAt.isAfter(tomorrow)).toList();
   }
 
   List<Reminder> get completedReminders {
@@ -63,113 +49,106 @@ class ReminderState {
 
 class ReminderViewModel extends StateNotifier<ReminderState> {
   final ReminderRepository _repository;
-  // final NotificationService _notificationService; // Injected via provider if needed, or we use specialized provider.
-  // Actually VM should coordinate.
   final Ref _ref;
+  final String? _userId;
 
-  ReminderViewModel(this._repository, this._ref) : super(ReminderState()) {
-    _loadReminders();
+  ReminderViewModel(this._repository, this._ref, this._userId)
+      : super(ReminderState()) {
+    if (_userId != null) {
+      _loadReminders();
+    }
   }
 
   Future<void> _loadReminders() async {
     state = state.copyWith(isLoading: true);
-    // TODO: Get real patient ID from helper/auth
-    // For now assuming a single user or handled by repo if it knew the user.
-    // But Repo method is `getReminders(patientId)`.
-    // We can't easily get auth state synchronously in constructor if it changes.
-    // But usually we init with a user ID.
-    // For demo, we might use a fixed ID or assume the Repo handles it if specialized.
-    // Let's just fetch dummy or empty for now.
-    // Or, better, observe the auth state in the provider definition.
-
-    // For now, load local:
     await _repository.init();
-    final reminders =
-        _repository.getReminders('currentUser'); // Replace with actual ID
-    state = state.copyWith(reminders: reminders, isLoading: false);
+    if (_userId != null) {
+      print('ReminderViewModel: Loading all reminders for user $_userId');
+      final reminders = _repository.getReminders(_userId);
+      print('ReminderViewModel: Loaded ${reminders.length} reminders.');
+      state = state.copyWith(reminders: reminders, isLoading: false);
+    } else {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
-  Future<void> refresh(String patientId) async {
+  Future<void> refresh() async {
+    if (_userId == null) return;
     state = state.copyWith(isLoading: true);
-    await _repository.syncReminders(patientId);
-    final reminders = _repository.getReminders(patientId);
+    await _repository.syncReminders(_userId);
+    final reminders = _repository.getReminders(_userId);
     state = state.copyWith(reminders: reminders, isLoading: false);
   }
 
   Future<void> addReminder(Reminder reminder) async {
-    state = state.copyWith(reminders: [...state.reminders, reminder]);
+    // state = state.copyWith(reminders: [...state.reminders, reminder]); // Optimistic
     await _repository.addReminder(reminder);
 
+    // Detailed logging
+    print('ReminderViewModel: Added reminder ${reminder.id}. Reloading...');
+
+    await _loadReminders(); // Reload from source of truth
+
     // Schedule Notification
-    final notifService = _ref.read(notificationServiceProvider);
+    final notifService = _ref.read(reminderNotificationServiceProvider);
     await notifService.scheduleReminder(reminder);
-
-    // If audio exists, sync is handled by Repo (it tries to upload/sync).
-    // But Repo logic in step 4 doesn't upload files designated by `localAudioPath` to Supabase Storage.
-    // It only inserts JSON.
-    // We need to upload the file separately if `localAudioPath` is present, then update `voiceAudioUrl`.
-
-    if (reminder.localAudioPath != null) {
-      await _uploadVoiceFile(reminder);
-    }
-  }
-
-  Future<void> _uploadVoiceFile(Reminder reminder) async {
-    try {
-      final file = File(reminder.localAudioPath!);
-      if (!file.existsSync()) return;
-
-      final path = 'voice-reminders/${reminder.patientId}/${reminder.id}.aac';
-
-      final supabase = _ref.read(supabaseClientProvider);
-
-      // Upload
-      await supabase.storage.from('voice_reminders').upload(path, file);
-
-      // Get URL
-      final url = supabase.storage.from('voice_reminders').getPublicUrl(path);
-
-      // Update Reminder
-      final updated = reminder.copyWith(voiceAudioUrl: url, isSynced: false);
-      // isSynced false because we just changed it and need to sync json again?
-      // Actually `addReminder` already tried to sync.
-      // We should update and sync again.
-      await updateReminder(updated);
-    } catch (e) {
-      print('Upload audio failed: $e');
-    }
   }
 
   Future<void> updateReminder(Reminder reminder) async {
     await _repository.updateReminder(reminder);
-    final notifService = _ref.read(notificationServiceProvider);
+    final notifService = _ref.read(reminderNotificationServiceProvider);
+
     // Reschedule
-    await notifService.cancelReminder(reminder.id);
-    if (reminder.status == ReminderStatus.pending) {
-      await notifService.scheduleReminder(reminder);
+    // Reschedule
+    try {
+      await notifService.cancelReminder(reminder);
+      if (reminder.status == ReminderStatus.pending) {
+        await notifService.scheduleReminder(reminder);
+      }
+    } catch (e) {
+      print('Notification rescheduling error: $e');
     }
 
-    // Update state
-    state = state.copyWith(
-      reminders: [
-        for (final r in state.reminders)
-          if (r.id == reminder.id) reminder else r
-      ],
-    );
+    // Refresh from Hive
+    await _loadReminders();
   }
 
   Future<void> deleteReminder(String id) async {
-    await _repository.deleteReminder(id);
-    final notifService = _ref.read(notificationServiceProvider);
-    await notifService.cancelReminder(id);
+    // 1. Find reminder to get correct notification ID for cancellation
+    final reminder = state.reminders.cast<Reminder?>().firstWhere(
+          (r) => r?.id == id,
+          orElse: () => null,
+        );
 
-    state = state.copyWith(
-      reminders: state.reminders.where((r) => r.id != id).toList(),
-    );
+    // 2. Cancel Notification
+    final notifService = _ref.read(reminderNotificationServiceProvider);
+    try {
+      if (reminder != null) {
+        await notifService.cancelReminder(reminder);
+      } else {
+        // Fallback if not in state (rare)
+        await notifService.cancelReminderById(id);
+      }
+    } catch (e) {
+      print('Notification cancel error: $e');
+    }
+
+    // 3. Delete from Repo
+    await _repository.deleteReminder(id);
+    await _loadReminders();
   }
 
   Future<void> markAsDone(String id) async {
-    final reminder = state.reminders.firstWhere((r) => r.id == id);
+    final reminder = state.reminders.firstWhere((r) => r.id == id,
+        orElse: () => Reminder(
+            id: 'error',
+            patientId: '',
+            title: '',
+            type: ReminderType.task,
+            remindAt: DateTime.now(),
+            createdAt: DateTime.now()));
+    if (reminder.id == 'error') return; // Not found
+
     final updated = reminder.copyWith(
       status: ReminderStatus.completed,
       completionHistory: [...reminder.completionHistory, DateTime.now()],
@@ -179,7 +158,8 @@ class ReminderViewModel extends StateNotifier<ReminderState> {
 }
 
 final reminderViewModelProvider =
-    StateNotifierProvider<ReminderViewModel, ReminderState>((ref) {
+    StateNotifierProvider.autoDispose<ReminderViewModel, ReminderState>((ref) {
   final repo = ref.watch(reminderRepositoryProvider);
-  return ReminderViewModel(repo, ref);
+  final user = ref.watch(currentUserProvider);
+  return ReminderViewModel(repo, ref, user?.id);
 });

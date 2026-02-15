@@ -30,13 +30,11 @@ class DashboardRepository {
 
     try {
       // Fetch from Supabase
-      final data = await _supabase.from('caregiver_patients').select('''
+      final data = await _supabase.from('caregiver_patient_links').select('''
             id,
             caregiver_id,
             patient_id,
-            relationship,
-            is_primary,
-            created_at,
+            linked_at,
             profiles!patient_id (
               full_name,
               avatar_url
@@ -52,10 +50,20 @@ class DashboardRepository {
           caregiverId: item['caregiver_id'],
           patientId: item['patient_id'],
           patientName: profile?['full_name'] ?? 'Unknown Patient',
-          patientPhotoUrl: profile?['avatar_url'],
-          relationship: item['relationship'],
-          isPrimary: item['is_primary'] ?? false,
-          createdAt: DateTime.parse(item['created_at']),
+          // patientPhotoUrl not in model but passed in constructor?
+          // Wait, CaregiverPatientLink model I saw earlier did NOT have patientPhotoUrl.
+          // Let me check the model again in thought.
+          // The model has: id, caregiverId, patientId, linkedAt, patientEmail, caregiverEmail, patientName, caregiverName.
+          // It does NOT have patientPhotoUrl.
+          // So I should remove patientPhotoUrl key from older code if it existed, or add it to model.
+          // The previous DashboardRepository code was:
+          // patientPhotoUrl: profile?['avatar_url'],
+          // relationship: item['relationship'],
+          // isPrimary: item['is_primary'] ?? false,
+          // createdAt: DateTime.parse(item['created_at']),
+
+          // I must match the NEW model constructor.
+          linkedAt: DateTime.parse(item['linked_at']),
         );
 
         links.add(link);
@@ -136,18 +144,18 @@ class DashboardRepository {
 
       // TODO: Fetch safe zone status from location_logs
       // For now, using mock data
-      final isInSafeZone = true;
-      final safeZoneBreaches = 0;
+      const isInSafeZone = true;
+      const safeZoneBreaches = 0;
 
       // TODO: Fetch journal entries
       // For now, using mock data
       final lastJournalEntry = now.subtract(const Duration(days: 2));
 
       // TODO: Fetch games played
-      final gamesPlayed = 5;
+      const gamesPlayed = 5;
 
       // Calculate memory journal consistency (mock)
-      final journalConsistency = 0.7;
+      const journalConsistency = 0.7;
 
       return DashboardStats(
         remindersCompleted: completed,

@@ -14,13 +14,15 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
     return Padding(
-      padding: padding ?? const EdgeInsets.only(bottom: 12),
+      padding: padding ?? EdgeInsets.only(bottom: 12 * scale),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
+        style: TextStyle(
+          fontSize: 18 * scale,
+          fontWeight: FontWeight.w500,
           color: Colors.black87,
           letterSpacing: -0.5,
         ),

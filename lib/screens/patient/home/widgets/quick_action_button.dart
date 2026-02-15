@@ -20,31 +20,37 @@ class QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12 * scale),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16 * scale),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.3), width: 2),
+            borderRadius: BorderRadius.circular(12 * scale),
+            border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 2), // Keep border width fixed
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 48, color: color),
-              const SizedBox(height: 12),
+              Icon(icon, size: 48 * scale, color: color),
+              SizedBox(height: 12 * scale),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16 * scale,
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

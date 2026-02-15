@@ -36,12 +36,7 @@ class TimeContextHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.teal.shade50.withOpacity(0.3),
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.teal.shade100,
-            width: 1,
-          ),
-        ),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +46,7 @@ class TimeContextHeader extends StatelessWidget {
             '$greeting, $name',
             style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: Colors.grey.shade800,
               letterSpacing: -0.5,
             ),

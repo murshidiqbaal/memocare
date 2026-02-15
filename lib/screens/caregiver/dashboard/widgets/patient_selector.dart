@@ -79,7 +79,10 @@ class PatientSelector extends StatelessWidget {
                         : null,
                     child: patient.patientPhotoUrl == null
                         ? Text(
-                            patient.patientName[0].toUpperCase(),
+                            (patient.patientName != null &&
+                                    patient.patientName!.isNotEmpty)
+                                ? patient.patientName![0].toUpperCase()
+                                : 'P',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -95,7 +98,7 @@ class PatientSelector extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          patient.patientName,
+                          patient.patientName ?? 'Unknown Patient',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

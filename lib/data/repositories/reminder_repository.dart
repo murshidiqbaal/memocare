@@ -14,20 +14,39 @@ class ReminderRepository {
 
   Future<void> init() async {
     if (_isInit) return;
-    // Adapters are registered in main.dart usually, but we can check here
-    // However, Hive initialization is async and best done at app start.
-    // Assuming generated adapters are registered.
-    _box = await Hive.openBox<Reminder>('reminders');
-    _isInit = true;
+    try {
+      _box = await Hive.openBox<Reminder>('reminders_box');
+      _isInit = true;
+      print('Hive initialized. Box: reminders_box, Open: ${_box.isOpen}');
+    } catch (e) {
+      print('Error opening Hive box: $e');
+    }
   }
 
   List<Reminder> getReminders(String patientId) {
-    if (!_isInit) return [];
-    return _box.values.where((r) => r.patientId == patientId).toList()
-      ..sort((a, b) => a.remindAt.compareTo(b.remindAt));
+    if (!_isInit) {
+      print('ReminderRepository not initialized');
+      return [];
+    }
+    final all = _box.values.toList();
+    final unique = all.toSet().toList(); // Dedup just in case
+    final filtered = unique.where((r) => r.patientId == patientId).toList();
+
+    // Sort: Pending first, then by time
+    filtered.sort((a, b) {
+      if (a.status != b.status) {
+        return a.status == ReminderStatus.pending ? -1 : 1;
+      }
+      return a.remindAt.compareTo(b.remindAt);
+    });
+
+    print(
+        'ReminderRepository: Loaded ${filtered.length} reminders for patient $patientId (Total in box: ${all.length})');
+    return filtered;
   }
 
   Future<void> addReminder(Reminder reminder) async {
+    if (!_isInit) await init();
     // Save to Hive first (Offline-first)
     await _box.put(reminder.id, reminder.copyWith(isSynced: false));
 
@@ -56,6 +75,7 @@ class ReminderRepository {
   }
 
   Future<void> updateReminder(Reminder reminder) async {
+    if (!_isInit) await init();
     await _box.put(reminder.id, reminder.copyWith(isSynced: false));
 
     // Try to upload audio if changed
@@ -88,6 +108,7 @@ class ReminderRepository {
   }
 
   Future<void> deleteReminder(String id) async {
+    if (!_isInit) await init();
     await _box.delete(id);
     try {
       await _supabase.from('reminders').delete().eq('id', id);
@@ -98,6 +119,7 @@ class ReminderRepository {
   }
 
   Future<void> markAsDone(String id) async {
+    if (!_isInit) await init();
     final reminder = _box.get(id);
     if (reminder != null) {
       final updated = reminder.copyWith(
@@ -148,11 +170,20 @@ class ReminderRepository {
       final List<dynamic> data = response;
       for (var json in data) {
         final remoteReminder = Reminder.fromJson(json);
-        // Local might have newer unsynced changes?
+
+        // Preserve local notification ID or generate new
+        final existing = _box.get(remoteReminder.id);
+        final stableId = existing?.notificationId ??
+            DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
+
         // Strategy: "Server Wins" for conflict or "Last Write Wins" based on timestamps.
-        // For now, simpler: Accept server state as truth for sync pass.
+        // For now, simpler: Accept server state as truth for sync pass but keep stable ID.
         await _box.put(
-            remoteReminder.id, remoteReminder.copyWith(isSynced: true));
+            remoteReminder.id,
+            remoteReminder.copyWith(
+              isSynced: true,
+              notificationId: stableId,
+            ));
       }
     } catch (e) {
       print('Sync fetch failed: $e');

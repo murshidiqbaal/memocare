@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/caregiver_patient_link.dart';
+import 'data/models/patient_profile.dart';
 import 'data/models/reminder.dart';
 import 'data/models/voice_query.dart';
 import 'providers/service_providers.dart';
@@ -30,10 +31,13 @@ void main() async {
   Hive.registerAdapter(ReminderStatusAdapter());
   Hive.registerAdapter(VoiceQueryAdapter());
   Hive.registerAdapter(CaregiverPatientLinkAdapter());
+  Hive.registerAdapter(PatientProfileAdapter());
+
+  await Hive.openBox<PatientProfile>('patient_profiles');
 
   final container = ProviderContainer();
   // Initialize Notification Service early
-  await container.read(notificationServiceProvider).init();
+  await container.read(reminderNotificationServiceProvider).init();
 
   runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
 }

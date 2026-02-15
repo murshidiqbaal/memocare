@@ -34,13 +34,14 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       isSnoozed: fields[14] as bool,
       snoozeDurationMinutes: fields[15] as int?,
       lastSnoozedAt: fields[16] as DateTime?,
+      notificationId: fields[17] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Reminder obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -74,7 +75,9 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       ..writeByte(15)
       ..write(obj.snoozeDurationMinutes)
       ..writeByte(16)
-      ..write(obj.lastSnoozedAt);
+      ..write(obj.lastSnoozedAt)
+      ..writeByte(17)
+      ..write(obj.notificationId);
   }
 
   @override

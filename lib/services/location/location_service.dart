@@ -151,10 +151,10 @@ class LocationTrackingService {
         NotificationDetails(android: androidDetails);
 
     await _localNotifications.show(
-      999,
-      '⚠ Safe Zone Exit Detected',
-      'It seems you have left the safe zone. Caregiver notified.',
-      platformDetails,
+      id: 999,
+      title: '⚠ Safe Zone Exit Detected',
+      body: 'It seems you have left the safe zone. Caregiver notified.',
+      notificationDetails: platformDetails,
     );
   }
 }

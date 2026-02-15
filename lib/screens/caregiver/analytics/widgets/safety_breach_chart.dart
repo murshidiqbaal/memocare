@@ -72,7 +72,7 @@ class SafetyBreachChart extends StatelessWidget {
                             return Container();
                         }
                         return SideTitleWidget(
-                          axisSide: meta.axisSide,
+                          meta: meta,
                           space: 4.0,
                           child: Text(text, style: style),
                         );

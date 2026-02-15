@@ -1,289 +1,219 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-import '../../../models/user/caregiver_profile.dart';
+import '../../../data/models/caregiver.dart';
+import '../../../data/models/patient.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/caregiver_patients_provider.dart';
+import '../../../providers/caregiver_profile_provider.dart';
+import '../patients/caregiver_patients_screen.dart';
 import 'edit_caregiver_profile_screen.dart';
-import 'viewmodels/caregiver_profile_viewmodel.dart';
 
 class CaregiverProfileScreen extends ConsumerWidget {
   const CaregiverProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final caregiverProfileAsync = ref.watch(caregiverProfileViewModelProvider);
-    final theme = Theme.of(context);
+    final profileAsync = ref.watch(caregiverProfileProvider);
+    final patientsAsync = ref.watch(connectedPatientsStreamProvider);
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: caregiverProfileAsync.when(
-        data: (profile) {
-          if (profile == null) {
-            return _buildCreateProfileView(context);
-          }
-
-          return CustomScrollView(
-            slivers: [
-              _buildSliverAppBar(context, profile, ref),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildStatsRow(context),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Caregiving Info',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildInfoTile(
-                        icon: Icons.person_outline,
-                        label: 'Full Name',
-                        value: profile.fullName,
-                      ),
-                      _buildInfoTile(
-                        icon: Icons.phone_outlined,
-                        label: 'Phone',
-                        value: profile.phoneNumber,
-                      ),
-                      _buildInfoTile(
-                        icon: Icons.favorite_border,
-                        label: 'Relationship',
-                        value: profile.relationship,
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Actions',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildMenuTile(
-                        context,
-                        icon: Icons.edit_outlined,
-                        title: 'Edit Profile',
-                        subtitle: 'Update your details',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditCaregiverProfileScreen(
-                                initialProfile: profile,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildMenuTile(
-                        context,
-                        icon: Icons.people_outline,
-                        title: 'My Patients',
-                        subtitle: 'Manage patient profiles & access',
-                        onTap: () {},
-                      ),
-                      _buildMenuTile(
-                        context,
-                        icon: Icons.person_add_outlined,
-                        title: 'Add New Patient',
-                        subtitle: 'Connect with a loved one',
-                        onTap: () {},
-                      ),
-                      const SizedBox(height: 24),
-                      _buildLogoutButton(context, ref),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+      appBar: AppBar(
+        title: const Text('My Profile'),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              final profile = profileAsync.valueOrNull;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      EditCaregiverProfileScreen(existingProfile: profile),
                 ),
-              ),
-            ],
-          );
+              );
+            },
+          ),
+        ],
+      ),
+      body: profileAsync.when(
+        data: (caregiver) {
+          if (caregiver == null) {
+            return _buildEmptyProfile(context);
+          }
+          return _buildProfileContent(
+              context, ref, caregiver, patientsAsync, userProfile?.fullName);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Error loading profile: $e'),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  ref.refresh(caregiverProfileViewModelProvider);
-                },
-                child: const Text('Retry'),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) context.go('/login');
-                },
-                child: const Text('Logout'),
-              ),
-            ],
-          ),
-        ),
+        error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
   }
 
-  Widget _buildCreateProfileView(BuildContext context) {
+  Widget _buildEmptyProfile(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.account_circle, size: 80, color: Colors.grey),
+          Icon(Icons.person_outline, size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           const Text(
-            'No Profile Found',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Please create your caregiver profile to continue.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            'No profile found',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
+          ElevatedButton(
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const EditCaregiverProfileScreen()),
+                  builder: (context) => const EditCaregiverProfileScreen(),
+                ),
               );
             },
-            icon: const Icon(Icons.add),
-            label: const Text('Create Profile'),
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
+            child: const Text('Create Profile'),
           ),
-          const SizedBox(height: 24),
-          Consumer(builder: (context, ref, _) {
-            return TextButton(
-                onPressed: () async {
-                  await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) context.go('/login');
-                },
-                child: const Text('Logout'));
-          })
         ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar(
-      BuildContext context, CaregiverProfile profile, WidgetRef ref) {
-    return SliverAppBar(
-      expandedHeight: 280,
-      pinned: true,
-      backgroundColor: Theme.of(context).primaryColor,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Theme.of(context).primaryColor,
-                Theme.of(context).primaryColor.withOpacity(0.8),
-              ],
+  Widget _buildProfileContent(
+    BuildContext context,
+    WidgetRef ref,
+    Caregiver caregiver,
+    AsyncValue<List<Patient>> patientsAsync,
+    String? authFullName,
+  ) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24 * scale),
+      child: Column(
+        children: [
+          // Profile Photo
+          Hero(
+            tag: 'caregiver_avatar',
+            child: Container(
+              width: 140 * scale,
+              height: 140 * scale,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.teal.shade50,
+                border: Border.all(color: Colors.teal.shade200, width: 4),
+                image: caregiver.profilePhotoUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(caregiver.profilePhotoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: caregiver.profilePhotoUrl == null
+                  ? Icon(Icons.person,
+                      size: 70 * scale, color: Colors.teal.shade400)
+                  : null,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          SizedBox(height: 16 * scale),
+
+          // Full Name
+          Text(
+            caregiver.fullName ?? authFullName ?? 'Caregiver',
+            style: TextStyle(
+              fontSize: 24 * scale,
+              fontWeight: FontWeight.bold,
+              color: Colors.teal.shade900,
+            ),
+          ),
+          SizedBox(height: 8 * scale),
+          Text(
+            caregiver.relationship ?? 'Family Member',
+            style: TextStyle(
+              fontSize: 16 * scale,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          SizedBox(height: 32 * scale),
+
+          // Stats / Quick Info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              const SizedBox(height: 40),
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.white,
-                    backgroundImage: profile.photoUrl != null
-                        ? NetworkImage(profile.photoUrl!)
-                        : null,
-                    child: profile.photoUrl == null
-                        ? Text(
-                            profile.fullName.substring(0, 1).toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          )
-                        : null,
-                  ),
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditCaregiverProfileScreen(
-                            initialProfile: profile,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.edit,
-                        size: 20,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ),
-                ],
+              _buildStatCard(
+                'Patients',
+                patientsAsync.when(
+                  data: (p) => p.length.toString(),
+                  loading: () => '...',
+                  error: (_, __) => '0',
+                ),
+                Icons.people_outline,
+                scale,
               ),
-              const SizedBox(height: 16),
-              Text(
-                profile.fullName,
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  profile.relationship,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              _buildStatCard(
+                'Status',
+                caregiver.notificationEnabled ? 'Active' : 'Muted',
+                caregiver.notificationEnabled
+                    ? Icons.notifications_active
+                    : Icons.notifications_off,
+                scale,
+                color:
+                    caregiver.notificationEnabled ? Colors.teal : Colors.orange,
               ),
             ],
           ),
-        ),
+          SizedBox(height: 32 * scale),
+
+          // Details List
+          _buildInfoRow(
+              Icons.phone, 'Phone', caregiver.phone ?? 'Not set', scale),
+          _buildInfoRow(Icons.family_restroom, 'Relationship',
+              caregiver.relationship ?? 'Not set', scale),
+          _buildInfoRow(Icons.sync, 'Auto-Sync', 'Enabled', scale),
+          const Divider(height: 48),
+
+          // Actions
+          _buildActionButton(
+            'Manage Patients',
+            Icons.manage_accounts,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const CaregiverPatientsScreen()),
+              );
+            },
+            scale,
+          ),
+          SizedBox(height: 16 * scale),
+          _buildActionButton(
+            'Sign Out',
+            Icons.logout,
+            () => ref.read(authControllerProvider.notifier).signOut(),
+            scale,
+            color: Colors.red.shade400,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatsRow(BuildContext context) {
+  Widget _buildStatCard(String label, String value, IconData icon, double scale,
+      {Color? color}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: 150 * scale,
+      padding: EdgeInsets.all(16 * scale),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -295,161 +225,78 @@ class CaregiverProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _buildStatItem(context, '2', 'Patients'),
-          _buildVerticalDivider(),
-          _buildStatItem(context, '14', 'Reminders'),
-          _buildVerticalDivider(),
-          _buildStatItem(context, '98%', 'Safety Score'),
+          Icon(icon, color: color ?? Colors.teal, size: 28 * scale),
+          SizedBox(height: 12 * scale),
+          Text(
+            value,
+            style: TextStyle(fontSize: 20 * scale, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 14 * scale, color: Colors.grey.shade600),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 40,
-      width: 1,
-      color: Colors.grey.shade200,
-    );
-  }
-
-  Widget _buildStatItem(BuildContext context, String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMenuTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildInfoRow(
+      IconData icon, String label, String value, double scale) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 5,
-                offset: const Offset(0, 2))
-          ],
-        ),
-        child: ListTile(
-          onTap: onTap,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Theme.of(context).primaryColor),
+      padding: EdgeInsets.symmetric(vertical: 12 * scale),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.teal.shade300, size: 24 * scale),
+          SizedBox(width: 16 * scale),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(
+                      color: Colors.grey.shade600, fontSize: 13 * scale)),
+              Text(value,
+                  style: TextStyle(
+                      fontSize: 16 * scale, fontWeight: FontWeight.w600)),
+            ],
           ),
-          title: Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: GoogleFonts.outfit(
-              color: Colors.grey.shade500,
-              fontSize: 13,
-            ),
-          ),
-          trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.grey.shade400, size: 24),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                Text(value,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () async {
-          await ref.read(authControllerProvider.notifier).signOut();
-          if (context.mounted) {
-            context.go('/login');
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade50,
-          foregroundColor: Colors.red,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
+  Widget _buildActionButton(
+      String label, IconData icon, VoidCallback onTap, double scale,
+      {Color? color}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+              horizontal: 20 * scale, vertical: 16 * scale),
+          decoration: BoxDecoration(
+            border: Border.all(color: (color ?? Colors.teal).withOpacity(0.2)),
             borderRadius: BorderRadius.circular(16),
           ),
-        ),
-        child: Text(
-          'Log Out',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+          child: Row(
+            children: [
+              Icon(icon, color: color ?? Colors.teal, size: 24 * scale),
+              SizedBox(width: 16 * scale),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16 * scale,
+                  fontWeight: FontWeight.w600,
+                  color: color ?? Colors.teal.shade800,
+                ),
+              ),
+              const Spacer(),
+              Icon(Icons.chevron_right,
+                  color: Colors.grey.shade400, size: 20 * scale),
+            ],
           ),
         ),
       ),

@@ -121,10 +121,9 @@ class CaregiverReminderCard extends StatelessWidget {
                       ),
                     ),
                     if (reminder.isSnoozed) // Assuming isSnoozed boolean exists
-                      Text(
+                      const Text(
                         ' • Snoozed',
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                   ],
                 ),

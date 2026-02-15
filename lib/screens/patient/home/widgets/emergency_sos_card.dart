@@ -17,26 +17,30 @@ class EmergencySOSCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.of(context).size.width / 375.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(12 * scale),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: EdgeInsets.symmetric(
+              horizontal: 24 * scale, vertical: 20 * scale),
           decoration: BoxDecoration(
             color: Colors.red.shade50,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(12 * scale),
             border: Border.all(
               color: Colors.red.shade300,
-              width: 2,
+              width:
+                  2, // Border width usually safe to keep fixed or minimal scaling
             ),
             boxShadow: [
               BoxShadow(
                 color: Colors.red.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                blurRadius: 12 * scale,
+                offset: Offset(0, 4 * scale),
               ),
             ],
           ),
@@ -44,19 +48,19 @@ class EmergencySOSCard extends StatelessWidget {
             children: [
               // Emergency Icon
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.all(14 * scale),
                 decoration: BoxDecoration(
                   color: Colors.red.shade100,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.sos,
-                  size: 36,
+                  size: 36 * scale,
                   color: Colors.red.shade700,
                 ),
               ),
 
-              const SizedBox(width: 20),
+              SizedBox(width: 20 * scale),
 
               // Emergency Text
               Expanded(
@@ -66,17 +70,17 @@ class EmergencySOSCard extends StatelessWidget {
                     Text(
                       'Emergency Help',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 20 * scale,
                         fontWeight: FontWeight.bold,
                         color: Colors.red.shade900,
                         letterSpacing: -0.3,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4 * scale),
                     Text(
                       'Tap to alert your caregiver',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 15 * scale,
                         fontWeight: FontWeight.w500,
                         color: Colors.red.shade700,
                       ),
@@ -88,7 +92,7 @@ class EmergencySOSCard extends StatelessWidget {
               // Arrow indicator
               Icon(
                 Icons.arrow_forward_ios_rounded,
-                size: 20,
+                size: 20 * scale,
                 color: Colors.red.shade600,
               ),
             ],

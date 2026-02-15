@@ -16,21 +16,21 @@ class NotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    final DarwinInitializationSettings initializationSettingsIOS =
+    const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
       requestAlertPermission: true,
     );
 
-    final InitializationSettings initializationSettings =
+    const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
     );
 
     await _notificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
   }
@@ -45,37 +45,30 @@ class NotificationService {
 
   Future<void> scheduleReminder(Reminder reminder) async {
     await _notificationsPlugin.zonedSchedule(
-      reminder.hashCode,
-      'Reminder: ${reminder.title}',
-      reminder.type == ReminderType.medication
+      id: reminder.hashCode, // Named 'id'
+      title: 'Reminder: ${reminder.title}', // Named 'title'
+      body: reminder.type == ReminderType.medication
           ? 'Time for your medication'
-          : 'You have a ${reminder.type.name} now',
-      tz.TZDateTime.from(reminder.remindAt, tz.local),
-      const NotificationDetails(
+          : 'You have a ${reminder.type.name} now', // Named 'body'
+      scheduledDate: tz.TZDateTime.from(
+          reminder.remindAt, tz.local), // Named 'scheduledDate'
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'reminder_channel',
           'Reminders',
           channelDescription: 'High priority alerts for reminders',
           importance: Importance.max,
           priority: Priority.high,
-          fullScreenIntent: true, // Important for "Alarm" style behavior
-          sound: RawResourceAndroidNotificationSound('gentle_alert'),
-          // actions: [
-          //   AndroidNotificationAction('done', 'Mark as Done'),
-          //   AndroidNotificationAction('snooze', 'Snooze 10m'),
-          // ],
+          fullScreenIntent: true,
           styleInformation: BigTextStyleInformation(''),
         ),
         iOS: DarwinNotificationDetails(
-          sound: 'gentle_alert.aiff',
           presentSound: true,
           presentAlert: true,
           presentBadge: true,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: _getMatchComponents(reminder.repeatRule),
       payload: reminder.id,
     );
@@ -94,11 +87,7 @@ class NotificationService {
   }
 
   Future<void> cancelReminder(String id) async {
-    // We used hashCode as ID. Ideally we should map string ID to int ID.
-    // For now, assuming hashCode is stable enough for this demo or we store the simple int ID.
-    // Better: maintain a map or use a hash of the UUID.
-    // However, string.hashCode isn't guaranteed stable across runs in some envs, but in Dart it's okay for runtime. For persistent scheduling, integer ID is better.
-    // Let's use a stable hash for the string ID.
-    await _notificationsPlugin.cancel(id.hashCode);
+    // Using hashCode as ID as per implementation
+    await _notificationsPlugin.cancel(id: id.hashCode);
   }
 }

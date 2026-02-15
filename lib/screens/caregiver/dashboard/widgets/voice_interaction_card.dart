@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../../data/models/voice_query.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../../data/models/voice_query.dart';
 
 /// Voice Interaction Monitoring Card
 /// Shows recent patient voice questions and AI responses
@@ -94,7 +95,7 @@ class VoiceInteractionCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _VoiceInteractionItem(interaction: interaction),
               );
-            }).toList(),
+            }),
 
           // Last interaction time
           if (recentInteractions.isNotEmpty)

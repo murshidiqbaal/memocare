@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../core/errors/failures.dart';
 import '../../models/user/caregiver_profile.dart';
@@ -35,7 +34,7 @@ class CaregiverProfileRepository {
         // The prompt says: "If profile does NOT exist: Show empty create-profile form"
         // So we can return a specific failure that the UI handles, or null.
         // Let's return a specific failure for "NotFound".
-        return Left(const ServerFailure('Profile not found'));
+        return const Left(ServerFailure('Profile not found'));
       }
 
       final profile = CaregiverProfile.fromJson(response);

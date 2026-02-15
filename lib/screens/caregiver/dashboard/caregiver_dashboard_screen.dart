@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../memories/caregiver_memories_screen.dart';
+import '../patients/caregiver_patients_screen.dart';
 import '../profile/caregiver_profile_screen.dart';
 import '../reminders/caregiver_reminders_screen.dart';
 import 'caregiver_dashboard_tab.dart';
@@ -19,7 +21,8 @@ class _CaregiverDashboardScreenState
 
   final List<Widget> _screens = [
     const CaregiverDashboardTab(),
-    const Center(child: Text('Memories Review')),
+    const CaregiverPatientsScreen(),
+    const CaregiverMemoriesScreen(),
     const CaregiverRemindersScreen(),
     const CaregiverProfileScreen(),
   ];
@@ -46,6 +49,11 @@ class _CaregiverDashboardScreenState
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: Colors.teal),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people, color: Colors.teal),
+            label: 'Patients',
           ),
           NavigationDestination(
             icon: Icon(Icons.photo_library_outlined),

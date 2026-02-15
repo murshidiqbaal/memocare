@@ -4,6 +4,7 @@ class InviteCode {
   final String code;
   final DateTime expiresAt;
   final bool isUsed;
+  final DateTime createdAt;
 
   InviteCode({
     required this.id,
@@ -11,6 +12,7 @@ class InviteCode {
     required this.code,
     required this.expiresAt,
     this.isUsed = false,
+    required this.createdAt,
   });
 
   factory InviteCode.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class InviteCode {
       code: json['code'],
       expiresAt: DateTime.parse(json['expires_at']),
       isUsed: json['used'] ?? false,
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 
