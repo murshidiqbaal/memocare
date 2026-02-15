@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/models/caregiver_patient_link.dart';
+import '../../../data/models/caregiver.dart';
 import '../../../providers/connection_providers.dart';
 
 class PatientConnectionsScreen extends ConsumerWidget {
@@ -52,7 +52,7 @@ class PatientConnectionsScreen extends ConsumerWidget {
 }
 
 class _CaregiverCard extends StatelessWidget {
-  final CaregiverPatientLink caregiver;
+  final Caregiver caregiver;
 
   const _CaregiverCard({required this.caregiver});
 
@@ -63,14 +63,19 @@ class _CaregiverCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: const CircleAvatar(
-          child: Icon(Icons.person),
+        leading: CircleAvatar(
+          backgroundImage: caregiver.profilePhotoUrl != null
+              ? NetworkImage(caregiver.profilePhotoUrl!)
+              : null,
+          child: caregiver.profilePhotoUrl == null
+              ? const Icon(Icons.person)
+              : null,
         ),
         title: Text(
-          caregiver.caregiverName ?? 'Unknown',
+          caregiver.fullName ?? 'Unknown Caregiver',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(caregiver.caregiverEmail ?? ''),
+        subtitle: Text(caregiver.phone ?? 'No phone number'),
         trailing: const Icon(Icons.chevron_right),
       ),
     );

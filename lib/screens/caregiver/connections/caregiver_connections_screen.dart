@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/models/caregiver_patient_link.dart';
+import '../../../data/models/patient.dart';
 import '../../../providers/connection_providers.dart';
+import '../../../providers/service_providers.dart';
 import '../../patient/profile/patient_profile_screen.dart';
 
 class CaregiverConnectionsScreen extends ConsumerWidget {
@@ -58,7 +59,7 @@ class CaregiverConnectionsScreen extends ConsumerWidget {
   void _showInviteDialog(BuildContext context, WidgetRef ref) {
     final codeController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    final repository = ref.read(connectionRepositoryProvider);
+    final repository = ref.read(patientConnectionRepositoryProvider);
 
     // State for loading/error handled locally for simplicity in dialog
     // Ideally use a StateProvider or Controller
@@ -116,7 +117,7 @@ class CaregiverConnectionsScreen extends ConsumerWidget {
                     setState(() => isLoading = true);
                     try {
                       await repository
-                          .connectToPatient(codeController.text.trim());
+                          .connectUsingInviteCode(codeController.text.trim());
 
                       // Refresh the list
                       ref.invalidate(linkedPatientsProvider);
@@ -155,7 +156,7 @@ class CaregiverConnectionsScreen extends ConsumerWidget {
 }
 
 class _PatientCard extends StatelessWidget {
-  final CaregiverPatientLink patient;
+  final Patient patient;
 
   const _PatientCard({required this.patient});
 
@@ -167,21 +168,25 @@ class _PatientCard extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
+          backgroundImage: patient.profilePhotoUrl != null
+              ? NetworkImage(patient.profilePhotoUrl!)
+              : null,
           backgroundColor: Colors.teal.shade100,
-          child: const Icon(Icons.person, color: Colors.teal),
+          child: patient.profilePhotoUrl == null
+              ? const Icon(Icons.person, color: Colors.teal)
+              : null,
         ),
         title: Text(
-          patient.patientName ?? 'Unknown',
+          patient.fullName ?? 'Unknown',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: Text(patient.patientEmail ?? ''),
+        subtitle: Text(patient.gender ?? ''),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  PatientProfileScreen(patientId: patient.patientId),
+              builder: (_) => PatientProfileScreen(patientId: patient.id),
             ),
           );
         },

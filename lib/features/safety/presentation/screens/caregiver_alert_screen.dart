@@ -52,11 +52,16 @@ class CaregiverAlertScreen extends ConsumerWidget {
               final alert = alerts[index];
 
               // Find patient name from linked patients list
-              final patientName = linkedPatients.value
-                      ?.firstWhere(
-                        (p) => p.patientId == alert.patientId,
+              // linkedPatients is AsyncValue<List<Patient>>
+              final patientName = linkedPatients.valueOrNull
+                      ?.cast<
+                          dynamic>() // Use dynamic cast if type is confused or just ensure iterable
+                      .firstWhere(
+                        (p) =>
+                            p.id == alert.patientId, // Patient model uses 'id'
+                        orElse: () => null,
                       )
-                      .patientName ??
+                      ?.fullName ?? // Patient model uses 'fullName'
                   'Unknown Patient';
 
               return _buildAlertCard(context, alert, patientName);

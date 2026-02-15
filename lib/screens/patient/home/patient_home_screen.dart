@@ -6,6 +6,8 @@ import 'package:dementia_care_app/screens/patient/memories/memories_screen.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../providers/emergency_alert_provider.dart';
+import '../../../widgets/sos_countdown_content.dart';
 import '../profile/patient_profile_screen.dart';
 import 'patient_dashboard_tab.dart';
 
@@ -22,8 +24,8 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
     return CurvedNavBar(
       actionButton: CurvedActionBar(
         onTab: (value) {
-          // Handle FAB tap if needed, usually switches to actionBarView
-          debugPrint('FAB Tapped: $value');
+          // Trigger the 5-second countdown when SOS mode is activated
+          ref.read(emergencySOSControllerProvider.notifier).startCountdown();
         },
         activeIcon: Container(
           padding: const EdgeInsets.all(8),
@@ -77,28 +79,24 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
         PatientProfileScreen(),
       ],
       actionBarView: Container(
-        color: Colors.red.shade50,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.warning_amber_rounded,
-                  size: 80, color: Colors.red),
-              const SizedBox(height: 20),
-              Text(
-                'EMERGENCY MODE',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.red.shade900,
-                      fontWeight: FontWeight.bold,
-                    ),
+        color: Colors.red.shade900,
+        child: SOSCountdownContent(
+          onCancel: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Tap any tab to return'),
+                duration: Duration(seconds: 2),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                'Calling Caregiver...',
-                style: TextStyle(fontSize: 20),
+            );
+          },
+          onClose: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Tap any tab to return'),
+                duration: Duration(seconds: 2),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

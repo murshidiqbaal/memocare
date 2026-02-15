@@ -1,15 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/caregiver.dart';
 import '../data/repositories/caregiver_repository.dart';
+import 'service_providers.dart'; // Add import to access the provider
 
-/// Provider for the Caregiver Repository
-final caregiverRepositoryProvider = Provider<CaregiverRepository>((ref) {
-  return CaregiverRepository(Supabase.instance.client);
-});
+// Provider is now in service_providers.dart
 
 /// Async Provider for the Caregiver Profile
 final caregiverProfileProvider =

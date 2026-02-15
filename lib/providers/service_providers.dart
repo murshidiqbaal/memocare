@@ -3,11 +3,14 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/patient_profile.dart';
+import '../data/repositories/caregiver_repository.dart';
 import '../data/repositories/dashboard_repository.dart';
 import '../data/repositories/memory_repository.dart';
+import '../data/repositories/patient_connection_repository.dart';
 import '../data/repositories/patient_profile_repository.dart';
 import '../data/repositories/people_repository.dart';
 import '../data/repositories/reminder_repository.dart';
+import '../data/repositories/safety_repository.dart'; // Added
 import '../data/repositories/voice_assistant_repository.dart';
 import '../services/audio/voice_playback_service.dart';
 import '../services/memory_query_engine.dart';
@@ -81,4 +84,20 @@ final patientProfileRepositoryProvider =
   final supabase = ref.watch(supabaseClientProvider);
   final box = Hive.box<PatientProfile>('patient_profiles');
   return PatientProfileRepository(supabase, box);
+});
+
+final patientConnectionRepositoryProvider =
+    Provider<PatientConnectionRepository>((ref) {
+  final supabase = ref.watch(supabaseClientProvider);
+  return PatientConnectionRepository(supabase);
+});
+
+final caregiverRepositoryProvider = Provider<CaregiverRepository>((ref) {
+  final supabase = ref.watch(supabaseClientProvider);
+  return CaregiverRepository(supabase);
+});
+
+final safetyRepositoryProvider = Provider<SafetyRepository>((ref) {
+  final supabase = ref.watch(supabaseClientProvider);
+  return SafetyRepository(supabase);
 });

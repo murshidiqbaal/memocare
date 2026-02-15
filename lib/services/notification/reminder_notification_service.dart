@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:flutter/material.dart'; // Add for Color
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -246,8 +247,48 @@ class ReminderNotificationService {
 
   // Overload for cancelling by ID string (legacy/fallback)
   Future<void> cancelReminderById(String reminderId) async {
-    await _notificationsPlugin.cancel(
-        id: reminderId.hashCode); // Corrected Named Arg
+    await _notificationsPlugin.cancel(id: reminderId.hashCode);
+  }
+
+  Future<void> cancelNotification(int id) async {
+    await _notificationsPlugin.cancel(id: id);
+  }
+
+  Future<void> showEmergencyNotification({
+    required String title,
+    required String body,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'emergency_channel',
+      'Emergency Alerts',
+      channelDescription: 'Critical alerts for SOS and safety events',
+      importance: Importance.max,
+      priority: Priority.max,
+      fullScreenIntent: true,
+      category: AndroidNotificationCategory.alarm,
+      color: const Color(0xFFFF0000), // Red
+      playSound: true,
+      enableVibration: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentSound: true,
+      presentAlert: true,
+      presentBadge: true,
+      interruptionLevel: InterruptionLevel.critical,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notificationsPlugin.show(
+      id: 99999,
+      title: title,
+      body: body,
+      notificationDetails: details,
+    );
   }
 
   /// Cancel all reminders

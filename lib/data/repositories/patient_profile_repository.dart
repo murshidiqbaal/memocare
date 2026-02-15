@@ -22,7 +22,7 @@ class PatientProfileRepository {
       // A. Get base profile (full_name, phone_number)
       final profileResponse = await _supabase
           .from('profiles')
-          .select('full_name, phone_number')
+          .select('full_name, phone_number, avatar_url, profile_photo_url')
           .eq('id', userId)
           .maybeSingle();
 
@@ -37,6 +37,28 @@ class PatientProfileRepository {
           .eq('id', userId)
           .maybeSingle();
 
+      // Prioritize patient table URL, then profiles table URL, then fallback to bucket
+      String? photoUrl = patientResponse?['profile_photo_url'];
+
+      // If null, check profiles table (might use avatar_url or profile_photo_url)
+      if (photoUrl == null) {
+        // Re-fetch or rely on the initial fetch if we included it
+        // Initial fetch: .select('full_name, phone_number') -> let's expand it
+        // But we can just use another query if needed, or expand the initial one above.
+        // Let's assume we expand the initial query in a moment.
+        // Actually, let's just do it here.
+
+        // Expanding the initial query above:
+        // final profileResponse = await _supabase.from('profiles').select('full_name, phone_number, avatar_url, profile_photo_url')...
+
+        // Since I can't edit previous lines in this Replace block easily without expanding context,
+        // I will assume I modify the initial query too.
+
+        // Wait, let's use the fetched profileResponse.
+        // However, I need to know keys.
+        // Let's use getPublicUrl as final fallback.
+      }
+
       // 3. Merge the data
       final Map<String, dynamic> mergedData = {
         'id': userId,
@@ -44,12 +66,34 @@ class PatientProfileRepository {
         'phone_number': profileResponse['phone_number'],
       };
 
+      // Helper to try keys in order
+      String? findPhotoUrl(Map<String, dynamic>? data) {
+        if (data == null) return null;
+        return data['profile_photo_url'] ?? data['avatar_url'];
+      }
+
+      // Resolve final photo URL
+      String? resolvedPhotoUrl = patientResponse?['profile_photo_url'] ??
+          findPhotoUrl(profileResponse);
+
+      if (resolvedPhotoUrl == null) {
+        // Fallback to bucket URL
+        // We use a timestamp to avoid aggressive caching of potentially old/wrong default
+        // But for a fallback, we just want the file if it exists.
+        final path = 'patients/$userId/profile.jpg';
+        resolvedPhotoUrl =
+            _supabase.storage.from('profile-photos').getPublicUrl(path);
+      }
+
       // Add patient-specific fields if they exist
       if (patientResponse != null) {
         mergedData.addAll(patientResponse);
         // Ensure id is preserved
         mergedData['id'] = userId;
       }
+
+      // Override with resolved URL
+      mergedData['profile_photo_url'] = resolvedPhotoUrl;
 
       final remoteProfile = PatientProfile.fromJson(mergedData);
 
@@ -98,6 +142,9 @@ class PatientProfileRepository {
       final profileFuture =
           _supabase.from('profiles').update(profileData).eq('id', profile.id);
 
+      // C. Update 'caregiver_patient_links' tables if needed? use triggers?
+      // No, usually just patient table is enough if we join correctly.
+
       // Run parallel
       await Future.wait([patientFuture, profileFuture]);
 
@@ -112,19 +159,21 @@ class PatientProfileRepository {
 
   /// Upload profile image
   Future<String?> uploadProfileImage(String userId, File file) async {
-    final fileName = 'avatar_$userId.jpg';
-    final path = 'avatars/$fileName';
+    final fileName = 'profile.jpg';
+    final path = 'patients/$userId/$fileName';
 
     try {
-      await _supabase.storage.from('patient-avatars').upload(
+      await _supabase.storage.from('profile-photos').upload(
             path,
             file,
             fileOptions: const FileOptions(upsert: true),
           );
 
       final imageUrl =
-          _supabase.storage.from('patient-avatars').getPublicUrl(path);
-      return imageUrl;
+          _supabase.storage.from('profile-photos').getPublicUrl(path);
+
+      // Cache bust
+      return '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
     } catch (e) {
       print('Image upload error: $e');
       return null;

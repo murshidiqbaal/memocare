@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
-import '../screens/auth/login_screen.dart';
+import '../screens/auth/flutter_login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/role_selection_screen.dart';
 import '../screens/caregiver/connections/caregiver_connections_screen.dart';
@@ -13,6 +13,7 @@ import '../screens/patient/connections/patient_connections_screen.dart';
 import '../screens/patient/home/patient_home_screen.dart';
 import '../screens/patient/reminders/reminder_alert_screen.dart';
 import '../screens/shared/splash_screen.dart';
+import '../widgets/realtime_initializer.dart'; // Added import
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -35,7 +36,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const FlutterLoginScreen(),
       ),
       GoRoute(
         path: '/register',
@@ -43,11 +44,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/patient-home',
-        builder: (context, state) => const PatientHomeScreen(),
+        builder: (context, state) =>
+            const RealtimeInitializer(child: PatientHomeScreen()),
       ),
       GoRoute(
         path: '/caregiver-dashboard',
-        builder: (context, state) => const CaregiverDashboardScreen(),
+        builder: (context, state) =>
+            const RealtimeInitializer(child: CaregiverDashboardScreen()),
       ),
       GoRoute(
         path: '/admin-panel',

@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../data/repositories/reminder_repository.dart';
+import '../../../../data/repositories/safety_repository.dart'; // Added
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/service_providers.dart';
 import '../../../../services/notification/reminder_notification_service.dart';
+import '../../../../services/realtime_service.dart'; // Added
 
 // --- State Classes ---
 
@@ -117,8 +119,10 @@ class HomeState {
 class HomeViewModel extends StateNotifier<HomeState> {
   final ReminderRepository _repository;
   final ReminderNotificationService _notificationService;
+  final SafetyRepository _safetyRepository; // Added
 
-  HomeViewModel(this._repository, this._notificationService)
+  HomeViewModel(
+      this._repository, this._notificationService, this._safetyRepository)
       : super(HomeState());
 
   // --- Actions ---
@@ -256,8 +260,20 @@ class HomeViewModel extends StateNotifier<HomeState> {
     state = state.copyWith(isOffline: isOffline);
   }
 
-  void triggerSOS() {
+  Future<void> triggerSOS() async {
     print('SOS Triggered!');
+    // Get location if possible, for now send null
+    // We assume SafetyRepository handles getting current user ID
+    try {
+      await _safetyRepository.sendSos(lat: null, lon: null);
+      // Optimistic update if needed
+    } catch (e) {
+      print('Error sending SOS: $e');
+    }
+  }
+
+  void updateRemindersFromRealtime(List<Reminder> reminders) {
+    state = state.copyWith(reminders: reminders);
   }
 }
 
@@ -265,14 +281,24 @@ final homeViewModelProvider =
     StateNotifierProvider<HomeViewModel, HomeState>((ref) {
   final reminderRepo = ref.watch(reminderRepositoryProvider);
   final notificationService = ref.watch(reminderNotificationServiceProvider);
-  final viewModel = HomeViewModel(reminderRepo, notificationService);
+  final safetyRepo =
+      ref.watch(safetyRepositoryProvider); // Added (Assuming provider exists)
+
+  final viewModel =
+      HomeViewModel(reminderRepo, notificationService, safetyRepo);
 
   // Watch user to trigger load immediately and once
   final user = ref.watch(currentUserProvider);
   if (user != null) {
-    // Only load if empty? No, load fresh on auth change.
     viewModel.loadReminders(user.id);
   }
+
+  // Listen to realtime stream
+  ref.listen(realtimeReminderStreamProvider, (prev, next) {
+    next.whenData((reminders) {
+      viewModel.updateRemindersFromRealtime(reminders);
+    });
+  });
 
   return viewModel;
 });

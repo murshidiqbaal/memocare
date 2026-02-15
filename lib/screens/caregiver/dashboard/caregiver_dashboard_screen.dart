@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../services/realtime_service.dart'; // Added
 import '../memories/caregiver_memories_screen.dart';
 import '../patients/caregiver_patients_screen.dart';
 import '../profile/caregiver_profile_screen.dart';
@@ -22,13 +23,24 @@ class _CaregiverDashboardScreenState
   final List<Widget> _screens = [
     const CaregiverDashboardTab(),
     const CaregiverPatientsScreen(),
-    const CaregiverMemoriesScreen(),
+    const CaregiverMemoriesScreen(
+      patientId: '',
+    ),
     const CaregiverRemindersScreen(),
     const CaregiverProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    // Listen for Realtime SOS Alerts
+    ref.listen(realtimeSosStreamProvider, (prev, next) {
+      next.whenData((alert) {
+        if (alert != null && alert.isActive) {
+          _showEmergencyDialog(alert);
+        }
+      });
+    });
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -69,6 +81,42 @@ class _CaregiverDashboardScreenState
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: Colors.teal),
             label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEmergencyDialog(dynamic alert) {
+    // Using dynamic to avoid deep import if model not convenient, but better use SosEvent
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.red.shade50,
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded,
+                color: Colors.red.shade800, size: 30),
+            const SizedBox(width: 10),
+            const Text('SOS EMERGENCY',
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'A patient has triggered an SOS alert! Immediate attention required.',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Navigate to alert map/details if implemented
+              Navigator.pop(context);
+            },
+            child: const Text('VIEW DETAILS',
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

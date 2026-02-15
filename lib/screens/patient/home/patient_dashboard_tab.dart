@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_provider.dart';
+import '../../../providers/emergency_alert_provider.dart'; // Added import for SOS controller
+import '../../../widgets/sos_countdown_dialog.dart'; // Added import for SOS Dialog
 import 'viewmodels/home_viewmodel.dart';
+import 'widgets/caregiver_dash_card.dart';
 import 'widgets/emergency_sos_card.dart';
 import 'widgets/memory_highlight_widget.dart';
 import 'widgets/offline_status_widget.dart';
 import 'widgets/patient_app_bar_widget.dart';
-import 'widgets/quick_action_grid_widget.dart';
 import 'widgets/reminder_section_card.dart';
 import 'widgets/section_title.dart';
 
@@ -42,7 +44,6 @@ class PatientDashboardTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeViewModelProvider);
-    final viewModel = ref.read(homeViewModelProvider.notifier);
     final profileAsync = ref.watch(userProfileProvider);
     final scale = MediaQuery.of(context).size.width / 375.0;
 
@@ -79,15 +80,8 @@ class PatientDashboardTab extends ConsumerWidget {
                           SizedBox(height: 12 * scale),
                         ],
 
-                        // // Top Section: Time Context Header
-                        // profileAsync.when(
-                        //   data: (profile) => TimeContextHeader(
-                        //     patientName: profile?.fullName.split(' ').first,
-                        //   ),
-                        //   loading: () => const TimeContextHeader(),
-                        //   error: (_, __) => const TimeContextHeader(),
-                        // ),
-                        // const SizedBox(height: 24),
+                        // Caregiver Card (Top of Dashboard)
+                        const CaregiverDashCard(), // Added widget
 
                         // Reminder Section
                         ReminderSectionCard(
@@ -111,16 +105,16 @@ class PatientDashboardTab extends ConsumerWidget {
 
                         // Quick Actions Grid
                         // User requested "below Memory section"
-                        QuickActionGrid(
-                          onMemoriesTap: () {},
-                          onGamesTap: () {},
-                          onLocationTap: () {},
-                        ),
-                        SizedBox(height: 24 * scale),
+                        // QuickActionGrid(
+                        //   onMemoriesTap: () {},
+                        //   onGamesTap: () {},
+                        //   onLocationTap: () {},
+                        // ),
+                        // SizedBox(height: 24 * scale),
 
                         // Emergency SOS (Scrollable position above sticky bar area)
                         EmergencySOSCard(
-                          onTap: () => _showSOSConfirmation(context, viewModel),
+                          onTap: () => _showSOSCountdown(context, ref),
                         ),
 
                         // Extra spacing for Sticky Bar safe area
@@ -179,137 +173,18 @@ class PatientDashboardTab extends ConsumerWidget {
     );
   }
 
-  /// Show emergency SOS confirmation dialog
-  /// Healthcare-grade design with large touch targets and clear messaging
-  void _showSOSConfirmation(BuildContext context, HomeViewModel viewModel) {
-    final scale = MediaQuery.of(context).size.width / 375.0;
+  /// Show emergency SOS countdown dialog
+  /// Automatically sends SOS after 5 seconds if not cancelled
+  void _showSOSCountdown(BuildContext context, WidgetRef ref) {
+    // Start countdown
+    ref.read(emergencySOSControllerProvider.notifier).startCountdown();
 
+    // Show dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28 * scale),
-        ),
-        backgroundColor: Colors.red.shade50,
-        contentPadding: EdgeInsets.all(28 * scale),
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning_rounded,
-              color: Colors.red.shade700,
-              size: 36 * scale,
-            ),
-            SizedBox(width: 16 * scale),
-            Expanded(
-              child: Text(
-                'Emergency Alert',
-                style: TextStyle(
-                  color: Colors.red.shade900,
-                  fontSize: 24 * scale,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            'Are you sure you want to send an emergency alert to your caregivers?',
-            style: TextStyle(
-              fontSize: 18 * scale,
-              height: 1.5,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.spaceEvenly,
-        actionsPadding:
-            EdgeInsets.fromLTRB(20 * scale, 0, 20 * scale, 20 * scale),
-        actions: [
-          // Cancel button
-          Flexible(
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 24 * scale,
-                  vertical: 18 * scale,
-                ),
-                minimumSize: Size(110 * scale, 56 * scale),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  fontSize: 18 * scale,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-
-          // Send Help button
-          Flexible(
-            child: ElevatedButton(
-              onPressed: () {
-                viewModel.triggerSOS();
-                Navigator.pop(context);
-
-                // Show confirmation snackbar
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        Icon(Icons.check_circle,
-                            color: Colors.white, size: 24 * scale),
-                        SizedBox(width: 12 * scale),
-                        Expanded(
-                          child: Text(
-                            'Emergency Alert Sent!',
-                            style: TextStyle(fontSize: 17 * scale),
-                          ),
-                        ),
-                      ],
-                    ),
-                    backgroundColor: Colors.red.shade700,
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16 * scale),
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 32 * scale,
-                  vertical: 18 * scale,
-                ),
-                minimumSize: Size(130 * scale, 56 * scale),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20 * scale),
-                ),
-                elevation: 3,
-              ),
-              child: Text(
-                'SEND HELP',
-                style: TextStyle(
-                  fontSize: 18 * scale,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
-      ),
+      useSafeArea: false,
+      builder: (context) => const SOSCountdownDialog(),
     );
   }
 }

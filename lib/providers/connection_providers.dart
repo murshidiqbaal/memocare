@@ -1,24 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/models/caregiver_patient_link.dart';
-import '../data/repositories/connection_repository.dart';
-import 'service_providers.dart';
+import '../data/models/caregiver.dart';
+import '../data/models/patient.dart';
+import '../providers/service_providers.dart';
 
-final connectionRepositoryProvider = Provider<ConnectionRepository>((ref) {
-  final supabase = ref.watch(supabaseClientProvider);
-  return ConnectionRepository(supabase);
-});
+// REPOSITORIES (Assuming these are provided in service_providers.dart or similar.
+// If not, I'll access them via ref.watch on the repository provider)
 
-/// Providers for Caregiver view
-final linkedPatientsProvider =
-    FutureProvider<List<CaregiverPatientLink>>((ref) {
-  return ref.watch(connectionRepositoryProvider).getLinkedPatients();
-});
-
-/// Providers for Patient view
-// incomingRequestsProvider removed as we use instant invite codes now
+// -----------------------------------------------------------------------------
+// PATIENT SIDE: Linked Caregivers
+// -----------------------------------------------------------------------------
 
 final linkedCaregiversProvider =
-    FutureProvider<List<CaregiverPatientLink>>((ref) {
-  return ref.watch(connectionRepositoryProvider).getLinkedCaregivers();
+    FutureProvider.autoDispose<List<Caregiver>>((ref) async {
+  final repository = ref.watch(patientConnectionRepositoryProvider);
+  return repository.getLinkedCaregivers();
 });
+
+final linkedCaregiversStreamProvider =
+    StreamProvider.autoDispose<List<Caregiver>>((ref) async* {
+  final repository = ref.watch(patientConnectionRepositoryProvider);
+  yield* repository.getLinkedCaregiversStream();
+});
+
+// -----------------------------------------------------------------------------
+// CAREGIVER SIDE: Connected Patients
+// -----------------------------------------------------------------------------
+
+final linkedPatientsProvider =
+    FutureProvider.autoDispose<List<Patient>>((ref) async {
+  final repository = ref.watch(patientConnectionRepositoryProvider);
+  return repository.getConnectedPatients();
+});
+
+final linkedPatientsStreamProvider =
+    StreamProvider.autoDispose<List<Patient>>((ref) {
+  final repository = ref.watch(patientConnectionRepositoryProvider);
+  return repository.getConnectedPatientsStream();
+});
+
+// Note: Profile photo upload is now handled by ProfilePhotoUploadNotifier
+// in lib/providers/profile_photo_provider.dart
+
+
+// Note: patientProfileProvider is now defined in 
+// lib/screens/patient/profile/viewmodels/patient_profile_viewmodel.dart
+

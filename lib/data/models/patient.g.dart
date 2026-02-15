@@ -13,6 +13,14 @@ Patient _$PatientFromJson(Map<String, dynamic> json) => Patient(
       medicalNotes: json['medical_notes'] as String?,
       emergencyContactName: json['emergency_contact_name'] as String?,
       emergencyContactPhone: json['emergency_contact_phone'] as String?,
+      phone: json['phone'] as String?,
+      linkedAt: json['linked_at'] == null
+          ? null
+          : DateTime.parse(json['linked_at'] as String),
+      dateOfBirth: json['date_of_birth'] == null
+          ? null
+          : DateTime.parse(json['date_of_birth'] as String),
+      gender: json['gender'] as String?,
     );
 
 Map<String, dynamic> _$PatientToJson(Patient instance) => <String, dynamic>{
@@ -22,4 +30,8 @@ Map<String, dynamic> _$PatientToJson(Patient instance) => <String, dynamic>{
       'medical_notes': instance.medicalNotes,
       'emergency_contact_name': instance.emergencyContactName,
       'emergency_contact_phone': instance.emergencyContactPhone,
+      'phone': instance.phone,
+      'linked_at': instance.linkedAt?.toIso8601String(),
+      'date_of_birth': instance.dateOfBirth?.toIso8601String(),
+      'gender': instance.gender,
     };

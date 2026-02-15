@@ -6,6 +6,8 @@ import '../../../data/models/patient.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/caregiver_patients_provider.dart';
 import '../../../providers/caregiver_profile_provider.dart';
+import '../../../providers/profile_photo_provider.dart'; // Added
+import '../../../widgets/editable_avatar.dart'; // Added
 import '../patients/caregiver_patients_screen.dart';
 import 'edit_caregiver_profile_screen.dart';
 
@@ -104,28 +106,8 @@ class CaregiverProfileScreen extends ConsumerWidget {
       child: Column(
         children: [
           // Profile Photo
-          Hero(
-            tag: 'caregiver_avatar',
-            child: Container(
-              width: 140 * scale,
-              height: 140 * scale,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.teal.shade50,
-                border: Border.all(color: Colors.teal.shade200, width: 4),
-                image: caregiver.profilePhotoUrl != null
-                    ? DecorationImage(
-                        image: NetworkImage(caregiver.profilePhotoUrl!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: caregiver.profilePhotoUrl == null
-                  ? Icon(Icons.person,
-                      size: 70 * scale, color: Colors.teal.shade400)
-                  : null,
-            ),
-          ),
+          // Profile Photo
+          _buildAvatar(ref, caregiver, scale),
           SizedBox(height: 16 * scale),
 
           // Full Name
@@ -181,6 +163,37 @@ class CaregiverProfileScreen extends ConsumerWidget {
           _buildInfoRow(Icons.family_restroom, 'Relationship',
               caregiver.relationship ?? 'Not set', scale),
           _buildInfoRow(Icons.sync, 'Auto-Sync', 'Enabled', scale),
+          const Divider(height: 48),
+
+          // Connected Patients Section
+          Text(
+            'Connected Patients',
+            style: TextStyle(
+              fontSize: 18 * scale,
+              fontWeight: FontWeight.bold,
+              color: Colors.teal.shade900,
+            ),
+          ),
+          SizedBox(height: 12 * scale),
+          patientsAsync.when(
+            data: (patients) {
+              if (patients.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text('No patients connected.'),
+                );
+              }
+              return Column(
+                children: patients
+                    .map(
+                        (patient) => _buildPatientCard(context, patient, scale))
+                    .toList(),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error: $e'),
+          ),
+
           const Divider(height: 48),
 
           // Actions
@@ -266,6 +279,83 @@ class CaregiverProfileScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildPatientCard(
+      BuildContext context, Patient patient, double scale) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12 * scale),
+      padding: EdgeInsets.all(12 * scale),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16 * scale),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24 * scale,
+            backgroundImage: patient.profilePhotoUrl != null
+                ? NetworkImage(patient.profilePhotoUrl!)
+                : null,
+            child: patient.profilePhotoUrl == null
+                ? const Icon(Icons.person)
+                : null,
+          ),
+          SizedBox(width: 12 * scale),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  patient.fullName ?? 'Unknown',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16 * scale,
+                  ),
+                ),
+                if (patient.dateOfBirth != null)
+                  Text(
+                    '${_calculateAge(patient.dateOfBirth!)} years old',
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 13 * scale),
+                  ),
+                if (patient.emergencyContactPhone != null)
+                  Row(
+                    children: [
+                      Icon(Icons.phone_in_talk,
+                          size: 14 * scale, color: Colors.red.shade400),
+                      SizedBox(width: 4 * scale),
+                      Text(
+                        'Emergency: ${patient.emergencyContactPhone}',
+                        style: TextStyle(
+                            color: Colors.red.shade400,
+                            fontSize: 12 * scale,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _calculateAge(DateTime birthDate) {
+    DateTime today = DateTime.now();
+    int age = today.year - birthDate.year;
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) age--;
+    return age;
+  }
+
   Widget _buildActionButton(
       String label, IconData icon, VoidCallback onTap, double scale,
       {Color? color}) {
@@ -299,6 +389,23 @@ class CaregiverProfileScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar(WidgetRef ref, Caregiver caregiver, double scale) {
+    final uploadState = ref.watch(profilePhotoUploadProvider);
+    final isUploading = uploadState is AsyncLoading;
+
+    return Hero(
+      tag: 'caregiver_avatar',
+      child: EditableAvatar(
+        profilePhotoUrl: caregiver.profilePhotoUrl,
+        isUploading: isUploading,
+        radius: 70 * scale,
+        onTap: () async {
+          await ref.read(profilePhotoUploadProvider.notifier).pickAndUpload();
+        },
       ),
     );
   }

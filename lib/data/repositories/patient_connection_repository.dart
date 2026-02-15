@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/caregiver.dart';
 import '../models/patient.dart';
 
 class PatientConnectionRepository {
@@ -24,7 +25,7 @@ class PatientConnectionRepository {
       final caregiverId = caregiverData['id'];
 
       // 2. Get linked patients with details
-      // Fetch directly from 'patients' table as requested
+      // Join patients -> caregiver_patient_links
       final List<dynamic> data = await _supabase.from('patients').select('''
             *,
             caregiver_patient_links!inner(
@@ -34,12 +35,19 @@ class PatientConnectionRepository {
           ''').eq('caregiver_patient_links.caregiver_id', caregiverId);
 
       return data.map((json) {
-        // Extract linked_at from the link array (which will have 1 item due to filter)
         final links = (json['caregiver_patient_links'] as List<dynamic>?) ?? [];
         final linkedAt = links.isNotEmpty ? links.first['linked_at'] : null;
 
+        // Handle date_of_birth parsing if it's a string
+        var dob = json['date_of_birth'];
+        if (dob is String) {
+          dob = DateTime.tryParse(dob);
+        }
+
         return Patient.fromJson({
           ...json,
+          'date_of_birth': dob
+              ?.toString(), // Ensure it is compatible with fromJson if it expects string in standard Supabase return
           'linked_at': linkedAt,
         });
       }).toList();
@@ -184,6 +192,87 @@ class PatientConnectionRepository {
           .eq('patient_id', patientId);
     } catch (e) {
       throw Exception('Failed to remove connection: $e');
+    }
+  }
+
+  /// Get linked caregivers for the current patient
+  Future<List<Caregiver>> getLinkedCaregivers() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      // Query caregiver_profiles joined with caregiver_patient_links
+      // We also need the 'profiles' table to get the name, assuming 'user_id' in caregiver_profiles links to 'profiles.id'
+      // Note: Supabase joins depend on foreign keys.
+      // Assuming:
+      // caregiver_profiles.user_id -> auth.users.id (and profiles.id)
+      // caregiver_patient_links.caregiver_id -> caregiver_profiles.id
+
+      final List<dynamic> data =
+          await _supabase.from('caregiver_profiles').select('''
+        *,
+        caregiver_patient_links!inner(
+          patient_id,
+          linked_at
+        )
+      ''').eq('caregiver_patient_links.patient_id', user.id);
+
+      // Now we need to fetch names from 'profiles' table because they are not in caregiver_profiles usually
+      // We'll collect user_ids and fetch profiles in batch or just map if possible.
+      // If we can't join 'profiles' easily here (depends on schema FKs), we do a second query.
+
+      // Let's rely on what we have. If Fetching profiles is needed:
+      var caregivers = <Caregiver>[];
+
+      for (var item in data) {
+        String userId = item['user_id'];
+
+        // Fetch details from profiles
+        // We select full_name and profile_photo_url (mapped to avatar_url in some schemas, but let's check PatientProfile)
+        // PatientProfile uses 'profile_photo_url'.
+        final profileData = await _supabase
+            .from('profiles')
+            .select('full_name, profile_photo_url, phone_number')
+            .eq('id', userId)
+            .maybeSingle();
+
+        final fullName = profileData?['full_name'];
+        final photoUrl = profileData?['profile_photo_url'];
+        final phone = profileData?['phone_number'];
+
+        final Map<String, dynamic> merged = Map.from(item);
+        if (fullName != null) merged['fullName'] = fullName;
+        // Prioritize profile photo from public profile if not in caregiver profile
+        if (photoUrl != null) merged['profile_photo_url'] = photoUrl;
+        // Map phone if missing
+        if (phone != null && merged['phone'] == null) merged['phone'] = phone;
+
+        caregivers.add(Caregiver.fromJson(merged));
+      }
+
+      return caregivers;
+    } catch (e) {
+      print('Error fetching linked caregivers: $e');
+      return [];
+    }
+  }
+
+  /// Real-time stream of linked caregivers
+  Stream<List<Caregiver>> getLinkedCaregiversStream() async* {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      yield [];
+      return;
+    }
+
+    yield await getLinkedCaregivers();
+
+    final stream = _supabase
+        .from('caregiver_patient_links')
+        .stream(primaryKey: ['id']).eq('patient_id', user.id);
+
+    await for (final _ in stream) {
+      yield await getLinkedCaregivers();
     }
   }
 }

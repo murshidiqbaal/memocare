@@ -67,6 +67,36 @@ class ReminderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Caregiver Badge
+                if (reminder.createdBy != null &&
+                    reminder.createdBy != reminder.patientId)
+                  Container(
+                    margin: EdgeInsets.only(bottom: 6 * scale),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 8 * scale, vertical: 4 * scale),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.shade50,
+                      borderRadius: BorderRadius.circular(6 * scale),
+                      border: Border.all(color: Colors.indigo.shade100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.volunteer_activism,
+                            size: 12 * scale, color: Colors.indigo.shade700),
+                        SizedBox(width: 4 * scale),
+                        Text(
+                          'Added by Caregiver',
+                          style: TextStyle(
+                            fontSize: 11 * scale,
+                            color: Colors.indigo.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Title
                 Text(
                   reminder.title,

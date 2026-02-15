@@ -7,6 +7,9 @@ import '../../../core/utils/profile_completion_helper.dart';
 import '../../../data/models/patient_profile.dart';
 import '../../../features/linking/presentation/controllers/link_controller.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/connection_providers.dart';
+import '../../../providers/profile_photo_provider.dart'; // Ensure this key provider is imported
+import '../../../widgets/editable_avatar.dart'; // Added
 import 'edit_patient_profile_screen.dart';
 import 'viewmodels/patient_profile_viewmodel.dart';
 
@@ -284,41 +287,24 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     );
   }
 
+  Future<void> _pickAndUploadImage(WidgetRef ref) async {
+    // Delegate to the provider which handles picking and uploading
+    await ref.read(profilePhotoUploadProvider.notifier).pickAndUpload();
+  }
+
   Widget _buildHeader(PatientProfile profile, double scale) {
+    final uploadState = ref.watch(profilePhotoUploadProvider);
+    final isUploading = uploadState is AsyncLoading;
+
     return Column(
       children: [
         // Hero animation for profile avatar
-        Hero(
-          tag: 'profile_avatar_${profile.id}',
-          child: Container(
-            width: 140 * scale,
-            height: 140 * scale,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.teal.shade50,
-              border: Border.all(color: Colors.teal.shade200, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.teal.withOpacity(0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-              image: profile.profileImageUrl != null
-                  ? DecorationImage(
-                      image: NetworkImage(profile.profileImageUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: profile.profileImageUrl == null
-                ? Icon(
-                    Icons.person,
-                    size: 70 * scale,
-                    color: Colors.teal.shade400,
-                  )
-                : null,
-          ),
+        // Editable Avatar
+        EditableAvatar(
+          profilePhotoUrl: profile.profileImageUrl,
+          isUploading: isUploading,
+          radius: 70 * scale,
+          onTap: () => _pickAndUploadImage(ref),
         ),
         SizedBox(height: 16 * scale),
         Text(
@@ -516,136 +502,172 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
 
   Widget _buildLinkingSection(double scale) {
     final activeCode = ref.watch(activeInviteCodeProvider);
-    final linkedProfiles = ref.watch(linkedProfilesProvider);
 
-    return _buildCard(scale, children: [
-      activeCode.when(
-        data: (code) {
-          if (code != null) {
-            return Column(
-              children: [
-                const Text(
-                  'Share this code with your caregiver',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
-                ),
-                SizedBox(height: 12 * scale),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 20 * scale, vertical: 12 * scale),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.shade50,
-                    borderRadius: BorderRadius.circular(12 * scale),
-                    border: Border.all(color: Colors.teal.shade200),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        code.code,
-                        style: TextStyle(
-                          fontSize: 28 * scale,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 4,
-                          color: Colors.teal.shade800,
-                        ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Invite Code Card
+        _buildCard(scale, children: [
+          activeCode.when(
+            data: (code) {
+              if (code != null) {
+                return Column(
+                  children: [
+                    const Text(
+                      'Share this code with your caregiver',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    SizedBox(height: 12 * scale),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 20 * scale, vertical: 12 * scale),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12 * scale),
+                        border: Border.all(color: Colors.teal.shade200),
                       ),
-                      SizedBox(width: 8 * scale),
-                      IconButton(
-                        icon: const Icon(Icons.copy, color: Colors.teal),
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: code.code));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Code copied to clipboard!'),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            code.code,
+                            style: TextStyle(
+                              fontSize: 28 * scale,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 4,
+                              color: Colors.teal.shade800,
                             ),
-                          );
-                        },
+                          ),
+                          SizedBox(width: 8 * scale),
+                          IconButton(
+                            icon: const Icon(Icons.copy, color: Colors.teal),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: code.code));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Code copied to clipboard!'),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 8 * scale),
-                Text(
-                  'Expires in ${code.expiresAt.difference(DateTime.now()).inHours} hours',
-                  style: TextStyle(fontSize: 12 * scale, color: Colors.red),
-                ),
-              ],
-            );
-          } else {
-            return Center(
-              child: ElevatedButton.icon(
-                onPressed: () =>
-                    ref.read(linkControllerProvider.notifier).generateCode(),
-                icon: const Icon(Icons.qr_code),
-                label: const Text('Generate Invite Code'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.all(16 * scale),
-                ),
-              ),
-            );
-          }
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-      ),
-      SizedBox(height: 24 * scale),
-      const Divider(),
-      SizedBox(height: 16 * scale),
-      Text(
-        'Linked Caregivers',
-        style: TextStyle(
-          fontSize: 16 * scale,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
-        ),
-      ),
-      SizedBox(height: 12 * scale),
-      linkedProfiles.when(
-        data: (links) {
-          if (links.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'No caregivers linked yet.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            );
-          }
-          return Column(
-            children: links.map((link) {
-              final profile = link.relatedProfile;
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.teal.shade100,
-                  child: Text(
-                    (profile?.fullName ?? 'C')[0].toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.teal.shade800,
-                      fontWeight: FontWeight.bold,
+                    ),
+                    SizedBox(height: 8 * scale),
+                    Text(
+                      'Expires in ${code.expiresAt.difference(DateTime.now()).inHours} hours',
+                      style: TextStyle(fontSize: 12 * scale, color: Colors.red),
+                    ),
+                  ],
+                );
+              } else {
+                return Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => ref
+                        .read(linkControllerProvider.notifier)
+                        .generateCode(),
+                    icon: const Icon(Icons.qr_code),
+                    label: const Text('Generate Invite Code'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.all(16 * scale),
                     ),
                   ),
-                ),
-                title: Text(profile?.fullName ?? 'Unknown Caregiver'),
-                subtitle: const Text('Caregiver'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.link_off, color: Colors.red),
-                  onPressed: () => ref
-                      .read(linkControllerProvider.notifier)
-                      .removeLink(link.id),
-                ),
-              );
-            }).toList(),
-          );
-        },
-        loading: () => const Center(child: LinearProgressIndicator()),
-        error: (e, _) => Text('Error loading caregivers: $e'),
-      ),
-    ]);
+                );
+              }
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+        ]),
+
+        SizedBox(height: 24 * scale),
+
+        // 2. Linked Caregivers Section
+        Text(
+          'Linked Caregivers',
+          style: TextStyle(
+            fontSize: 20 * scale,
+            fontWeight: FontWeight.bold,
+            color: Colors.teal.shade800,
+          ),
+        ),
+        SizedBox(height: 12 * scale),
+
+        _buildCard(scale, children: [
+          Consumer(builder: (context, ref, child) {
+            final caregiversAsync = ref.watch(linkedCaregiversProvider);
+
+            return caregiversAsync.when(
+              data: (caregivers) {
+                if (caregivers.isEmpty) {
+                  return Padding(
+                    padding: EdgeInsets.all(8.0 * scale),
+                    child: const Center(
+                      child: Text(
+                        'No caregivers linked yet.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: caregivers.map((caregiver) {
+                    return Container(
+                      margin: EdgeInsets.only(bottom: 8 * scale),
+                      padding: EdgeInsets.all(8 * scale),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12 * scale),
+                        color: Colors.teal.shade50.withOpacity(0.5),
+                      ),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 24 * scale,
+                          backgroundColor: Colors.teal.shade100,
+                          backgroundImage: caregiver.profilePhotoUrl != null
+                              ? NetworkImage(caregiver.profilePhotoUrl!)
+                              : null,
+                          child: caregiver.profilePhotoUrl == null
+                              ? Text(
+                                  (caregiver.fullName ?? 'C')[0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.teal.shade800,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        title: Text(
+                          caregiver.fullName ?? 'Unknown Caregiver',
+                          style: TextStyle(
+                              fontSize: 16 * scale,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (caregiver.relationship != null)
+                              Text(caregiver.relationship!),
+                            Text(caregiver.phone ?? 'No phone number',
+                                style: TextStyle(fontSize: 13 * scale)),
+                          ],
+                        ),
+                        trailing: Icon(Icons.verified, color: Colors.teal),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(child: LinearProgressIndicator()),
+              error: (e, _) => Text('Error loading caregivers: $e'),
+            );
+          }),
+        ]),
+      ],
+    );
   }
 
   Widget _buildSettingsSection(double scale) {
