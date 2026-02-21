@@ -1,16 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/memory.dart';
 import '../data/repositories/memory_repository.dart';
 import 'service_providers.dart';
-
-// Memory Repository Provider
-final memoryRepositoryProvider = Provider<MemoryRepository>((ref) {
-  final supabase = Supabase.instance.client;
-  final voiceService = ref.watch(voiceServiceProvider);
-  return MemoryRepository(supabase, voiceService);
-});
 
 // Memory State for UI
 class MemoryListState {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../data/models/reminder.dart';
+import '../../../../features/live_location/presentation/widgets/live_location_map_widget.dart';
 import '../../patient/reminders/add_edit_reminder_screen.dart';
 import '../analytics/analytics_dashboard_screen.dart';
 import '../reminders/caregiver_reminder_viewmodel.dart';
@@ -14,7 +15,6 @@ import 'widgets/caregiver_reminder_list.dart';
 import 'widgets/game_stats_widget.dart';
 import 'widgets/memory_review_widget.dart';
 import 'widgets/patient_status_card_widget.dart';
-import 'widgets/safety_map_widget.dart';
 
 class CaregiverDashboardTab extends ConsumerWidget {
   const CaregiverDashboardTab({super.key});
@@ -51,6 +51,7 @@ class CaregiverDashboardTab extends ConsumerWidget {
           context,
           reminderViewModel,
           dashboardState.selectedPatientName,
+          dashboardState.selectedPatient?.patientId ?? 'patient_1',
         ),
         backgroundColor: Colors.teal,
         child: const Icon(Icons.add_alert, color: Colors.white),
@@ -86,10 +87,10 @@ class CaregiverDashboardTab extends ConsumerWidget {
               ),
             ),
 
-            // 2. Safety Map
-            SafetyMapWidget(
-              statusText: dashboardState.patientStatus.locationName,
-              isSafe: dashboardState.patientStatus.isSafe,
+            // 2. Live Location Map
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: LiveLocationMapWidget(height: 250),
             ),
 
             const SizedBox(height: 16),
@@ -127,11 +128,17 @@ class CaregiverDashboardTab extends ConsumerWidget {
                   .take(5)
                   .toList(),
               onDelete: reminderViewModel.deleteReminder,
-              onEdit: (reminder) => _navigateToAddReminder(context,
-                  reminderViewModel, dashboardState.selectedPatientName,
+              onEdit: (reminder) => _navigateToAddReminder(
+                  context,
+                  reminderViewModel,
+                  dashboardState.selectedPatientName,
+                  dashboardState.selectedPatient?.patientId ?? 'patient_1',
                   existingReminder: reminder),
-              onAdd: () => _navigateToAddReminder(context, reminderViewModel,
-                  dashboardState.selectedPatientName),
+              onAdd: () => _navigateToAddReminder(
+                  context,
+                  reminderViewModel,
+                  dashboardState.selectedPatientName,
+                  dashboardState.selectedPatient?.patientId ?? 'patient_1'),
             ),
 
             const SizedBox(height: 16),
@@ -152,15 +159,17 @@ class CaregiverDashboardTab extends ConsumerWidget {
     );
   }
 
-  void _navigateToAddReminder(BuildContext context,
-      CaregiverReminderViewModel viewModel, String patientName,
+  void _navigateToAddReminder(
+      BuildContext context,
+      CaregiverReminderViewModel viewModel,
+      String patientName,
+      String patientId,
       {Reminder? existingReminder}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddEditReminderScreen(
-          targetPatientId:
-              'patient_1', // Should come from dashboardState.selectedPatientId if available
+          targetPatientId: patientId,
           existingReminder: existingReminder,
           onSave: (reminder) {
             if (existingReminder != null) {

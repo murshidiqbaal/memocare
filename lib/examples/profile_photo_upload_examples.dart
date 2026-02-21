@@ -16,6 +16,8 @@ import '../screens/patient/profile/viewmodels/patient_profile_viewmodel.dart';
 import '../widgets/editable_avatar.dart';
 
 class MyProfileScreen extends ConsumerWidget {
+  const MyProfileScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final uploadState = ref.watch(profilePhotoUploadProvider);
@@ -69,13 +71,15 @@ Future<void> uploadPhoto(WidgetRef ref) async {
 // ----------------------------------------------------------------------------
 
 class UploadStatusWidget extends ConsumerWidget {
+  const UploadStatusWidget({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final uploadState = ref.watch(profilePhotoUploadProvider);
 
     return uploadState.when(
-      data: (_) => Text('Ready'),
-      loading: () => CircularProgressIndicator(),
+      data: (_) => const Text('Ready'),
+      loading: () => const CircularProgressIndicator(),
       error: (error, stack) => Text('Error: $error'),
     );
   }
@@ -93,10 +97,10 @@ Widget buildCustomUploadButton(BuildContext context, WidgetRef ref) {
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Photo uploaded!')),
+        const SnackBar(content: Text('Photo uploaded!')),
       );
     },
-    child: Text('Upload Photo'),
+    child: const Text('Upload Photo'),
   );
 }
 
@@ -137,7 +141,7 @@ Future<void> uploadWithErrorHandling(
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('✓ Photo uploaded successfully!'),
           backgroundColor: Colors.teal,
         ),

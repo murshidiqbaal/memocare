@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../data/models/person.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../data/models/person.dart';
 import 'people_viewmodel.dart';
 import 'widgets/people_card_edit_form.dart';
 import 'widgets/people_card_list_item.dart';

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/profile_completion_helper.dart';
 import '../../../data/models/patient_profile.dart';
 import '../../../features/linking/presentation/controllers/link_controller.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/connection_providers.dart';
 import '../../../providers/profile_photo_provider.dart'; // Ensure this key provider is imported
 import '../../../widgets/editable_avatar.dart'; // Added
 import 'edit_patient_profile_screen.dart';
@@ -162,9 +162,10 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                 SizedBox(height: 16 * scale),
 
                 // Profile Completion Indicator
-                if (completion < 100)
+                if (completion < 100) ...[
                   _buildCompletionCard(completion, completionMessage, scale),
-                SizedBox(height: 24 * scale),
+                  SizedBox(height: 24 * scale),
+                ],
 
                 // Personal Information Section
                 _buildSectionTitle('Personal Information', scale),
@@ -296,36 +297,55 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     final uploadState = ref.watch(profilePhotoUploadProvider);
     final isUploading = uploadState is AsyncLoading;
 
-    return Column(
-      children: [
-        // Hero animation for profile avatar
-        // Editable Avatar
-        EditableAvatar(
-          profilePhotoUrl: profile.profileImageUrl,
-          isUploading: isUploading,
-          radius: 70 * scale,
-          onTap: () => _pickAndUploadImage(ref),
-        ),
-        SizedBox(height: 16 * scale),
-        Text(
-          profile.fullName,
-          style: TextStyle(
-            fontSize: 26 * scale,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        if (profile.dateOfBirth != null)
-          Text(
-            '${_calculateAge(profile.dateOfBirth!)} years old',
-            style: TextStyle(
-              fontSize: 16 * scale,
-              color: Colors.grey.shade600,
-            ),
-          ),
-      ],
-    );
+    // We fetch the profile image directly from the patients table as requested
+    return FutureBuilder<Map<String, dynamic>?>(
+        future: Supabase.instance.client
+            .from('patients')
+            .select('profile_photo_url')
+            .eq('id', profile.id)
+            .maybeSingle()
+            .then((value) => value),
+        builder: (context, snapshot) {
+          String? profilePhotoUrl = profile.profileImageUrl;
+
+          if (snapshot.hasData && snapshot.data != null) {
+            final fetchedUrl = snapshot.data!['profile_photo_url'] as String?;
+            if (fetchedUrl != null) {
+              profilePhotoUrl = fetchedUrl;
+            }
+          }
+
+          return Column(
+            children: [
+              // Hero animation for profile avatar
+              // Editable Avatar
+              EditableAvatar(
+                profilePhotoUrl: profilePhotoUrl,
+                isUploading: isUploading,
+                radius: 70 * scale,
+                onTap: () => _pickAndUploadImage(ref),
+              ),
+              SizedBox(height: 16 * scale),
+              Text(
+                profile.fullName,
+                style: TextStyle(
+                  fontSize: 26 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (profile.dateOfBirth != null)
+                Text(
+                  '${_calculateAge(profile.dateOfBirth!)} years old',
+                  style: TextStyle(
+                    fontSize: 16 * scale,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+            ],
+          );
+        });
   }
 
   Widget _buildCompletionCard(int completion, String message, double scale) {
@@ -597,74 +617,193 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
         SizedBox(height: 12 * scale),
 
         _buildCard(scale, children: [
-          Consumer(builder: (context, ref, child) {
-            final caregiversAsync = ref.watch(linkedCaregiversProvider);
+          FutureBuilder<List<dynamic>>(
+            future: Supabase.instance.client
+                .from('caregiver_patient_links')
+                .select('''
+                  *,
+                  caregiver_profiles:caregiver_id (*)
+                ''')
+                .eq('patient_id',
+                    Supabase.instance.client.auth.currentUser?.id ?? '')
+                .order('linked_at', ascending: true),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: LinearProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                // Return detailed error if fetch fails for easy debugging
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Error loading caregivers: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red)),
+                );
+              }
 
-            return caregiversAsync.when(
-              data: (caregivers) {
-                if (caregivers.isEmpty) {
-                  return Padding(
-                    padding: EdgeInsets.all(8.0 * scale),
-                    child: const Center(
-                      child: Text(
-                        'No caregivers linked yet.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+              final links = snapshot.data ?? <dynamic>[];
+
+              if (links.isEmpty) {
+                return Padding(
+                  padding: EdgeInsets.all(16.0 * scale),
+                  child: const Center(
+                    child: Text(
+                      'No caregivers linked yet.',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                  );
-                }
-                return Column(
-                  children: caregivers.map((caregiver) {
-                    return Container(
-                      margin: EdgeInsets.only(bottom: 8 * scale),
-                      padding: EdgeInsets.all(8 * scale),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12 * scale),
-                        color: Colors.teal.shade50.withOpacity(0.5),
+                  ),
+                );
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: links.map((link) {
+                  final caregiverProfile =
+                      link['caregiver_profiles'] as Map<String, dynamic>? ?? {};
+
+                  final fullName = 'Linked Caregiver';
+                  final photoUrl =
+                      caregiverProfile['profile_photo_url'] as String?;
+                  final relationship =
+                      caregiverProfile['relationship'] as String?;
+                  final phone =
+                      caregiverProfile['phone'] as String? ?? 'No phone number';
+
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 8 * scale),
+                    padding: EdgeInsets.all(8 * scale),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12 * scale),
+                      color: Colors.teal.shade50.withOpacity(0.5),
+                    ),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        radius: 24 * scale,
+                        backgroundColor: Colors.teal.shade100,
+                        backgroundImage:
+                            photoUrl != null ? NetworkImage(photoUrl) : null,
+                        child: photoUrl == null
+                            ? Text(
+                                fullName.isNotEmpty
+                                    ? fullName[0].toUpperCase()
+                                    : 'C',
+                                style: TextStyle(
+                                  color: Colors.teal.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
                       ),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          radius: 24 * scale,
-                          backgroundColor: Colors.teal.shade100,
-                          backgroundImage: caregiver.profilePhotoUrl != null
-                              ? NetworkImage(caregiver.profilePhotoUrl!)
-                              : null,
-                          child: caregiver.profilePhotoUrl == null
-                              ? Text(
-                                  (caregiver.fullName ?? 'C')[0].toUpperCase(),
+                      title: Text(
+                        fullName,
+                        style: TextStyle(
+                          fontSize: 16 * scale,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (relationship != null)
+                            Text(relationship,
+                                style: TextStyle(color: Colors.teal.shade700)),
+                          Text(phone, style: TextStyle(fontSize: 13 * scale)),
+                        ],
+                      ),
+                      trailing: const Icon(Icons.verified, color: Colors.teal),
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(16 * scale)),
+                            contentPadding: EdgeInsets.all(24 * scale),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                  radius: 40 * scale,
+                                  backgroundColor: Colors.teal.shade100,
+                                  backgroundImage: photoUrl != null
+                                      ? NetworkImage(photoUrl)
+                                      : null,
+                                  child: photoUrl == null
+                                      ? Text(
+                                          fullName.isNotEmpty
+                                              ? fullName[0].toUpperCase()
+                                              : 'C',
+                                          style: TextStyle(
+                                              fontSize: 32 * scale,
+                                              color: Colors.teal.shade800,
+                                              fontWeight: FontWeight.bold),
+                                        )
+                                      : null,
+                                ),
+                                SizedBox(height: 16 * scale),
+                                Text(
+                                  fullName,
                                   style: TextStyle(
-                                    color: Colors.teal.shade800,
-                                    fontWeight: FontWeight.bold,
+                                      fontSize: 20 * scale,
+                                      fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 8 * scale),
+                                if (relationship != null) ...[
+                                  Text(
+                                    relationship,
+                                    style: TextStyle(
+                                        fontSize: 16 * scale,
+                                        color: Colors.teal.shade700),
+                                  ),
+                                  SizedBox(height: 8 * scale),
+                                ],
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.phone,
+                                        size: 16 * scale,
+                                        color: Colors.grey.shade600),
+                                    SizedBox(width: 8 * scale),
+                                    Text(
+                                      phone,
+                                      style: TextStyle(
+                                          fontSize: 16 * scale,
+                                          color: Colors.grey.shade600),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 24 * scale),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.teal,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8 * scale)),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 12 * scale),
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Close'),
                                   ),
                                 )
-                              : null,
-                        ),
-                        title: Text(
-                          caregiver.fullName ?? 'Unknown Caregiver',
-                          style: TextStyle(
-                              fontSize: 16 * scale,
-                              fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (caregiver.relationship != null)
-                              Text(caregiver.relationship!),
-                            Text(caregiver.phone ?? 'No phone number',
-                                style: TextStyle(fontSize: 13 * scale)),
-                          ],
-                        ),
-                        trailing: Icon(Icons.verified, color: Colors.teal),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-              loading: () => const Center(child: LinearProgressIndicator()),
-              error: (e, _) => Text('Error loading caregivers: $e'),
-            );
-          }),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
         ]),
       ],
     );
@@ -684,7 +823,9 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     DateTime today = DateTime.now();
     int age = today.year - birthDate.year;
     if (today.month < birthDate.month ||
-        (today.month == birthDate.month && today.day < birthDate.day)) age--;
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age--;
+    }
     return age;
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../services/realtime_service.dart'; // Added
+import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
+import '../../../features/patient_selection/providers/patient_selection_provider.dart';
 import '../memories/caregiver_memories_screen.dart';
 import '../patients/caregiver_patients_screen.dart';
 import '../profile/caregiver_profile_screen.dart';
@@ -20,18 +22,28 @@ class _CaregiverDashboardScreenState
     extends ConsumerState<CaregiverDashboardScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const CaregiverDashboardTab(),
-    const CaregiverPatientsScreen(),
-    const CaregiverMemoriesScreen(
-      patientId: '',
-    ),
-    const CaregiverRemindersScreen(),
-    const CaregiverProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fetch linked patients so they are ready for the Dashboard Dropdowns
+    Future.microtask(() {
+      ref.read(patientSelectionProvider.notifier).fetchLinkedPatients();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Dynamically retrieve the currently selected patient ID from the unified state
+    // (kept for SOS listener and any future direct usage)
+    ref.watch(patientSelectionProvider).selectedPatient?.id;
+
+    final List<Widget> screens = [
+      const CaregiverDashboardTab(),
+      const CaregiverPatientsScreen(),
+      const CaregiverMemoriesScreen(), // reads patientSelectionProvider internally
+      const CaregiverRemindersScreen(),
+      const CaregiverProfileScreen(),
+    ];
     // Listen for Realtime SOS Alerts
     ref.listen(realtimeSosStreamProvider, (prev, next) {
       next.whenData((alert) {
@@ -44,7 +56,7 @@ class _CaregiverDashboardScreenState
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -56,28 +68,46 @@ class _CaregiverDashboardScreenState
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
         indicatorColor: Colors.teal.shade50,
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: Colors.teal),
             label: 'Dashboard',
           ),
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people, color: Colors.teal),
+            icon: GestureDetector(
+              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+              child: const Icon(Icons.people_outline),
+            ),
+            selectedIcon: GestureDetector(
+              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+              child: const Icon(Icons.people, color: Colors.teal),
+            ),
             label: 'Patients',
           ),
           NavigationDestination(
-            icon: Icon(Icons.photo_library_outlined),
-            selectedIcon: Icon(Icons.photo_library, color: Colors.teal),
+            icon: GestureDetector(
+              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+              child: const Icon(Icons.photo_library_outlined),
+            ),
+            selectedIcon: GestureDetector(
+              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+              child: const Icon(Icons.photo_library, color: Colors.teal),
+            ),
             label: 'Memories',
           ),
           NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment, color: Colors.teal),
+            icon: GestureDetector(
+              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+              child: const Icon(Icons.assignment_outlined),
+            ),
+            selectedIcon: GestureDetector(
+              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+              child: const Icon(Icons.assignment, color: Colors.teal),
+            ),
             label: 'Reminders',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: Colors.teal),
             label: 'Profile',

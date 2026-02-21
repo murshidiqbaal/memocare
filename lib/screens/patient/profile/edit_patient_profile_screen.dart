@@ -150,13 +150,13 @@ class _EditPatientProfileScreenState
           ? patientMonitoringProvider(widget.patientId!)
           : patientProfileProvider;
 
-      // Upload image if selected
+      // Update profile fields first
+      await ref.read(provider.notifier).updateProfile(updatedProfile);
+
+      // Upload image last so it appends the new photo url to the updated profile state
       if (_selectedImage != null) {
         await ref.read(provider.notifier).updateProfileImage(_selectedImage!);
       }
-
-      // Update profile
-      await ref.read(provider.notifier).updateProfile(updatedProfile);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -548,7 +548,7 @@ class _EditPatientProfileScreenState
     return Padding(
       padding: EdgeInsets.only(bottom: 16 * scale),
       child: DropdownButtonFormField<String>(
-        value: _selectedGender,
+        initialValue: _selectedGender,
         decoration: InputDecoration(
           labelText: 'Gender',
           labelStyle: TextStyle(

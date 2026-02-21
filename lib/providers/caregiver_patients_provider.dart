@@ -1,16 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/patient.dart';
-import '../data/repositories/patient_connection_repository.dart';
-
-/// Provider for the Patient Connection Repository
-final patientConnectionRepositoryProvider =
-    Provider<PatientConnectionRepository>((ref) {
-  return PatientConnectionRepository(Supabase.instance.client);
-});
+import 'service_providers.dart';
 
 /// Stream of Connected Patients (Real-time)
 final connectedPatientsStreamProvider = StreamProvider<List<Patient>>((ref) {

@@ -266,7 +266,7 @@ class ReminderNotificationService {
       priority: Priority.max,
       fullScreenIntent: true,
       category: AndroidNotificationCategory.alarm,
-      color: const Color(0xFFFF0000), // Red
+      color: Color(0xFFFF0000), // Red
       playSound: true,
       enableVibration: true,
     );

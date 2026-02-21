@@ -4,23 +4,66 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/models/memory.dart';
+import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
+import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../widgets/patient_selector_dropdown.dart';
 import 'memory_upload_screen.dart';
 import 'memory_viewmodel.dart';
 
 class CaregiverMemoriesScreen extends ConsumerWidget {
-  final String patientId;
-
-  const CaregiverMemoriesScreen({super.key, required this.patientId});
+  const CaregiverMemoriesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final patientState = ref.watch(patientSelectionProvider);
+    final patientId = patientState.selectedPatient?.id ?? '';
+
+    // No patient selected
+    if (patientId.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const PatientSelectorDropdown(),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          foregroundColor: Colors.black,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_off, size: 80, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'No patient selected',
+                style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Use the dropdown above or long-press\na navigation tab to select a patient.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade400),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => PatientBottomSheetPicker.show(context, ref),
+                icon: const Icon(Icons.person_search),
+                label: const Text('Select Patient'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final state = ref.watch(memoryViewModelProvider(patientId));
     final viewModel = ref.read(memoryViewModelProvider(patientId).notifier);
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Manage Memories'),
+        title: const PatientSelectorDropdown(),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -30,36 +73,64 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
             onPressed: () {
               viewModel.refresh();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Syncing memories...')),
+                const SnackBar(content: Text('Refreshing memories...')),
               );
             },
           ),
         ],
       ),
-      body: state.isLoading && state.memories.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : state.memories.isEmpty
-              ? _buildEmptyState(context)
-              : RefreshIndicator(
-                  onRefresh: () => viewModel.refresh(),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
+      body: Column(
+        children: [
+          // Error banner
+          if (state.error != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              color: Colors.orange.shade50,
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_outlined,
+                      color: Colors.orange.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      state.error!,
+                      style: TextStyle(
+                          color: Colors.orange.shade800, fontSize: 13),
                     ),
-                    itemCount: state.memories.length,
-                    itemBuilder: (context, index) {
-                      final memory = state.memories[index];
-                      return _buildMemoryCard(context, memory, viewModel);
-                    },
                   ),
-                ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: state.isLoading && state.memories.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : state.memories.isEmpty
+                    ? _buildEmptyState(context)
+                    : RefreshIndicator(
+                        onRefresh: () => viewModel.refresh(),
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: state.memories.length,
+                          itemBuilder: (context, index) {
+                            final memory = state.memories[index];
+                            return _buildMemoryCard(
+                                context, ref, memory, viewModel, patientId);
+                          },
+                        ),
+                      ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToUpload(context, null, patientId),
+        onPressed: () => _navigateToUpload(context, ref, null, patientId),
         label: const Text('Add Memory'),
         icon: const Icon(Icons.add_photo_alternate),
         backgroundColor: Colors.teal,
@@ -91,9 +162,14 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildMemoryCard(
-      BuildContext context, Memory memory, MemoryViewModel viewModel) {
+    BuildContext context,
+    WidgetRef ref,
+    Memory memory,
+    MemoryViewModel viewModel,
+    String patientId,
+  ) {
     return GestureDetector(
-      onTap: () => _navigateToUpload(context, memory, patientId),
+      onTap: () => _navigateToUpload(context, ref, memory, patientId),
       onLongPress: () => _showDeleteDialog(context, memory, viewModel),
       child: Card(
         elevation: 4,
@@ -103,7 +179,7 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: memory.imageUrl != null
+              child: memory.imageUrl != null && memory.imageUrl!.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: memory.imageUrl!,
                       fit: BoxFit.cover,
@@ -112,15 +188,24 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
                         child: const Center(child: CircularProgressIndicator()),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.image_not_supported,
-                            color: Colors.grey),
+                        color: Colors.grey.shade200,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image,
+                                color: Colors.grey.shade400, size: 36),
+                            const SizedBox(height: 4),
+                            Text('Image failed',
+                                style: TextStyle(
+                                    color: Colors.grey.shade500, fontSize: 10)),
+                          ],
+                        ),
                       ),
                     )
                   : Container(
-                      color: Colors.grey.shade300,
-                      child:
-                          const Icon(Icons.photo, size: 48, color: Colors.grey),
+                      color: Colors.teal.shade50,
+                      child: Icon(Icons.photo,
+                          size: 48, color: Colors.teal.shade200),
                     ),
             ),
             Padding(
@@ -131,7 +216,7 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
                   Text(
                     memory.title,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
@@ -142,21 +227,20 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
                     Text(
                       DateFormat('MMM dd, yyyy').format(memory.eventDate!),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: Colors.grey.shade600,
                       ),
                     ),
                   if (!memory.isSynced)
                     Row(
                       children: [
-                        Icon(Icons.cloud_off, size: 12, color: Colors.orange),
+                        const Icon(Icons.cloud_off,
+                            size: 12, color: Colors.orange),
                         const SizedBox(width: 4),
                         Text(
                           'Not synced',
                           style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.orange.shade700,
-                          ),
+                              fontSize: 10, color: Colors.orange.shade700),
                         ),
                       ],
                     ),
@@ -170,19 +254,23 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
   }
 
   Future<void> _navigateToUpload(
-      BuildContext context, Memory? memory, String selectedPatientId) async {
+    BuildContext context,
+    WidgetRef ref,
+    Memory? memory,
+    String patientId,
+  ) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => MemoryUploadScreen(
-          patientId: selectedPatientId,
+          patientId: patientId,
           existingMemory: memory,
         ),
       ),
     );
 
     if (result == true && context.mounted) {
-      // Refresh handled by ViewModel
+      ref.read(memoryViewModelProvider(patientId).notifier).refresh();
     }
   }
 

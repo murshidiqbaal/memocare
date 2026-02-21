@@ -1,0 +1,65 @@
+/// Example usage of the Patient Selection flow.
+
+// 1. In your Main App / Auth Success state:
+// Provide the global PatientSelectionProvider initialization
+/* 
+@override
+void initState() {
+  super.initState();
+  // Fetch linked patients globally
+  Future.microtask(() {
+    ref.read(patientSelectionProvider.notifier).fetchLinkedPatients();
+  });
+}
+*/
+
+// 2. Wrap your Bottom Navigation elements
+/*
+NavigationBar(
+  destinations: [
+    NavigationDestination(
+      icon: GestureDetector(
+        onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+        child: const Icon(Icons.people_outline),
+      ),
+      label: 'Patients',
+    ),
+  ]
+)
+*/
+
+// 3. Put AppBar Dropdown inside individual screens
+/*
+AppBar(
+  title: const Text('Dashboard'),
+  actions: [
+    const PatientAppBarDropdown(),
+  ],
+)
+*/
+
+// 4. Wrap crucial user actions using the guard
+/*
+void _onUploadMemoryTapped() {
+  if (!PatientSafetyGuard.ensurePatientSelected(context, ref)) {
+     return; // Stops here!
+  }
+  
+  final patientId = PatientSafetyGuard.getActivePatientId(ref);
+  // Proceed with safe UUID
+  uploader.uploadMemory(patientId: patientId, title: '...');
+}
+*/
+
+// 5. Reactive UI Example
+/*
+Widget build(BuildContext context, WidgetRef ref) {
+  final selectionState = ref.watch(patientSelectionProvider);
+  
+  if (selectionState.selectedPatient == null) {
+      return const Center(child: Text("Select a patient above to see Reminders"));
+  }
+  
+  return RemindersList(patientId: selectionState.selectedPatient!.id);
+}
+*/

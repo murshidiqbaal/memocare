@@ -193,7 +193,7 @@ class _EditCaregiverProfileScreenState
               SizedBox(height: 20 * scale),
               // Relationship Dropdown
               DropdownButtonFormField<String>(
-                value: _selectedRelationship,
+                initialValue: _selectedRelationship,
                 decoration: InputDecoration(
                   labelText: 'Relationship to Patient',
                   prefixIcon:
@@ -251,7 +251,7 @@ class _EditCaregiverProfileScreenState
                       value: _notificationEnabled,
                       onChanged: (val) =>
                           setState(() => _notificationEnabled = val),
-                      activeColor: Colors.teal,
+                      activeThumbColor: Colors.teal,
                     ),
                   ],
                 ),

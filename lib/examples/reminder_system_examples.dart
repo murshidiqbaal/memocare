@@ -352,7 +352,7 @@ class _CreateReminderDialogState extends State<CreateReminderDialog> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<ReminderFrequency>(
-              value: _selectedRepeatRule,
+              initialValue: _selectedRepeatRule,
               decoration: const InputDecoration(
                 labelText: 'Repeat',
               ),

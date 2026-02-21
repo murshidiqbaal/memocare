@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+
 import '../../../../data/models/voice_query.dart';
 import '../../../../data/repositories/voice_assistant_repository.dart';
+import '../../../../services/llm_memory_query_engine.dart';
 import '../../../../services/tts_service.dart';
-import '../../../../services/memory_query_engine.dart';
 
 /// Voice assistant state
 class VoiceAssistantState {
@@ -51,7 +52,7 @@ class VoiceAssistantState {
 class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
   final VoiceAssistantRepository _repository;
   final TTSService _ttsService;
-  final MemoryQueryEngine _queryEngine;
+  final LLMMemoryQueryEngine _queryEngine;
   final String patientId;
 
   late stt.SpeechToText _speech;
@@ -137,7 +138,7 @@ class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
 
           // If speech is finalized, process the query
           if (result.finalResult) {
-            _processQuery(result.recognizedWords);
+            processQuery(result.recognizedWords);
           }
         },
         listenFor: const Duration(seconds: 30),
@@ -163,12 +164,12 @@ class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
 
     // Process the query if we have transcript
     if (state.currentTranscript.isNotEmpty) {
-      await _processQuery(state.currentTranscript);
+      await processQuery(state.currentTranscript);
     }
   }
 
   /// Process the patient's query
-  Future<void> _processQuery(String query) async {
+  Future<void> processQuery(String query) async {
     if (query.trim().isEmpty) {
       state = state.copyWith(
         isListening: false,

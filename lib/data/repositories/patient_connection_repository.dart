@@ -208,14 +208,11 @@ class PatientConnectionRepository {
       // caregiver_profiles.user_id -> auth.users.id (and profiles.id)
       // caregiver_patient_links.caregiver_id -> caregiver_profiles.id
 
-      final List<dynamic> data =
-          await _supabase.from('caregiver_profiles').select('''
-        *,
-        caregiver_patient_links!inner(
-          patient_id,
-          linked_at
-        )
-      ''').eq('caregiver_patient_links.patient_id', user.id);
+      // 1. get caregivers
+      final List<dynamic> data = await _supabase
+          .from('caregiver_patient_links')
+          .select('caregiver_profiles(*)')
+          .eq('patient_id', user.id);
 
       // Now we need to fetch names from 'profiles' table because they are not in caregiver_profiles usually
       // We'll collect user_ids and fetch profiles in batch or just map if possible.
@@ -224,7 +221,10 @@ class PatientConnectionRepository {
       // Let's rely on what we have. If Fetching profiles is needed:
       var caregivers = <Caregiver>[];
 
-      for (var item in data) {
+      for (var linkItem in data) {
+        final item = linkItem['caregiver_profiles'] as Map<String, dynamic>?;
+        if (item == null) continue;
+
         String userId = item['user_id'];
 
         // Fetch details from profiles

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "672285327148",
+    "project_id": "studio-7097823911-8aa49",
+    "storage_bucket": "studio-7097823911-8aa49.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:672285327148:android:c736f395150076ddc4f689",
+        "android_client_info": {
+          "package_name": "com.example.memocare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdSksyfxJcA5d49BnCWtqeWMa-UWzwINA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

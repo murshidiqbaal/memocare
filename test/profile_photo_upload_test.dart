@@ -3,7 +3,6 @@
 // ============================================================================
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 
 // This file demonstrates how to test the profile photo upload system
 // Run: flutter test test/profile_photo_upload_test.dart

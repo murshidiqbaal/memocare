@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/patient.dart';
 import '../../../providers/caregiver_patients_provider.dart';
-import 'connect_patient_screen.dart';
+import '../../patient/profile/patient_profile_screen.dart';
+import 'add_patient_screen.dart';
 
 class CaregiverPatientsScreen extends ConsumerWidget {
   const CaregiverPatientsScreen({super.key});
@@ -25,8 +26,7 @@ class CaregiverPatientsScreen extends ConsumerWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (context) => const ConnectPatientScreen()),
+            MaterialPageRoute(builder: (context) => const AddPatientScreen()),
           );
         },
         backgroundColor: Colors.teal,
@@ -92,9 +92,12 @@ class CaregiverPatientsScreen extends ConsumerWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         onTap: () {
-          // Navigate to patient dashboard (to be implemented/exists)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Viewing ${patient.fullName}\'s status...')),
+          // Navigate to patient profile
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PatientProfileScreen(patientId: patient.id),
+            ),
           );
         },
         borderRadius: BorderRadius.circular(20),

@@ -40,7 +40,7 @@ dependencies:
 
   # ---------------- NOTIFICATIONS ----------------
   flutter_local_notifications: ^20.0.0
-  firebase_messaging: ^16.1.1
+  firebase_messaging: 16.1.1
   permission_handler: ^12.0.1
 
   # ---------------- UI ----------------
@@ -78,7 +78,15 @@ dependencies:
   flutter_local_notifications_platform_interface: ^10.0.0
   flutter_local_notifications_windows: ^2.0.1
   flutter_login: ^6.0.0
+  
+  # ---------------- AI/LLM ----------------
+  google_generative_ai: ^0.4.6
+  http: ^1.2.0
+
   mockito: ^5.4.4
+  firebase_core: ^4.4.0
+  hive: ^2.2.3
+  url_launcher: ^6.3.2
 
 
 dev_dependencies:

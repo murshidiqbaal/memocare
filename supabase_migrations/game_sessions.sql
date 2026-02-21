@@ -34,7 +34,7 @@ CREATE POLICY "Linked caregivers can view patient game sessions" ON public.game_
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = game_sessions.patient_id 
         AND c.user_id = auth.uid()
     )
@@ -45,7 +45,7 @@ CREATE POLICY "Linked caregivers can delete game sessions" ON public.game_sessio
   FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = game_sessions.patient_id 
         AND c.user_id = auth.uid()
     )

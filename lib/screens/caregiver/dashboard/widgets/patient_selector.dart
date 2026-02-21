@@ -59,8 +59,11 @@ class PatientSelector extends StatelessWidget {
         child: DropdownButton<String>(
           value: selectedPatient?.id,
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down,
-              color: Colors.teal.shade700, size: 32),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: Colors.teal.shade700,
+            size: 32,
+          ),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,

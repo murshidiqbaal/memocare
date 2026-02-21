@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'voice_assistant_viewmodel.dart';
+
 import '../../../providers/service_providers.dart';
+import 'voice_assistant_viewmodel.dart';
 
 /// Provider for voice assistant
 final voiceAssistantProvider = StateNotifierProvider.family<
     VoiceAssistantViewModel, VoiceAssistantState, String>((ref, patientId) {
   final repository = ref.watch(voiceAssistantRepositoryProvider);
   final ttsService = ref.watch(ttsServiceProvider);
-  final queryEngine = ref.watch(memoryQueryEngineProvider);
+  final queryEngine = ref.watch(llmMemoryQueryEngineProvider);
   return VoiceAssistantViewModel(
       repository, ttsService, queryEngine, patientId);
 });
@@ -66,6 +67,11 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen>
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.keyboard),
+            onPressed: () => _showKeyboardInput(context, viewModel),
+            tooltip: 'Type Query',
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () => _showHistory(context, state.queryHistory),
@@ -336,6 +342,61 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen>
         color: statusColor,
       ),
       textAlign: TextAlign.center,
+    );
+  }
+
+  /// Show text input dialog
+  void _showKeyboardInput(
+      BuildContext context, VoiceAssistantViewModel viewModel) {
+    final textController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Type your question',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: textController,
+              decoration: const InputDecoration(
+                hintText: 'What would you like to know?',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+              onSubmitted: (value) {
+                if (value.isNotEmpty) {
+                  viewModel.processQuery(value);
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                final text = textController.text.trim();
+                if (text.isNotEmpty) {
+                  viewModel.processQuery(text);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Ask Assistant'),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 

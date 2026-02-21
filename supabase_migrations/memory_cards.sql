@@ -31,7 +31,7 @@ CREATE POLICY "Linked caregivers can view patient memories" ON public.memory_car
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = memory_cards.patient_id 
         AND c.user_id = auth.uid()
     )
@@ -42,7 +42,7 @@ CREATE POLICY "Linked caregivers can create memories" ON public.memory_cards
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = memory_cards.patient_id 
         AND c.user_id = auth.uid()
     )
@@ -53,7 +53,7 @@ CREATE POLICY "Linked caregivers can update memories" ON public.memory_cards
   FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = memory_cards.patient_id 
         AND c.user_id = auth.uid()
     )
@@ -64,7 +64,7 @@ CREATE POLICY "Linked caregivers can delete memories" ON public.memory_cards
   FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = memory_cards.patient_id 
         AND c.user_id = auth.uid()
     )
@@ -72,26 +72,26 @@ CREATE POLICY "Linked caregivers can delete memories" ON public.memory_cards
 
 -- Create storage bucket for memory photos if not exists
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('memory_photos', 'memory_photos', true)
+VALUES ('memory-photos', 'memory-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage policies for memory_photos bucket
+-- Storage policies for memory-photos bucket
 CREATE POLICY "Authenticated users can upload memory photos"
 ON storage.objects FOR INSERT
 TO authenticated
-WITH CHECK (bucket_id = 'memory_photos');
+WITH CHECK (bucket_id = 'memory-photos');
 
 CREATE POLICY "Anyone can view memory photos"
 ON storage.objects FOR SELECT
 TO public
-USING (bucket_id = 'memory_photos');
+USING (bucket_id = 'memory-photos');
 
 CREATE POLICY "Caregivers can update their uploaded photos"
 ON storage.objects FOR UPDATE
 TO authenticated
-USING (bucket_id = 'memory_photos');
+USING (bucket_id = 'memory-photos');
 
 CREATE POLICY "Caregivers can delete their uploaded photos"
 ON storage.objects FOR DELETE
 TO authenticated
-USING (bucket_id = 'memory_photos');
+USING (bucket_id = 'memory-photos');

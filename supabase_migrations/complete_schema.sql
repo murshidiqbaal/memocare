@@ -93,7 +93,7 @@ CREATE POLICY "Linked Caregivers can view patient profile" ON public.patients
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.caregiver_patient_links link
-      JOIN public.caregivers c ON link.caregiver_id = c.id
+      JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
       WHERE link.patient_id = patients.id AND c.user_id = auth.uid()
     )
   );
@@ -147,7 +147,7 @@ CREATE POLICY "Patients view links" ON public.caregiver_patient_links
 CREATE POLICY "Caregivers view links" ON public.caregiver_patient_links
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.caregivers c
+      SELECT 1 FROM public.caregiver_profiles c
       WHERE c.id = caregiver_patient_links.caregiver_id AND c.user_id = auth.uid()
     )
   );
@@ -156,7 +156,7 @@ CREATE POLICY "Caregivers view links" ON public.caregiver_patient_links
 CREATE POLICY "Caregivers create link" ON public.caregiver_patient_links
   FOR INSERT WITH CHECK (
     EXISTS (
-      SELECT 1 FROM public.caregivers c
+      SELECT 1 FROM public.caregiver_profiles c
       WHERE c.id = caregiver_id AND c.user_id = auth.uid()
     )
   );
@@ -169,7 +169,7 @@ CREATE POLICY "Patients revoke link" ON public.caregiver_patient_links
 CREATE POLICY "Caregivers revoke link" ON public.caregiver_patient_links
   FOR DELETE USING (
     EXISTS (
-      SELECT 1 FROM public.caregivers c
+      SELECT 1 FROM public.caregiver_profiles c
       WHERE c.id = caregiver_id AND c.user_id = auth.uid()
     )
   );

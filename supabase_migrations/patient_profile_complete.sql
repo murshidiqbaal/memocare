@@ -92,7 +92,7 @@ USING (
   EXISTS (
     SELECT 1 
     FROM public.caregiver_patient_links link
-    JOIN public.caregivers c ON link.caregiver_id = c.id
+    JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
     WHERE link.patient_id = patients.id 
     AND c.user_id = auth.uid()
   )
@@ -107,7 +107,7 @@ USING (
   EXISTS (
     SELECT 1 
     FROM public.caregiver_patient_links link
-    JOIN public.caregivers c ON link.caregiver_id = c.id
+    JOIN public.caregiver_profiles c ON link.caregiver_id = c.id
     WHERE link.patient_id = patients.id 
     AND c.user_id = auth.uid()
   )

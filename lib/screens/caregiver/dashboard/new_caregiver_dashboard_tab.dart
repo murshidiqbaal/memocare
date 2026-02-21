@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../data/repositories/dashboard_repository.dart';
+import '../../../providers/service_providers.dart';
 import '../people/caregiver_people_screen.dart';
 import '../reminders/caregiver_reminders_screen.dart';
 import 'viewmodels/caregiver_dashboard_viewmodel.dart';
@@ -347,13 +347,3 @@ class _NewCaregiverDashboardTabState
     );
   }
 }
-
-// Provider for dashboard repository (to be added to service_providers.dart)
-final dashboardRepositoryProvider = Provider((ref) {
-  final supabase = ref.watch(supabaseClientProvider);
-  return DashboardRepository(supabase);
-});
-
-final supabaseClientProvider = Provider<SupabaseClient>((ref) {
-  return Supabase.instance.client;
-});

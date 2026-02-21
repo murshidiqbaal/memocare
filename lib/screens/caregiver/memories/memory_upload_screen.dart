@@ -75,6 +75,18 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
   Future<void> _saveMemory() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Safety check BEFORE database payload generation
+    if (widget.patientId.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Cannot save memory: No patient selected. Please select a patient from the dashboard.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final memory = Memory(
       id: widget.existingMemory?.id ?? const Uuid().v4(),
       patientId: widget.patientId,

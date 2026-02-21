@@ -120,6 +120,7 @@ class PatientProfileRepository {
         'id': profile.id,
         'date_of_birth': profile.dateOfBirth?.toIso8601String(),
         'gender': profile.gender,
+        'address': profile.address,
         'medical_notes': profile.medicalNotes,
         'emergency_contact_name': profile.emergencyContactName,
         'emergency_contact_phone': profile.emergencyContactPhone,

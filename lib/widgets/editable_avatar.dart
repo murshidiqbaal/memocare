@@ -59,7 +59,7 @@ class EditableAvatar extends ConsumerWidget {
             Container(
               width: radius * 2,
               height: radius * 2,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.black45,
                 shape: BoxShape.circle,
               ),

@@ -1,85 +1,119 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../data/repositories/reminder_repository.dart';
+import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
 import '../../../../providers/service_providers.dart';
 
 class CaregiverReminderState {
   final List<Reminder> reminders;
   final String selectedPatientId;
   final bool isLoading;
+  final String? error;
 
   CaregiverReminderState({
     this.reminders = const [],
-    this.selectedPatientId = 'patient_1', // Default or passed in
+    this.selectedPatientId = '',
     this.isLoading = false,
+    this.error,
   });
 
   CaregiverReminderState copyWith({
     List<Reminder>? reminders,
     String? selectedPatientId,
     bool? isLoading,
+    String? error,
   }) {
     return CaregiverReminderState(
       reminders: reminders ?? this.reminders,
       selectedPatientId: selectedPatientId ?? this.selectedPatientId,
       isLoading: isLoading ?? this.isLoading,
+      error: error,
     );
   }
 }
 
 class CaregiverReminderViewModel extends StateNotifier<CaregiverReminderState> {
   final ReminderRepository _repository;
+  final SupabaseClient _supabase;
 
-  CaregiverReminderViewModel(this._repository)
-      : super(CaregiverReminderState()) {
-    // Initial load? Or wait for patient selection?
-    // For now, load default
-    _loadReminders();
-  }
+  CaregiverReminderViewModel(this._repository, this._supabase)
+      : super(CaregiverReminderState());
 
-  Future<void> _loadReminders() async {
-    state = state.copyWith(isLoading: true);
-    await _repository.init();
-    // Fetch for the selected patient
-    final reminders = _repository.getReminders(state.selectedPatientId);
-    state = state.copyWith(reminders: reminders, isLoading: false);
+  /// Called when the globally selected patient changes
+  void onPatientChanged(String patientId) {
+    if (patientId == state.selectedPatientId) return;
+    state = state.copyWith(selectedPatientId: patientId, reminders: []);
+    if (patientId.isNotEmpty) {
+      refresh();
+    }
   }
 
   Future<void> refresh() async {
-    state = state.copyWith(isLoading: true);
-    await _repository.syncReminders(state.selectedPatientId);
-    final reminders = _repository.getReminders(state.selectedPatientId);
-    state = state.copyWith(reminders: reminders, isLoading: false);
+    if (state.selectedPatientId.isEmpty) return;
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      // Fetch from Supabase directly
+      final data = await _supabase
+          .from('reminders')
+          .select()
+          .eq('patient_id', state.selectedPatientId)
+          .order('remind_at', ascending: true);
+
+      final reminders = (data as List)
+          .map((r) => Reminder.fromJson(r as Map<String, dynamic>))
+          .toList();
+      state = state.copyWith(reminders: reminders, isLoading: false);
+    } catch (e) {
+      // Fallback to local cache
+      await _repository.init();
+      final cached = _repository.getReminders(state.selectedPatientId);
+      state = state.copyWith(
+        reminders: cached,
+        isLoading: false,
+        error: 'Showing cached data. Sync failed: $e',
+      );
+    }
   }
 
-  void selectPatient(String patientId) {
-    state = state.copyWith(selectedPatientId: patientId);
-    refresh();
-  }
+  // Keep this for legacy callers
+  void selectPatient(String patientId) => onPatientChanged(patientId);
 
   Future<void> addReminder(Reminder reminder) async {
-    // Optimistic update
     state = state.copyWith(reminders: [...state.reminders, reminder]);
-    await _repository.addReminder(reminder);
-    // Sync happens in repo
+    try {
+      await _repository.addReminder(reminder);
+      await refresh();
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to add reminder: $e');
+    }
   }
 
   Future<void> updateReminder(Reminder reminder) async {
-    await _repository.updateReminder(reminder);
     state = state.copyWith(
       reminders: [
         for (final r in state.reminders)
           if (r.id == reminder.id) reminder else r
       ],
     );
+    try {
+      await _repository.updateReminder(reminder);
+      await refresh();
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to update reminder: $e');
+    }
   }
 
   Future<void> deleteReminder(String id) async {
-    await _repository.deleteReminder(id);
     state = state.copyWith(
       reminders: state.reminders.where((r) => r.id != id).toList(),
     );
+    try {
+      await _repository.deleteReminder(id);
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to delete reminder: $e');
+    }
   }
 
   // Analytics Helpers
@@ -108,8 +142,7 @@ class CaregiverReminderViewModel extends StateNotifier<CaregiverReminderState> {
     return state.reminders
         .where((r) =>
             r.status == ReminderStatus.missed ||
-            (r.status == ReminderStatus.pending &&
-                r.remindAt.isBefore(now))) // Simple logic
+            (r.status == ReminderStatus.pending && r.remindAt.isBefore(now)))
         .length;
   }
 }
@@ -118,5 +151,19 @@ final caregiverReminderProvider =
     StateNotifierProvider<CaregiverReminderViewModel, CaregiverReminderState>(
         (ref) {
   final repo = ref.watch(reminderRepositoryProvider);
-  return CaregiverReminderViewModel(repo);
+  final supabase = ref.watch(supabaseClientProvider);
+  final vm = CaregiverReminderViewModel(repo, supabase);
+
+  // React to global patient selection changes automatically
+  ref.listen<String?>(
+    patientSelectionProvider.select((s) => s.selectedPatient?.id),
+    (_, patientId) {
+      if (patientId != null && patientId.isNotEmpty) {
+        vm.onPatientChanged(patientId);
+      }
+    },
+    fireImmediately: true,
+  );
+
+  return vm;
 });

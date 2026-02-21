@@ -230,8 +230,9 @@ class EmergencyAlertRepository {
   Future<Either<Failure, String?>> getPrimaryCaregiverPhone() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null)
+      if (user == null) {
         return const Left(AuthFailure('User not authenticated'));
+      }
 
       // Find links - get the first one
       final response = await _supabase

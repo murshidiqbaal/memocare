@@ -6,7 +6,7 @@ part 'voice_query.g.dart';
 /// Voice query model for storing patient voice interactions
 /// Stores both the question asked and the AI-generated response
 @JsonSerializable(explicitToJson: true)
-@HiveType(typeId: 6)
+@HiveType(typeId: 9)
 class VoiceQuery extends HiveObject {
   @HiveField(0)
   final String id;

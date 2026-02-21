@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../features/linking/presentation/controllers/link_controller.dart';
+import '../../../providers/caregiver_patients_provider.dart';
+import '../../patient/profile/patient_profile_screen.dart';
 
 class AddPatientScreen extends ConsumerStatefulWidget {
   const AddPatientScreen({super.key});
@@ -17,11 +18,11 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final linkState = ref.watch(linkControllerProvider);
-    final linksAsync = ref.watch(linkedProfilesProvider);
+    final connectionState = ref.watch(caregiverConnectionControllerProvider);
+    final patientsAsync = ref.watch(connectedPatientsStreamProvider);
 
-    ref.listen(linkControllerProvider, (previous, next) {
-      if (next is AsyncError) {
+    ref.listen(caregiverConnectionControllerProvider, (previous, next) {
+      if (next.hasError) {
         showDialog(
             context: context,
             builder: (c) => AlertDialog(
@@ -34,12 +35,10 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
                         child: const Text('OK'))
                   ],
                 ));
-      } else if (next is AsyncData &&
-          !next.isLoading &&
-          previous is AsyncLoading) {
+      } else if (!next.isLoading && previous?.isLoading == true) {
         // Success
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Patient linked successfully!')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Action successful!')));
         _codeController.clear();
       }
     });
@@ -85,7 +84,7 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
                             v == null || v.length < 6 ? 'Invalid code' : null,
                       ),
                       const SizedBox(height: 16),
-                      linkState.isLoading
+                      connectionState.isLoading
                           ? const CircularProgressIndicator()
                           : SizedBox(
                               width: double.infinity,
@@ -93,8 +92,11 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
                                 onPressed: () {
                                   if (_formKey.currentState!.validate()) {
                                     ref
-                                        .read(linkControllerProvider.notifier)
-                                        .linkPatient(_codeController.text
+                                        .read(
+                                            caregiverConnectionControllerProvider
+                                                .notifier)
+                                        .connectUsingInviteCode(_codeController
+                                            .text
                                             .toUpperCase()
                                             .trim());
                                   }
@@ -117,27 +119,67 @@ class _AddPatientScreenState extends ConsumerState<AddPatientScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            linksAsync.when(
-                data: (links) {
-                  if (links.isEmpty) {
+            patientsAsync.when(
+                data: (patients) {
+                  if (patients.isEmpty) {
                     return const Center(child: Text('No patients linked yet.'));
                   }
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: links.length,
+                    itemCount: patients.length,
                     itemBuilder: (context, index) {
-                      final link = links[index];
+                      final patient = patients[index];
                       return ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.person)),
-                        title: Text(link.relatedProfile?.fullName ?? 'Unknown'),
+                        leading: CircleAvatar(
+                          backgroundImage: patient.profilePhotoUrl != null
+                              ? NetworkImage(patient.profilePhotoUrl!)
+                              : null,
+                          child: patient.profilePhotoUrl == null
+                              ? const Icon(Icons.person)
+                              : null,
+                        ),
+                        title: Text(patient.fullName ?? 'Unknown'),
                         subtitle: Text(
-                            'Linked since ${DateFormat.yMMMd().format(link.createdAt)}'),
+                            'Linked since ${patient.linkedAt != null ? DateFormat.yMMMd().format(patient.linkedAt!) : "Unknown"}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.link_off, color: Colors.red),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (c) => AlertDialog(
+                                title: const Text('Remove Connection'),
+                                content: Text('Remove ${patient.fullName}?'),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(c),
+                                      child: const Text('Cancel')),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(c);
+                                      ref
+                                          .read(
+                                              caregiverConnectionControllerProvider
+                                                  .notifier)
+                                          .removeConnection(patient.id);
+                                    },
+                                    child: const Text('Remove',
+                                        style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                         onTap: () {
-                          // TODO: Select this patient as current dashboard patient context
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Selected patient.')));
+                          // Navigate to patient profile
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  PatientProfileScreen(patientId: patient.id),
+                            ),
+                          );
                         },
                       );
                     },

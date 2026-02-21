@@ -130,17 +130,30 @@ class HomeViewModel extends StateNotifier<HomeState> {
   /// Load all reminders from Hive and populate state.
   Future<void> loadReminders(String patientId) async {
     print('HomeViewModel: Loading ALL reminders for patient $patientId');
+    // Ensure we mark it as loading to show the UI an update is coming
     state = state.copyWith(isLoading: true);
 
     try {
       await _repository.init();
-      final allReminders = _repository.getReminders(patientId);
 
-      // We store ALL reminders. The 'todayReminders' getter handles filtering.
-      state = state.copyWith(reminders: allReminders, isLoading: false);
-      print('HomeViewModel: Loaded ${allReminders.length} reminders.');
+      // Ensure we immediately show local cache while sync happens in background
+      final initialReminders = _repository.getReminders(patientId);
+      state = state.copyWith(reminders: initialReminders);
+
+      // FORCE PULL from Supabase to fetch any reminders created by caregivers
+      print('HomeViewModel: Initiating Remote Sync for $patientId...');
+      await _repository.syncReminders(patientId);
+
+      // Re-fetch from Hive now that remote sync is complete
+      final syncedReminders = _repository.getReminders(patientId);
+
+      // Update State with the final merged list
+      state = state.copyWith(reminders: syncedReminders, isLoading: false);
+      print(
+          'HomeViewModel: Loaded ${syncedReminders.length} reminders after sync.');
     } catch (e) {
       print('HomeViewModel Error loading reminders: $e');
+      // Even if sync fails, show local reminders at least
       state = state.copyWith(isLoading: false);
     }
   }

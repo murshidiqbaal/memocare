@@ -1,6 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../widgets/patient_selector_dropdown.dart';
 import '../../patient/reminders/add_edit_reminder_screen.dart';
 import 'caregiver_reminder_viewmodel.dart';
 import 'reminder_history_screen.dart';
@@ -13,11 +16,55 @@ class CaregiverRemindersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(caregiverReminderProvider);
     final viewModel = ref.read(caregiverReminderProvider.notifier);
+    final selectedPatient = ref.watch(patientSelectionProvider).selectedPatient;
+
+    if (selectedPatient == null || state.selectedPatientId.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const PatientSelectorDropdown(),
+          backgroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_off, size: 80, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'No patient selected',
+                style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please use the dropdown above or\nlong-press a navigation tab to select.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade400),
+              ),
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please select a patient first.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+          label: const Text('New Reminder'),
+          icon: const Icon(Icons.add),
+          backgroundColor: Colors.grey,
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Patient Reminders'),
+        title: const PatientSelectorDropdown(),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -36,7 +83,7 @@ class CaregiverRemindersScreen extends ConsumerWidget {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                _buildOverviewHeader(context, viewModel),
+                _buildOverviewHeader(context, viewModel, ref),
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(20),
@@ -105,8 +152,9 @@ class CaregiverRemindersScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOverviewHeader(
-      BuildContext context, CaregiverReminderViewModel viewModel) {
+  Widget _buildOverviewHeader(BuildContext context,
+      CaregiverReminderViewModel viewModel, WidgetRef ref) {
+    final selectedPatient = ref.watch(patientSelectionProvider).selectedPatient;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -120,22 +168,37 @@ class CaregiverRemindersScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 28,
-                backgroundImage:
-                    AssetImage('assets/images/placeholders/elderly_man.jpg'),
-                // Fallback if asset missing is handled by image provider usually, or use icon
-                child: Icon(Icons.person, size: 30),
+                backgroundColor: Colors.teal.shade300,
+                backgroundImage: (selectedPatient?.profileImageUrl != null &&
+                        selectedPatient!.profileImageUrl!.isNotEmpty)
+                    ? CachedNetworkImageProvider(
+                        selectedPatient.profileImageUrl!)
+                    : null,
+                child: (selectedPatient?.profileImageUrl == null ||
+                        selectedPatient!.profileImageUrl!.isEmpty)
+                    ? Text(
+                        selectedPatient?.fullName.isNotEmpty == true
+                            ? selectedPatient!.fullName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
               const SizedBox(width: 16),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Managing For',
+                  const Text('Managing For',
                       style: TextStyle(color: Colors.white70, fontSize: 12)),
                   Text(
-                    'Grandpa Joe',
-                    style: TextStyle(
+                    selectedPatient?.fullName ?? 'No Patient Selected',
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold),
