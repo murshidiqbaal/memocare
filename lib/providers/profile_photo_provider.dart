@@ -54,8 +54,8 @@ class ProfilePhotoUploadNotifier extends AsyncNotifier<void> {
 
       final role = profile.role; // 'patient' or 'caregiver'
 
-      // Upload
-      final url = await _repository.uploadProfilePhoto(
+      // Upload (result stored in DB, we only need to invalidate providers)
+      await _repository.uploadProfilePhoto(
         userId: user.id,
         file: file,
         role: role,

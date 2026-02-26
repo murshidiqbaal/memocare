@@ -13,8 +13,8 @@ class PatientSafetyGuard {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: const [
+          content: const Row(
+            children: [
               Icon(Icons.warning_amber_rounded, color: Colors.white),
               SizedBox(width: 12),
               Expanded(
@@ -45,7 +45,7 @@ class PatientSafetyGuard {
     final patientId = ref.read(patientSelectionProvider).selectedPatient?.id;
     if (patientId == null || patientId.isEmpty) {
       throw StateError(
-          "Attempted to access patient ID when zero valid selection exists.");
+          'Attempted to access patient ID when zero valid selection exists.');
     }
     return patientId;
   }

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import '../../../data/models/game_session.dart';
-import '../../../providers/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../providers/game_providers.dart';
 
 class GamesScreen extends ConsumerStatefulWidget {
@@ -19,8 +20,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(currentUserProvider);
-    final patientId = user?.id;
+    final patientId = Supabase.instance.client.auth.currentUser?.id;
 
     if (patientId == null) {
       return Scaffold(
@@ -115,7 +115,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 32),
@@ -188,6 +188,7 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
   int moves = 0;
   late Stopwatch stopwatch;
   Timer? timer;
+  bool _gameFinished = false;
 
   @override
   void initState() {
@@ -202,6 +203,7 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
   }
 
   void _initializeGame() {
+    _gameFinished = false;
     stopwatch = Stopwatch()..start();
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
@@ -275,33 +277,43 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
     }
   }
 
-  void _gameComplete() {
+  // Save game session
+  Future<void> _gameComplete() async {
+    if (_gameFinished) return;
+    _gameFinished = true;
     stopwatch.stop();
     timer?.cancel();
 
-    // Calculate score (higher is better)
-    // Score = 1000 - (moves * 10) - (seconds * 2)
     final score =
         max(0, 1000 - (moves * 10) - (stopwatch.elapsed.inSeconds * 2));
 
-    // Save game session
-    final session = GameSession(
-      id: const Uuid().v4(),
-      patientId: widget.patientId,
-      gameType: 'memory_match',
-      score: score,
-      durationSeconds: stopwatch.elapsed.inSeconds,
-      completedAt: DateTime.now(),
-      createdAt: DateTime.now(),
-      isSynced: false,
-    );
+    try {
+      if (kDebugMode) {
+        print('--- MEMORY MATCH GAME TICK ---');
+        print('Using auth.uid() automatically in repository.');
+      }
 
-    ref
-        .read(gameSessionsProvider(widget.patientId).notifier)
-        .saveSession(session);
+      await ref.read(gameRepositoryProvider).recordCompletedGame(
+            gameId: 'memory_match',
+            score: score,
+            durationSeconds: stopwatch.elapsed.inSeconds,
+            attempts: moves,
+          );
 
-    // Show completion dialog
-    _showCompletionDialog(score);
+      if (mounted) {
+        _showCompletionDialog(score);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save game session: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        _gameFinished = false; // Allow retrying if desired.
+      }
+    }
   }
 
   void _showCompletionDialog(int score) {
@@ -366,7 +378,7 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -484,7 +496,7 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

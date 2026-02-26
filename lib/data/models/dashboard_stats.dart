@@ -25,7 +25,7 @@ class DashboardStats {
   // Alert count
   final int unreadAlerts;
 
-  DashboardStats({
+  const DashboardStats({
     this.remindersCompleted = 0,
     this.remindersPending = 0,
     this.remindersMissed = 0,

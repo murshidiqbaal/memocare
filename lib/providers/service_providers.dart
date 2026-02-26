@@ -1,9 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../data/models/patient_profile.dart'; // Added
 import '../data/repositories/caregiver_repository.dart';
 import '../data/repositories/dashboard_repository.dart';
 import '../data/repositories/memory_repository.dart';
@@ -18,6 +16,7 @@ import '../services/fcm_service.dart';
 import '../services/llm_memory_query_engine.dart';
 import '../services/memory_query_engine.dart';
 import '../services/notification/reminder_notification_service.dart';
+import '../services/notification_trigger_service.dart';
 import '../services/tts_service.dart';
 import '../services/voice_service.dart';
 
@@ -38,11 +37,18 @@ final reminderNotificationServiceProvider =
   return ReminderNotificationService();
 });
 
+// Notification Trigger Service Provider (FCM push → Supabase Edge Function)
+final notificationTriggerProvider = Provider<NotificationTriggerService>((ref) {
+  final supabase = ref.watch(supabaseClientProvider);
+  return NotificationTriggerService(supabase);
+});
+
 // Reminder Repository Provider
 final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   final voiceService = ref.watch(voiceServiceProvider);
-  return ReminderRepository(supabase, voiceService);
+  final notificationService = ref.watch(reminderNotificationServiceProvider);
+  return ReminderRepository(supabase, voiceService, notificationService);
 });
 
 // People Repository Provider
@@ -101,9 +107,7 @@ final patientConnectionRepositoryProvider =
 final patientProfileRepositoryProvider =
     Provider<PatientProfileRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
-  // Box is opened in main.dart
-  final box = Hive.box<PatientProfile>('patient_profiles');
-  return PatientProfileRepository(supabase, box);
+  return PatientProfileRepository(supabase);
 });
 
 // TTS Service Provider

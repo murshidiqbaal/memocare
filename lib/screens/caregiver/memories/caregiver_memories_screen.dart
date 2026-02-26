@@ -210,40 +210,44 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.all(12),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    memory.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  if (memory.eventDate != null)
-                    Text(
-                      DateFormat('MMM dd, yyyy').format(memory.eventDate!),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  if (!memory.isSynced)
-                    Row(
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.cloud_off,
-                            size: 12, color: Colors.orange),
-                        const SizedBox(width: 4),
                         Text(
-                          'Not synced',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.orange.shade700),
+                          memory.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 4),
+                        if (memory.eventDate != null)
+                          Text(
+                            DateFormat('MMM dd, yyyy')
+                                .format(memory.eventDate!),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline,
+                        color: Colors.redAccent, size: 20),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                    onPressed: () =>
+                        _showDeleteDialog(context, memory, viewModel),
+                  ),
                 ],
               ),
             ),
@@ -287,11 +291,18 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              viewModel.deleteMemory(memory.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Memory deleted')),
+            onPressed: () async {
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              Navigator.pop(context); // Close dialog immediately
+
+              await viewModel.deleteMemory(memory);
+
+              if (context.mounted) {
+                // Not strictly needed since we captured scaffoldMessenger but good practice
+              }
+
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(content: Text('Memory deleted successfully')),
               );
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),

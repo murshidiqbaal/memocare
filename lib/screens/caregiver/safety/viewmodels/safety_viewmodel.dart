@@ -33,7 +33,9 @@ class MockSafetyService {
         patientId: 'patient_1',
         latitude: 37.422,
         longitude: -122.084,
-        radius: 100,
-        createdAt: DateTime.now());
+        radiusMeters: 100,
+        label: 'Home',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now());
   }
 }

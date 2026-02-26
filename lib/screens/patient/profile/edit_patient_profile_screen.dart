@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../data/models/patient_profile.dart';
 import '../../../providers/auth_provider.dart';
-import 'viewmodels/patient_profile_viewmodel.dart';
+import '../../../providers/service_providers.dart';
 
 /// Dedicated Edit/Create Patient Profile Screen
 /// Follows HIPAA-style security, elder-friendly UI, and production-ready patterns
@@ -142,20 +142,21 @@ class _EditPatientProfileScreenState
         profileImageUrl: widget.existingProfile?.profileImageUrl,
         createdAt: widget.existingProfile?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
-        isSynced: false,
       );
 
-      // Get the appropriate provider
-      final provider = widget.patientId != null
-          ? patientMonitoringProvider(widget.patientId!)
-          : patientProfileProvider;
+      final repository = ref.read(patientProfileRepositoryProvider);
 
       // Update profile fields first
-      await ref.read(provider.notifier).updateProfile(updatedProfile);
+      await repository.updateProfile(updatedProfile);
 
       // Upload image last so it appends the new photo url to the updated profile state
       if (_selectedImage != null) {
-        await ref.read(provider.notifier).updateProfileImage(_selectedImage!);
+        final imageUrl = await repository.uploadProfileImage(
+            updatedProfile.id, _selectedImage!);
+        if (imageUrl != null) {
+          await repository.updateProfile(
+              updatedProfile.copyWith(profileImageUrl: imageUrl));
+        }
       }
 
       if (mounted) {

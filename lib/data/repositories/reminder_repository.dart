@@ -1,6 +1,6 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/notification/reminder_notification_service.dart';
 import '../../services/voice_service.dart';
 import '../models/reminder.dart';
 
@@ -11,96 +11,58 @@ import '../models/reminder.dart';
 class ReminderRepository {
   final SupabaseClient _supabase;
   final VoiceService _voiceService;
-  late Box<Reminder> _box;
-  bool _isInit = false;
+  final ReminderNotificationService _notificationService;
 
-  ReminderRepository(this._supabase, this._voiceService);
+  ReminderRepository(
+      this._supabase, this._voiceService, this._notificationService);
 
-  Future<void> init() async {
-    if (_isInit) return;
+  Future<void> init() async {}
+
+  /// Get reminders for a specific patient
+  Future<List<Reminder>> getReminders(String patientId) async {
     try {
-      _box = await Hive.openBox<Reminder>('reminders_box');
-      _isInit = true;
-      print('Hive initialized. Box: reminders_box, Open: ${_box.isOpen}');
+      final data = await _supabase
+          .from('reminders')
+          .select()
+          .eq('patient_id', patientId)
+          .order('reminder_time');
+
+      return (data as List<dynamic>)
+          .map((json) => Reminder.fromJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      print('Error opening Hive box: $e');
+      print('ReminderRepository: Error fetching reminders: $e');
+      throw Exception('Failed to fetch reminders: $e');
     }
   }
 
-  /// Get reminders for a specific patient (local Hive)
-  List<Reminder> getReminders(String patientId) {
-    if (!_isInit) {
-      print('ReminderRepository not initialized');
-      return [];
-    }
-    final all = _box.values.toList();
-    final unique = all.toSet().toList();
-    final filtered = unique.where((r) => r.patientId == patientId).toList();
-
-    // Sort: Pending first, then by time
-    filtered.sort((a, b) {
-      if (a.status != b.status) {
-        return a.status == ReminderStatus.pending ? -1 : 1;
-      }
-      return a.remindAt.compareTo(b.remindAt);
-    });
-
-    print(
-        'ReminderRepository: Loaded ${filtered.length} reminders for patient $patientId (Total in box: ${all.length})');
-    return filtered;
-  }
-
-  /// ✅ NEW: Watch patient reminders in realtime
+  /// Watch patient reminders in realtime
   /// Returns a stream that updates when reminders change in Supabase
   Stream<List<Reminder>> watchPatientRemindersRealtime(String patientId) {
     return _supabase
         .from('reminders')
         .stream(primaryKey: ['id'])
         .eq('patient_id', patientId)
-        .order('remind_at')
-        .map((data) {
-          final reminders =
-              data.map((json) => Reminder.fromJson(json)).toList();
-
-          // Update local Hive cache
-          _updateLocalCache(reminders);
-
-          return reminders;
-        });
+        .order('reminder_time')
+        .map((data) => data.map((json) => Reminder.fromJson(json)).toList());
   }
 
-  /// ✅ NEW: Watch reminders for all patients linked to a caregiver
-  /// RLS-safe: Uses caregiver_patient_links join
+  /// Watch reminders for all patients linked to a caregiver
+  /// RLS-safe: Uses caregiver_patient_links join or policy
   Stream<List<Reminder>> watchCaregiverPatientReminders(String caregiverId) {
-    // Query reminders where patient_id is in the caregiver's linked patients
-    // This assumes RLS policies allow caregivers to see linked patient reminders
     return _supabase
         .from('reminders')
         .stream(primaryKey: ['id'])
-        .order('remind_at')
-        .map((data) {
-          final reminders =
-              data.map((json) => Reminder.fromJson(json)).toList();
-
-          // Filter locally for linked patients (if RLS doesn't handle it)
-          // In production, RLS should handle this filtering server-side
-          _updateLocalCache(reminders);
-
-          return reminders;
-        });
+        .eq('caregiver_id', caregiverId)
+        .order('reminder_time')
+        .map((data) => data.map((json) => Reminder.fromJson(json)).toList());
   }
 
-  /// ✅ NEW: Create reminder for a specific patient (caregiver action)
-  Future<void> createReminderForPatient({
-    required Reminder reminder,
-    required String createdBy, // caregiver user ID
-  }) async {
-    if (!_isInit) await init();
+  /// Add reminder
+  Future<void> addReminder(Reminder reminder) async {
+    // 1. Schedule Notification (local only for now, if patient is adding, though usually Caregiver adds)
+    await _notificationService.scheduleReminder(reminder);
 
-    // Save to Hive first (Offline-first)
-    await _box.put(reminder.id, reminder.copyWith(isSynced: false));
-
-    // Try to upload audio if local path exists
     String? voiceUrl = reminder.voiceAudioUrl;
     if (reminder.localAudioPath != null && voiceUrl == null) {
       try {
@@ -111,52 +73,30 @@ class ReminderRepository {
       }
     }
 
-    final updatedReminder = reminder.copyWith(
-      voiceAudioUrl: voiceUrl,
-      // Ensure created_by is set for RLS
-    );
+    final updatedReminder = reminder.copyWith(voiceAudioUrl: voiceUrl);
 
-    // Sync to Supabase
+    // 2. Sync to Supabase
     try {
       await _supabase.from('reminders').insert(updatedReminder.toJson());
-      await _box.put(
-          updatedReminder.id, updatedReminder.copyWith(isSynced: true));
     } catch (e) {
-      print('Sync error creating reminder: $e');
+      print('Sync error adding reminder: $e');
       throw Exception('Failed to create reminder: $e');
     }
   }
 
-  /// Add reminder (existing method - kept for compatibility)
-  Future<void> addReminder(Reminder reminder) async {
-    if (!_isInit) await init();
-    await _box.put(reminder.id, reminder.copyWith(isSynced: false));
-
-    String? voiceUrl = reminder.voiceAudioUrl;
-    if (reminder.localAudioPath != null && voiceUrl == null) {
-      try {
-        voiceUrl = await _voiceService.uploadVoiceNote(
-            reminder.localAudioPath!, reminder.id);
-      } catch (e) {
-        print('Voice upload failed: $e');
-      }
-    }
-
-    final updatedReminder = reminder.copyWith(voiceAudioUrl: voiceUrl);
-
-    try {
-      await _supabase.from('reminders').insert(updatedReminder.toJson());
-      await _box.put(
-          updatedReminder.id, updatedReminder.copyWith(isSynced: true));
-    } catch (e) {
-      print('Sync error adding reminder: $e');
-    }
+  Future<void> createReminderForPatient({
+    required Reminder reminder,
+  }) async {
+    await addReminder(reminder);
   }
 
   /// Update reminder
   Future<void> updateReminder(Reminder reminder) async {
-    if (!_isInit) await init();
-    await _box.put(reminder.id, reminder.copyWith(isSynced: false));
+    // 1. Clear previous notification, and schedule new one
+    await _notificationService.cancelReminder(reminder);
+    if (reminder.status == ReminderStatus.pending) {
+      await _notificationService.scheduleReminder(reminder);
+    }
 
     String? voiceUrl = reminder.voiceAudioUrl;
     if (reminder.localAudioPath != null && voiceUrl == null) {
@@ -170,23 +110,43 @@ class ReminderRepository {
 
     final updatedReminder = reminder.copyWith(voiceAudioUrl: voiceUrl);
 
+    // 2. Sync to Supabase
     try {
       await _supabase
           .from('reminders')
           .update(updatedReminder.toJson())
           .eq('id', updatedReminder.id);
-      await _box.put(
-          updatedReminder.id, updatedReminder.copyWith(isSynced: true));
     } catch (e) {
       print('Sync error updating reminder: $e');
       throw Exception('Failed to update reminder: $e');
     }
   }
 
+  /// Snooze reminder
+  Future<void> snoozeReminder(String id, int minutes) async {
+    try {
+      final response =
+          await _supabase.from('reminders').select().eq('id', id).single();
+      final reminder = Reminder.fromJson(response);
+
+      final updated = reminder.copyWith(
+        isSnoozed: true,
+        snoozeDurationMinutes: minutes,
+        lastSnoozedAt: DateTime.now(),
+        // For UI, we advance the reminderTime visually
+        reminderTime: reminder.reminderTime.add(Duration(minutes: minutes)),
+      );
+      await updateReminder(updated);
+    } catch (e) {
+      print('Error snoozing reminder: $e');
+      throw Exception('Failed to snooze reminder: $e');
+    }
+  }
+
   /// Delete reminder
   Future<void> deleteReminder(String id) async {
-    if (!_isInit) await init();
-    await _box.delete(id);
+    await _notificationService.cancelReminderById(id);
+
     try {
       await _supabase.from('reminders').delete().eq('id', id);
     } catch (e) {
@@ -195,107 +155,26 @@ class ReminderRepository {
     }
   }
 
-  /// ✅ NEW: Mark reminder as completed (with completion sync)
+  /// Mark reminder as completed
   Future<void> markReminderCompleted(String id) async {
-    if (!_isInit) await init();
-    final reminder = _box.get(id);
-    if (reminder != null) {
+    try {
+      final response =
+          await _supabase.from('reminders').select().eq('id', id).single();
+
+      final reminder = Reminder.fromJson(response);
       final updated = reminder.copyWith(
         status: ReminderStatus.completed,
         completionHistory: [...reminder.completionHistory, DateTime.now()],
-        isSynced: false,
       );
       await updateReminder(updated);
+    } catch (e) {
+      print('Error marking reminder completed: $e');
+      throw Exception('Failed to complete reminder: $e');
     }
   }
 
-  /// Mark as done (existing method - kept for compatibility)
+  /// Mark as done
   Future<void> markAsDone(String id) async {
     await markReminderCompleted(id);
-  }
-
-  /// Sync reminders with Supabase
-  Future<void> syncReminders(String patientId) async {
-    if (!_isInit) await init();
-
-    // 1. Push local changes
-    final unsynced = _box.values.where((r) => !r.isSynced).toList();
-    for (var r in unsynced) {
-      String? voiceUrl = r.voiceAudioUrl;
-      if (r.localAudioPath != null && voiceUrl == null) {
-        try {
-          voiceUrl =
-              await _voiceService.uploadVoiceNote(r.localAudioPath!, r.id);
-        } catch (e) {
-          print('Sync voice upload failed for ${r.id}: $e');
-        }
-      }
-
-      final toSync = r.copyWith(voiceAudioUrl: voiceUrl);
-
-      try {
-        await _supabase.from('reminders').upsert(toSync.toJson());
-        await _box.put(toSync.id, toSync.copyWith(isSynced: true));
-      } catch (e) {
-        print('Sync push failed for ${r.id}: $e');
-      }
-    }
-
-    // 2. Fetch remote
-    try {
-      final response = await _supabase
-          .from('reminders')
-          .select()
-          .eq('patient_id', patientId);
-
-      final List<dynamic> data = response;
-      for (var json in data) {
-        final remoteReminder = Reminder.fromJson(json);
-
-        final existing = _box.get(remoteReminder.id);
-        final stableId = existing?.notificationId ??
-            DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
-
-        await _box.put(
-            remoteReminder.id,
-            remoteReminder.copyWith(
-              isSynced: true,
-              notificationId: stableId,
-            ));
-      }
-    } catch (e) {
-      print('Sync fetch failed: $e');
-    }
-  }
-
-  /// Upsert from realtime event
-  Future<void> upsertFromRealtime(Reminder reminder) async {
-    if (!_isInit) await init();
-    await _box.put(reminder.id, reminder.copyWith(isSynced: true));
-  }
-
-  /// Delete from realtime event
-  Future<void> deleteFromRealtime(String id) async {
-    if (!_isInit) await init();
-    await _box.delete(id);
-  }
-
-  /// Helper: Update local Hive cache from realtime data
-  void _updateLocalCache(List<Reminder> reminders) {
-    if (!_isInit) return;
-
-    for (var reminder in reminders) {
-      final existing = _box.get(reminder.id);
-      final stableId = existing?.notificationId ??
-          DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
-
-      _box.put(
-        reminder.id,
-        reminder.copyWith(
-          isSynced: true,
-          notificationId: stableId,
-        ),
-      );
-    }
   }
 }

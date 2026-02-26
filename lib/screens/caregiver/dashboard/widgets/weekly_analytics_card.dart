@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../data/models/game_analytics_summary.dart';
+
 /// Weekly Analytics Card
 /// Shows key metrics and AI-generated insights
 class WeeklyAnalyticsCard extends StatelessWidget {
   final double adherencePercentage;
-  final int gamesPlayed;
+  final GameAnalyticsSummary gameStats;
   final double journalConsistency;
   final int safeZoneBreaches;
   final String insightMessage;
@@ -13,7 +15,7 @@ class WeeklyAnalyticsCard extends StatelessWidget {
   const WeeklyAnalyticsCard({
     super.key,
     required this.adherencePercentage,
-    required this.gamesPlayed,
+    required this.gameStats,
     required this.journalConsistency,
     required this.safeZoneBreaches,
     required this.insightMessage,
@@ -86,9 +88,34 @@ class WeeklyAnalyticsCard extends StatelessWidget {
               Expanded(
                 child: _MetricCard(
                   label: 'Games',
-                  value: gamesPlayed.toString(),
+                  value: gameStats.gamesPlayedThisWeek.toString(),
                   icon: Icons.games,
                   color: Colors.purple,
+                  trend: gameStats.engagementTrend,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCard(
+                  label: 'Avg Score',
+                  value: gameStats.avgScoreThisWeek.toStringAsFixed(0),
+                  icon: Icons.score,
+                  color: Colors.indigo,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricCard(
+                  label: 'Play Time',
+                  value: gameStats.formattedPlayTime,
+                  icon: Icons.timer,
+                  color: Colors.teal,
                 ),
               ),
             ],
@@ -174,24 +201,35 @@ class WeeklyAnalyticsCard extends StatelessWidget {
   }
 }
 
-/// Individual metric card
 class _MetricCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color color;
+  final String? trend;
 
   const _MetricCard({
     required this.label,
     required this.value,
     required this.icon,
     required this.color,
+    this.trend,
   });
 
   @override
   Widget build(BuildContext context) {
+    IconData? trendIcon;
+    Color? trendColor;
+    if (trend == 'up') {
+      trendIcon = Icons.arrow_upward;
+      trendColor = Colors.green;
+    } else if (trend == 'down') {
+      trendIcon = Icons.arrow_downward;
+      trendColor = Colors.red;
+    }
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -199,12 +237,21 @@ class _MetricCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 20),
+              if (trendIcon != null) ...[
+                const SizedBox(width: 4),
+                Icon(trendIcon, color: trendColor, size: 14),
+              ],
+            ],
+          ),
           const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -218,6 +265,8 @@ class _MetricCard extends StatelessWidget {
               color: color.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

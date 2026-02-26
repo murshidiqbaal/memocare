@@ -13,6 +13,7 @@ class LLMMemoryQueryEngine {
   final ReminderRepository _reminderRepo;
   final PeopleRepository _peopleRepo;
   final MemoryRepository _memoryRepo;
+  // ignore: unused_field
   final SupabaseClient _supabase;
   final String _geminiApiKey;
 
@@ -80,28 +81,32 @@ class LLMMemoryQueryEngine {
       // Initialize repositories
       await Future.wait([
         _reminderRepo.init(),
-        _peopleRepo.init(),
-        _memoryRepo.init(),
       ]);
 
-      // Fetch data in parallel
-      final reminders = _reminderRepo.getReminders(patientId);
-      final people = _peopleRepo.getPeople(patientId);
-      final memories = _memoryRepo.getMemories(patientId);
+      // Fetch data
+      final results = await Future.wait([
+        _peopleRepo.getPeople(patientId),
+        _memoryRepo.getMemories(patientId),
+        _reminderRepo.getReminders(patientId),
+      ]);
+      final people = results[0] as List;
+      final memories = results[1] as List;
+      final reminders = results[2] as List<Reminder>;
 
       // Get today's and upcoming reminders
       final now = DateTime.now();
       final todayReminders = reminders.where((r) {
-        return r.remindAt.day == now.day &&
-            r.remindAt.month == now.month &&
-            r.remindAt.year == now.year &&
+        return r.reminderTime.day == now.day &&
+            r.reminderTime.month == now.month &&
+            r.reminderTime.year == now.year &&
             r.status == ReminderStatus.pending;
       }).toList();
 
       final upcomingReminders = reminders.where((r) {
-        return r.remindAt.isAfter(now) && r.status == ReminderStatus.pending;
+        return r.reminderTime.isAfter(now) &&
+            r.status == ReminderStatus.pending;
       }).toList()
-        ..sort((a, b) => a.remindAt.compareTo(b.remindAt));
+        ..sort((a, b) => a.reminderTime.compareTo(b.reminderTime));
 
       // Get recent memories (last 7 days)
       final recentMemories = memories.where((m) {
@@ -168,7 +173,7 @@ Available information:''');
     if (context.todayReminders.isNotEmpty) {
       buffer.writeln('\nToday\'s reminders:');
       for (var reminder in context.todayReminders.take(3)) {
-        final time = _formatTime(reminder.remindAt);
+        final time = _formatTime(reminder.reminderTime);
         buffer.writeln('- ${reminder.title} at $time');
       }
     }
@@ -177,8 +182,8 @@ Available information:''');
     if (context.upcomingReminders.isNotEmpty) {
       buffer.writeln('\nUpcoming events:');
       for (var reminder in context.upcomingReminders.take(3)) {
-        final date = _formatDate(reminder.remindAt);
-        final time = _formatTime(reminder.remindAt);
+        final date = _formatDate(reminder.reminderTime);
+        final time = _formatTime(reminder.reminderTime);
         buffer.writeln('- ${reminder.title} on $date at $time');
       }
     }
@@ -222,7 +227,7 @@ Available information:''');
         return "You don't have any reminders right now. You're all caught up!";
       }
       final next = context.todayReminders.first;
-      final time = _formatTime(next.remindAt);
+      final time = _formatTime(next.reminderTime);
       return 'Yes, you have ${next.title} at $time today.';
     }
 
@@ -230,8 +235,8 @@ Available information:''');
     if (lowerQuery.contains('time') || lowerQuery.contains('when')) {
       if (context.upcomingReminders.isNotEmpty) {
         final next = context.upcomingReminders.first;
-        final date = _formatDate(next.remindAt);
-        final time = _formatTime(next.remindAt);
+        final date = _formatDate(next.reminderTime);
+        final time = _formatTime(next.reminderTime);
         return 'Your next event is ${next.title} on $date at $time.';
       }
     }

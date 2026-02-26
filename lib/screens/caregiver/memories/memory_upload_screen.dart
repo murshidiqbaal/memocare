@@ -98,7 +98,6 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
       localPhotoPath: _localPhotoPath,
       imageUrl: widget.existingMemory?.imageUrl,
       createdAt: widget.existingMemory?.createdAt ?? DateTime.now(),
-      isSynced: false,
     );
 
     if (widget.existingMemory == null) {

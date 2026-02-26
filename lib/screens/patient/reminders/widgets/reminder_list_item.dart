@@ -21,7 +21,7 @@ class ReminderListItem extends StatelessWidget {
     final isCompleted = reminder.status == ReminderStatus.completed;
     final isMissed = reminder.status == ReminderStatus.missed ||
         (reminder.status == ReminderStatus.pending &&
-            reminder.remindAt.isBefore(DateTime.now()));
+            reminder.reminderTime.isBefore(DateTime.now()));
 
     final hasVoice =
         reminder.voiceAudioUrl != null || reminder.localAudioPath != null;
@@ -108,7 +108,7 @@ class ReminderListItem extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          DateFormat('h:mm a').format(reminder.remindAt),
+                          DateFormat('h:mm a').format(reminder.reminderTime),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

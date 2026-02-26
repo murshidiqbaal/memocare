@@ -95,7 +95,7 @@ class CaregiverReminderList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 4),
-                    Text(DateFormat('h:mm a').format(reminder.remindAt)),
+                    Text(DateFormat('h:mm a').format(reminder.reminderTime)),
                     if (hasVoice)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),

@@ -68,8 +68,8 @@ class ReminderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Caregiver Badge
-                if (reminder.createdBy != null &&
-                    reminder.createdBy != reminder.patientId)
+                if (reminder.caregiverId.isNotEmpty &&
+                    reminder.caregiverId != reminder.patientId)
                   Container(
                     margin: EdgeInsets.only(bottom: 6 * scale),
                     padding: EdgeInsets.symmetric(

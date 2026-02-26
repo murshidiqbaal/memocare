@@ -1,185 +1,167 @@
-import 'package:hive/hive.dart';
-import 'package:json_annotation/json_annotation.dart';
-
-part 'reminder.g.dart';
-
-@HiveType(typeId: 1)
 enum ReminderType {
-  @HiveField(0)
   medication,
-  @HiveField(1)
   appointment,
-  @HiveField(2)
   task,
 }
 
-@HiveType(typeId: 2)
 enum ReminderFrequency {
-  @HiveField(0)
   once,
-  @HiveField(1)
   daily,
-  @HiveField(2)
   weekly,
-  @HiveField(3)
   custom,
 }
 
-@HiveType(typeId: 3)
 enum ReminderStatus {
-  @HiveField(0)
   pending,
-  @HiveField(1)
   completed,
-  @HiveField(2)
   missed,
 }
 
-@JsonSerializable(explicitToJson: true)
-@HiveType(typeId: 0)
-class Reminder extends HiveObject {
-  @HiveField(0)
+class Reminder {
   final String id;
-
-  @HiveField(1)
-  @JsonKey(name: 'patient_id')
   final String patientId;
-
-  @HiveField(2)
+  final String caregiverId;
   final String title;
-
-  @HiveField(3)
   final ReminderType type;
-
-  @HiveField(4)
   final String? description;
-
-  @HiveField(5)
-  @JsonKey(name: 'remind_at')
-  final DateTime remindAt;
-
-  @HiveField(6)
-  @JsonKey(name: 'repeat_rule')
+  final DateTime reminderTime;
   final ReminderFrequency repeatRule;
-
-  @HiveField(7)
-  @JsonKey(name: 'created_by')
-  final String? createdBy;
-
-  @HiveField(8)
-  @JsonKey(name: 'completion_status')
   final ReminderStatus status;
-
-  @HiveField(9)
-  @JsonKey(name: 'voice_audio_url')
-  final String? voiceAudioUrl;
-
-  @HiveField(10)
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  final String? localAudioPath;
-
-  @HiveField(11)
-  @JsonKey(name: 'created_at')
   final DateTime createdAt;
-
-  @HiveField(12)
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  final bool isSynced;
-
-  @HiveField(13)
-  @JsonKey(name: 'completion_history')
   final List<DateTime> completionHistory;
-
-  @HiveField(14)
-  @JsonKey(name: 'is_snoozed')
   final bool isSnoozed;
-
-  @HiveField(15)
-  @JsonKey(name: 'snooze_duration_minutes')
   final int? snoozeDurationMinutes;
-
-  @HiveField(16)
-  @JsonKey(name: 'last_snoozed_at')
   final DateTime? lastSnoozedAt;
 
-  @HiveField(17)
-  @JsonKey(
-      name: 'notification_id', includeFromJson: false, includeToJson: false)
+  // Local only properties (not sent to Supabase)
+  final String? localAudioPath;
   final int? notificationId;
+
+  // Keeping this for compatibility in UI but it's local only since it's not in schema
+  final String? voiceAudioUrl;
 
   Reminder({
     required this.id,
     required this.patientId,
+    required this.caregiverId,
     required this.title,
     required this.type,
-    required this.remindAt,
+    required this.reminderTime,
     required this.createdAt,
     this.description,
     this.repeatRule = ReminderFrequency.once,
-    this.createdBy,
     this.status = ReminderStatus.pending,
-    this.voiceAudioUrl,
-    this.localAudioPath,
-    this.isSynced = true,
     this.completionHistory = const [],
     this.isSnoozed = false,
     this.snoozeDurationMinutes,
     this.lastSnoozedAt,
+    this.localAudioPath,
     this.notificationId,
+    this.voiceAudioUrl,
   });
 
-  factory Reminder.fromJson(Map<String, dynamic> json) =>
-      _$ReminderFromJson(json);
+  factory Reminder.fromJson(Map<String, dynamic> json) {
+    return Reminder(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      caregiverId: json['caregiver_id'] as String,
+      title: json['title'] as String,
+      type: ReminderType.values.firstWhere(
+        (e) => e.name == json['type'],
+        orElse: () => ReminderType.task,
+      ),
+      description: json['description'] as String?,
+      reminderTime: DateTime.parse(json['reminder_time'] as String).toLocal(),
+      repeatRule: ReminderFrequency.values.firstWhere(
+        (e) => e.name == json['repeat_rule'],
+        orElse: () => ReminderFrequency.once,
+      ),
+      status: ReminderStatus.values.firstWhere(
+        (e) => e.name == json['completion_status'],
+        orElse: () => ReminderStatus.pending,
+      ),
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      completionHistory: (json['completion_history'] as List<dynamic>?)
+              ?.map((e) => DateTime.parse(e as String).toLocal())
+              .toList() ??
+          [],
+      isSnoozed: json['is_snoozed'] as bool? ?? false,
+      snoozeDurationMinutes: json['snooze_duration_minutes'] as int?,
+      lastSnoozedAt: json['last_snoozed_at'] != null
+          ? DateTime.parse(json['last_snoozed_at'] as String).toLocal()
+          : null,
+      localAudioPath: json['localAudioPath'] as String?,
+      notificationId: json['notificationId'] as int?,
+      voiceAudioUrl: json['voiceAudioUrl'] as String?,
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$ReminderToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'caregiver_id': caregiverId,
+      'title': title,
+      'type': type.name,
+      'description': description,
+      'reminder_time': reminderTime.toUtc().toIso8601String(),
+      'repeat_rule': repeatRule.name,
+      'completion_status': status.name,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'completion_history':
+          completionHistory.map((e) => e.toUtc().toIso8601String()).toList(),
+      'is_snoozed': isSnoozed,
+      'snooze_duration_minutes': snoozeDurationMinutes,
+      'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
+      // localAudioPath, notificationId, voiceAudioUrl strictly local
+    };
+  }
 
   Reminder copyWith({
     String? id,
     String? patientId,
+    String? caregiverId,
     String? title,
     ReminderType? type,
     String? description,
-    DateTime? remindAt,
+    DateTime? reminderTime,
     ReminderFrequency? repeatRule,
-    String? createdBy,
     ReminderStatus? status,
-    String? voiceAudioUrl,
-    String? localAudioPath,
     DateTime? createdAt,
-    bool? isSynced,
     List<DateTime>? completionHistory,
     bool? isSnoozed,
     int? snoozeDurationMinutes,
     DateTime? lastSnoozedAt,
+    String? localAudioPath,
     int? notificationId,
+    String? voiceAudioUrl,
   }) {
     return Reminder(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
+      caregiverId: caregiverId ?? this.caregiverId,
       title: title ?? this.title,
       type: type ?? this.type,
       description: description ?? this.description,
-      remindAt: remindAt ?? this.remindAt,
+      reminderTime: reminderTime ?? this.reminderTime,
       repeatRule: repeatRule ?? this.repeatRule,
-      createdBy: createdBy ?? this.createdBy,
       status: status ?? this.status,
-      voiceAudioUrl: voiceAudioUrl ?? this.voiceAudioUrl,
-      localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,
-      isSynced: isSynced ?? this.isSynced,
       completionHistory: completionHistory ?? this.completionHistory,
       isSnoozed: isSnoozed ?? this.isSnoozed,
       snoozeDurationMinutes:
           snoozeDurationMinutes ?? this.snoozeDurationMinutes,
       lastSnoozedAt: lastSnoozedAt ?? this.lastSnoozedAt,
+      localAudioPath: localAudioPath ?? this.localAudioPath,
       notificationId: notificationId ?? this.notificationId,
+      voiceAudioUrl: voiceAudioUrl ?? this.voiceAudioUrl,
     );
   }
 
   // Convenience Getters & Aliases
   bool get isCompleted => status == ReminderStatus.completed;
   bool get hasVoiceNote => voiceAudioUrl != null || localAudioPath != null;
-  DateTime get time => remindAt;
+  DateTime get time => reminderTime;
   ReminderFrequency get frequency => repeatRule;
   int get snoozeCount => 0;
   List<DateTime> get missedLogs => [];

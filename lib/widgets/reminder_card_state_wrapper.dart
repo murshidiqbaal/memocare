@@ -25,7 +25,7 @@ class ReminderCardStateWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final isExpired = reminder.remindAt.isBefore(now) &&
+    final isExpired = reminder.reminderTime.isBefore(now) &&
         reminder.status != ReminderStatus.completed;
     final isDisabled = isExpired;
 
@@ -75,7 +75,7 @@ class ReminderCardStateWrapper extends StatelessWidget {
 extension ReminderExpiredExtension on Reminder {
   bool get isExpired {
     final now = DateTime.now();
-    return remindAt.isBefore(now) && status != ReminderStatus.completed;
+    return reminderTime.isBefore(now) && status != ReminderStatus.completed;
   }
 
   bool get isMissed => isExpired;

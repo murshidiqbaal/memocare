@@ -39,11 +39,8 @@ class CaregiverProfileRepository {
 
       final profile = CaregiverProfile.fromJson(response);
 
-      // TODO: Save to Hive for offline cache here (omitted for brevity, can happen in ViewModel or separate service)
-
       return Right(profile);
     } catch (e) {
-      // TODO: Try fetching from Hive if offline
       return Left(ServerFailure(e.toString()));
     }
   }

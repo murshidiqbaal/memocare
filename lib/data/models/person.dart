@@ -1,50 +1,34 @@
-import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'person.g.dart';
 
 @JsonSerializable(explicitToJson: true)
-@HiveType(typeId: 4)
-class Person extends HiveObject {
-  @HiveField(0)
+class Person {
   final String id;
 
-  @HiveField(1)
   @JsonKey(name: 'patient_id')
   final String patientId;
 
-  @HiveField(2)
   final String name;
 
-  @HiveField(3)
   final String relationship;
 
-  @HiveField(4)
   final String? description;
 
-  @HiveField(5)
   @JsonKey(name: 'photo_url')
   final String? photoUrl;
 
-  @HiveField(6)
   @JsonKey(name: 'voice_audio_url')
   final String? voiceAudioUrl;
 
-  @HiveField(7)
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localPhotoPath;
 
-  @HiveField(8)
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localAudioPath;
 
-  @HiveField(9)
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
-
-  @HiveField(10)
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  final bool isSynced;
 
   Person({
     required this.id,
@@ -57,7 +41,6 @@ class Person extends HiveObject {
     this.localPhotoPath,
     this.localAudioPath,
     required this.createdAt,
-    this.isSynced = true,
   });
 
   factory Person.fromJson(Map<String, dynamic> json) => _$PersonFromJson(json);
@@ -75,7 +58,6 @@ class Person extends HiveObject {
     String? localPhotoPath,
     String? localAudioPath,
     DateTime? createdAt,
-    bool? isSynced,
   }) {
     return Person(
       id: id ?? this.id,
@@ -88,7 +70,6 @@ class Person extends HiveObject {
       localPhotoPath: localPhotoPath ?? this.localPhotoPath,
       localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,
-      isSynced: isSynced ?? this.isSynced,
     );
   }
 }

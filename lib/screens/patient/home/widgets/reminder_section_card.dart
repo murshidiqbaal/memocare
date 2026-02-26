@@ -42,9 +42,9 @@ class _ReminderSectionCardState extends ConsumerState<ReminderSectionCard> {
     final now = DateTime.now();
     final upcoming = reminders
         .where((r) =>
-            r.remindAt.isAfter(now) && r.status == ReminderStatus.pending)
+            r.reminderTime.isAfter(now) && r.status == ReminderStatus.pending)
         .toList()
-      ..sort((a, b) => a.remindAt.compareTo(b.remindAt));
+      ..sort((a, b) => a.reminderTime.compareTo(b.reminderTime));
 
     return upcoming.isNotEmpty ? upcoming.first : null;
   }
@@ -198,7 +198,7 @@ class _ReminderSectionCardState extends ConsumerState<ReminderSectionCard> {
                         SizedBox(width: 8 * scale),
                         Flexible(
                           child: Text(
-                            'Next: ${DateFormat('h:mm a').format(nextReminder.remindAt)}',
+                            'Next: ${DateFormat('h:mm a').format(nextReminder.reminderTime)}',
                             style: TextStyle(
                               fontSize: 16 * scale,
                               fontWeight: FontWeight.bold,

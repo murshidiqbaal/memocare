@@ -51,7 +51,7 @@ Future<void> uploadPhoto(WidgetRef ref) async {
     final user = ref.read(currentUserProvider);
     final profile = await ref.read(userProfileProvider.future);
 
-    final url = await repo.uploadProfilePhoto(
+    await repo.uploadProfilePhoto(
       userId: user!.id,
       file: file,
       role: profile!.role, // 'patient' or 'caregiver'

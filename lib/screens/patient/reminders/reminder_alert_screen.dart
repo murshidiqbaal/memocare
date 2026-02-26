@@ -112,7 +112,7 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
     }
 
     final updated = reminder.copyWith(
-      remindAt: DateTime.now().add(Duration(minutes: minutes)),
+      reminderTime: DateTime.now().add(Duration(minutes: minutes)),
       isSnoozed: true,
       snoozeDurationMinutes: minutes,
       lastSnoozedAt: DateTime.now(),
@@ -190,7 +190,7 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              DateFormat('h:mm a').format(reminder.remindAt),
+              DateFormat('h:mm a').format(reminder.reminderTime),
               style: TextStyle(
                 fontSize: 20,
                 color: Colors.teal.shade700,

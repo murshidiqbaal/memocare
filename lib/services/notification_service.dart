@@ -51,7 +51,7 @@ class NotificationService {
           ? 'Time for your medication'
           : 'You have a ${reminder.type.name} now', // Named 'body'
       scheduledDate: tz.TZDateTime.from(
-          reminder.remindAt, tz.local), // Named 'scheduledDate'
+          reminder.reminderTime, tz.local), // Named 'scheduledDate'
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'reminder_channel',

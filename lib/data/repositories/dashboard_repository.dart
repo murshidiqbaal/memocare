@@ -1,4 +1,3 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/models/voice_query.dart';
@@ -7,27 +6,15 @@ import '../models/dashboard_stats.dart';
 import '../models/reminder.dart';
 
 /// Dashboard Repository
-/// Handles data aggregation and caching for caregiver dashboard
+/// Handles data aggregation for caregiver dashboard
 class DashboardRepository {
   final SupabaseClient _supabase;
-  late Box<CaregiverPatientLink> _linksBox;
-  bool _isInit = false;
 
   DashboardRepository(this._supabase);
-
-  /// Initialize Hive boxes
-  Future<void> init() async {
-    if (_isInit) return;
-    _linksBox =
-        await Hive.openBox<CaregiverPatientLink>('caregiver_patient_links');
-    _isInit = true;
-  }
 
   /// Get all patients linked to a caregiver
   Future<List<CaregiverPatientLink>> getLinkedPatients(
       String caregiverId) async {
-    await init();
-
     try {
       // Fetch from Supabase
       final data = await _supabase.from('caregiver_patient_links').select('''
@@ -67,16 +54,12 @@ class DashboardRepository {
         );
 
         links.add(link);
-        await _linksBox.put(link.id, link);
       }
 
       return links;
     } catch (e) {
       print('Error fetching linked patients: $e');
-      // Return cached data
-      return _linksBox.values
-          .where((l) => l.caregiverId == caregiverId)
-          .toList();
+      return [];
     }
   }
 
@@ -175,7 +158,7 @@ class DashboardRepository {
       );
     } catch (e) {
       print('Error fetching dashboard stats: $e');
-      return DashboardStats();
+      return const DashboardStats();
     }
   }
 
@@ -220,7 +203,6 @@ class DashboardRepository {
 
   /// Sync dashboard data
   Future<void> syncDashboard(String caregiverId) async {
-    await init();
     await getLinkedPatients(caregiverId);
   }
 }

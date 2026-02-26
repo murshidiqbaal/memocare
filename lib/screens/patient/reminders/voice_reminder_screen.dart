@@ -109,12 +109,6 @@ class _VoiceReminderScreenState extends ConsumerState<VoiceReminderScreen> {
     DateTime now = DateTime.now();
     DateTime time = now.add(const Duration(hours: 1)); // Default 1 hour later
 
-    // Improved regex to catch "at 8"
-    final timeRegex = RegExp(r'(\d{1,2})(:(\d{2}))?\s*(am|pm)?');
-    // This regex is too broad, it catches "at 8" but also just "8".
-    // Let's stick to explicit AM/PM or "at 8" if needed, but for simplicity stick to existing logic or slight improvement.
-    // The previous regex was: r'(\d{1,2})(:(\d{2}))?\s*(am|pm)'
-    // Let's keep it simple for demo.
     final strictTimeRegex = RegExp(r'(\d{1,2})(:(\d{2}))?\s*(am|pm)');
     final match = strictTimeRegex.firstMatch(lowerText);
 
@@ -155,12 +149,13 @@ class _VoiceReminderScreenState extends ConsumerState<VoiceReminderScreen> {
     final reminder = Reminder(
       id: const Uuid().v4(),
       title: _parsedTitle,
-      remindAt: _parsedTime ?? DateTime.now(),
+      reminderTime: _parsedTime ?? DateTime.now(),
       createdAt: DateTime.now(),
       repeatRule: _parsedFrequency,
       type: _parsedType,
       patientId: userId,
       status: ReminderStatus.pending,
+      caregiverId: userId,
     );
 
     ref.read(reminderViewModelProvider.notifier).addReminder(reminder);

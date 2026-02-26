@@ -36,7 +36,6 @@ class InsightCard extends StatelessWidget {
         textColor = Colors.orange.shade900;
         break;
       case InsightType.neutral:
-      default:
         bg = Colors.blue.shade50;
         border = Colors.blue.shade200;
         icon = Icons.info_outline;

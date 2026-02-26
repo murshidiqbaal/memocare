@@ -64,7 +64,7 @@ class PatientDashboardExample extends ConsumerWidget {
                         ),
                       ),
                       subtitle: Text(
-                        DateFormat('h:mm a').format(reminder.remindAt),
+                        DateFormat('h:mm a').format(reminder.reminderTime),
                         style: TextStyle(
                           color: isExpired ? Colors.grey : Colors.teal,
                         ),
@@ -96,9 +96,9 @@ class PatientDashboardExample extends ConsumerWidget {
   List<Reminder> _getTodayReminders(List<Reminder> reminders) {
     final now = DateTime.now();
     return reminders.where((r) {
-      return r.remindAt.year == now.year &&
-          r.remindAt.month == now.month &&
-          r.remindAt.day == now.day;
+      return r.reminderTime.year == now.year &&
+          r.reminderTime.month == now.month &&
+          r.reminderTime.day == now.day;
     }).toList();
   }
 
@@ -208,7 +208,7 @@ class CaregiverReminderManagementExample extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Time: ${DateFormat('MMM d, h:mm a').format(reminder.remindAt)}',
+                            'Time: ${DateFormat('MMM d, h:mm a').format(reminder.reminderTime)}',
                             style: TextStyle(
                               color: isExpired ? Colors.grey : Colors.teal,
                             ),
@@ -431,15 +431,15 @@ class _CreateReminderDialogState extends State<CreateReminderDialog> {
       patientId: widget.patientId,
       title: _titleController.text,
       description: _descriptionController.text,
-      remindAt: _selectedDateTime,
+      reminderTime: _selectedDateTime,
       repeatRule: _selectedRepeatRule,
       status: ReminderStatus.pending,
       type: ReminderType.medication, // or other type
       completionHistory: [],
-      isSynced: false,
       notificationId:
           DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
       createdAt: DateTime.now(),
+      caregiverId: '',
     );
 
     widget.onSave(reminder);

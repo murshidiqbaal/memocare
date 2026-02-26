@@ -1,81 +1,65 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../data/models/patient_profile.dart';
-import '../../../../providers/auth_provider.dart';
-import '../../../../providers/service_providers.dart';
 
-class PatientProfileViewModel
-    extends StateNotifier<AsyncValue<PatientProfile?>> {
-  final Ref _ref;
-  final String? _targetPatientId;
+/// 🔥 Unified realtime provider for Patient Profile.
+/// - Caregiver → query by patient id
+/// - Patient → query by auth user_id
+final patientProfileProvider =
+    StreamProvider.autoDispose.family<PatientProfile?, String?>(
+  (ref, patientId) {
+    final supabase = Supabase.instance.client;
 
-  PatientProfileViewModel(this._ref, [this._targetPatientId])
-      : super(const AsyncValue.loading()) {
-    loadProfile();
-  }
-
-  Future<void> loadProfile() async {
-    final user = _ref.read(currentUserProvider);
-    final profileId = _targetPatientId ?? user?.id;
-
-    if (profileId == null) {
-      state = const AsyncValue.data(null);
-      return;
+    // 👀 Caregiver viewing specific patient
+    if (patientId != null && patientId.isNotEmpty) {
+      return supabase
+          .from('patients')
+          .stream(primaryKey: ['id'])
+          .eq('id', patientId)
+          .map(_mapSinglePatientSafely);
     }
 
-    state = const AsyncValue.loading();
-    try {
-      final repository = _ref.read(patientProfileRepositoryProvider);
-      final profile = await repository.getProfile(profileId);
-      state = AsyncValue.data(profile);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    // 👤 Patient viewing own profile
+    final userId = supabase.auth.currentUser?.id;
+
+    if (userId == null) {
+      return Stream.value(null);
     }
-  }
 
-  Future<void> updateProfile(PatientProfile profile) async {
-    try {
-      final repository = _ref.read(patientProfileRepositoryProvider);
-      await repository.updateProfile(profile);
-      state = AsyncValue.data(profile);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
+    return supabase
+        .from('patients')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .map(_mapSinglePatientSafely);
+  },
+);
 
-  Future<void> updateProfileImage(File file) async {
-    final currentProfile = state.valueOrNull;
-    if (currentProfile == null) return;
+/// 🧠 Safe mapper (prevents crashes & multi-row issues)
+PatientProfile? _mapSinglePatientSafely(List<Map<String, dynamic>> rows) {
+  if (rows.isEmpty) return null;
 
-    try {
-      final repository = _ref.read(patientProfileRepositoryProvider);
-      final imageUrl =
-          await repository.uploadProfileImage(currentProfile.id, file);
-
-      if (imageUrl != null) {
-        final updatedProfile =
-            currentProfile.copyWith(profileImageUrl: imageUrl);
-        await updateProfile(updatedProfile);
-      }
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  try {
+    return PatientProfile.fromJson(rows.first);
+  } catch (_) {
+    return null;
   }
 }
 
-/// Provider for the logged-in patient's profile
-final patientProfileProvider =
-    StateNotifierProvider<PatientProfileViewModel, AsyncValue<PatientProfile?>>(
-        (ref) {
-  return PatientProfileViewModel(ref);
-});
+/// ✅ Linked caregivers provider (clean + typed)
+final linkedCaregiversProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>(
+  (ref, patientId) async {
+    final supabase = Supabase.instance.client;
 
-/// Family/Caregiver targeted patient profile provider
-final patientMonitoringProvider = StateNotifierProvider.family<
-    PatientProfileViewModel,
-    AsyncValue<PatientProfile?>,
-    String>((ref, patientId) {
-  return PatientProfileViewModel(ref, patientId);
-});
+    if (patientId.isEmpty) return [];
+
+    final data = await supabase
+        .from('caregiver_patient_links')
+        .select('*, caregiver_profiles:caregiver_id(*)')
+        .eq('patient_id', patientId)
+        .order('linked_at', ascending: true);
+
+    return List<Map<String, dynamic>>.from(data);
+  },
+);

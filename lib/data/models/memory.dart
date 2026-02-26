@@ -1,51 +1,35 @@
-import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'memory.g.dart';
 
 @JsonSerializable(explicitToJson: true)
-@HiveType(typeId: 5)
-class Memory extends HiveObject {
-  @HiveField(0)
+class Memory {
   final String id;
 
-  @HiveField(1)
   @JsonKey(name: 'patient_id')
   final String patientId;
 
-  @HiveField(2)
   final String title;
 
-  @HiveField(3)
   final String? description;
 
-  @HiveField(4)
   @JsonKey(name: 'image_url')
   final String? imageUrl;
 
-  @HiveField(5)
   @JsonKey(name: 'voice_audio_url')
   final String? voiceAudioUrl;
 
-  @HiveField(6)
   @JsonKey(name: 'event_date')
   final DateTime? eventDate;
 
-  @HiveField(7)
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localPhotoPath;
 
-  @HiveField(8)
   @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localAudioPath;
 
-  @HiveField(9)
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
-
-  @HiveField(10)
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  final bool isSynced;
 
   Memory({
     required this.id,
@@ -58,7 +42,6 @@ class Memory extends HiveObject {
     this.localPhotoPath,
     this.localAudioPath,
     required this.createdAt,
-    this.isSynced = true,
   });
 
   factory Memory.fromJson(Map<String, dynamic> json) => _$MemoryFromJson(json);
@@ -76,7 +59,6 @@ class Memory extends HiveObject {
     String? localPhotoPath,
     String? localAudioPath,
     DateTime? createdAt,
-    bool? isSynced,
   }) {
     return Memory(
       id: id ?? this.id,
@@ -89,7 +71,6 @@ class Memory extends HiveObject {
       localPhotoPath: localPhotoPath ?? this.localPhotoPath,
       localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,
-      isSynced: isSynced ?? this.isSynced,
     );
   }
 }

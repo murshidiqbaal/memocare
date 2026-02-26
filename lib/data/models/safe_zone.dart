@@ -1,63 +1,57 @@
-import 'package:uuid/uuid.dart';
+import 'package:json_annotation/json_annotation.dart';
 
+part 'safe_zone.g.dart';
+
+@JsonSerializable(explicitToJson: true)
 class SafeZone {
   final String id;
+  @JsonKey(name: 'patient_id')
   final String patientId;
   final double latitude;
   final double longitude;
-  final double radius; // in meters
+  @JsonKey(name: 'radius_meters')
+  final int radiusMeters;
+  final String label;
+  @JsonKey(name: 'created_at')
   final DateTime createdAt;
-  final String? name; // "Home", "Park"
+  @JsonKey(name: 'updated_at')
+  final DateTime updatedAt;
 
   SafeZone({
     required this.id,
     required this.patientId,
     required this.latitude,
     required this.longitude,
-    required this.radius,
+    required this.radiusMeters,
+    required this.label,
     required this.createdAt,
-    this.name,
+    required this.updatedAt,
   });
 
-  factory SafeZone.create({
-    required String patientId,
-    required double lat,
-    required double lng,
-    required double radius,
-    String? name,
+  factory SafeZone.fromJson(Map<String, dynamic> json) =>
+      _$SafeZoneFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SafeZoneToJson(this);
+
+  SafeZone copyWith({
+    String? id,
+    String? patientId,
+    double? latitude,
+    double? longitude,
+    int? radiusMeters,
+    String? label,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return SafeZone(
-      id: const Uuid().v4(),
-      patientId: patientId,
-      latitude: lat,
-      longitude: lng,
-      radius: radius,
-      createdAt: DateTime.now(),
-      name: name,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'patient_id': patientId,
-      'latitude': latitude,
-      'longitude': longitude,
-      'radius': radius,
-      'created_at': createdAt.toIso8601String(),
-      'name': name,
-    };
-  }
-
-  factory SafeZone.fromJson(Map<String, dynamic> json) {
-    return SafeZone(
-      id: json['id'],
-      patientId: json['patient_id'],
-      latitude: json['latitude'],
-      longitude: json['longitude'],
-      radius: (json['radius'] as num).toDouble(),
-      createdAt: DateTime.parse(json['created_at']),
-      name: json['name'],
+      id: id ?? this.id,
+      patientId: patientId ?? this.patientId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      radiusMeters: radiusMeters ?? this.radiusMeters,
+      label: label ?? this.label,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

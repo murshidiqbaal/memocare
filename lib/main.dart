@@ -2,19 +2,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
-import 'data/models/caregiver_patient_link.dart';
-import 'data/models/game_session.dart';
-import 'data/models/memory.dart';
-import 'data/models/patient_profile.dart';
-import 'data/models/person.dart';
-import 'data/models/reminder.dart';
-import 'data/models/voice_query.dart';
 import 'providers/service_providers.dart';
 import 'routes/app_router.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,27 +25,14 @@ void main() async {
   // Initialize Supabase
   await SupabaseConfig.initialize();
 
-  // Initialize Hive
-  await Hive.initFlutter();
-
-  // Register Adapters
-  Hive.registerAdapter(ReminderAdapter());
-  Hive.registerAdapter(ReminderTypeAdapter());
-  Hive.registerAdapter(ReminderFrequencyAdapter());
-  Hive.registerAdapter(ReminderStatusAdapter());
-  Hive.registerAdapter(VoiceQueryAdapter());
-  Hive.registerAdapter(CaregiverPatientLinkAdapter());
-  Hive.registerAdapter(PatientProfileAdapter());
-  Hive.registerAdapter(PersonAdapter());
-  Hive.registerAdapter(MemoryAdapter());
-  Hive.registerAdapter(GameSessionAdapter());
-
-  await Hive.openBox<PatientProfile>('patient_profiles');
-
   final container = ProviderContainer();
 
-  // Initialize Notification Service early
+  // Initialize Notification Service early (local alarms + channels)
   await container.read(reminderNotificationServiceProvider).init();
+
+  // Register the global navigator key with FCMService so notification
+  // taps can navigate to the correct screen from any app state.
+  FCMService.setNavigatorKey(rootNavigatorKey);
 
   // Initialize FCM Service (Safely)
   try {

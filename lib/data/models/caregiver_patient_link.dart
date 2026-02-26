@@ -1,41 +1,31 @@
-import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'caregiver_patient_link.g.dart';
 
 /// Caregiver-Patient link model for secure invite code flow
 @JsonSerializable(explicitToJson: true)
-@HiveType(typeId: 7)
-class CaregiverPatientLink extends HiveObject {
-  @HiveField(0)
+class CaregiverPatientLink {
   final String id;
 
-  @HiveField(1)
   @JsonKey(name: 'caregiver_id')
   final String caregiverId;
 
-  @HiveField(2)
   @JsonKey(name: 'patient_id')
   final String patientId;
 
-  @HiveField(3)
   @JsonKey(name: 'linked_at')
   final DateTime linkedAt;
 
   // Optional fields for UI display (fetched via Supabase joins)
-  @HiveField(4)
   @JsonKey(name: 'patient_email')
   final String? patientEmail;
 
-  @HiveField(5)
   @JsonKey(name: 'caregiver_email')
   final String? caregiverEmail;
 
-  @HiveField(6)
   @JsonKey(name: 'patient_name')
   final String? patientName;
 
-  @HiveField(7)
   @JsonKey(name: 'caregiver_name')
   final String? caregiverName;
 

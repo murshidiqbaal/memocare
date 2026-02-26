@@ -2,11 +2,15 @@ class Patient {
   final String id;
   final String fullName;
   final String? profileImageUrl;
+  final String? phoneNumber;
+  final String? emergencyContactPhone;
 
   Patient({
     required this.id,
     required this.fullName,
     this.profileImageUrl,
+    this.phoneNumber,
+    this.emergencyContactPhone,
   });
 
   /// Parse from Supabase joined query
@@ -27,6 +31,9 @@ class Patient {
       profileImageUrl: profileData['avatar_url'] as String? ??
           profileData['profile_photo_url'] as String? ??
           profileData['profile_image_url'] as String?,
+      phoneNumber: profileData['phone_number'] as String? ??
+          profileData['phone'] as String?,
+      emergencyContactPhone: profileData['emergency_contact_phone'] as String?,
     );
   }
 
@@ -35,6 +42,8 @@ class Patient {
       id: json['id'] as String? ?? '',
       fullName: json['full_name'] as String? ?? 'Unknown Patient',
       profileImageUrl: json['profile_image_url'] as String?,
+      phoneNumber: json['phone_number'] as String?,
+      emergencyContactPhone: json['emergency_contact_phone'] as String?,
     );
   }
 
@@ -43,6 +52,8 @@ class Patient {
       'id': id,
       'full_name': fullName,
       'profile_image_url': profileImageUrl,
+      'phone_number': phoneNumber,
+      'emergency_contact_phone': emergencyContactPhone,
     };
   }
 

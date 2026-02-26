@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/memory.dart';
 import '../data/repositories/memory_repository.dart';
@@ -31,10 +32,12 @@ class MemoryListState {
 
 // Memory List Notifier for Patient View
 class MemoryListNotifier extends StateNotifier<MemoryListState> {
+  // ignore: unused_field
   final MemoryRepository _repository;
+  final SupabaseClient _supabase;
   final String patientId;
 
-  MemoryListNotifier(this._repository, this.patientId)
+  MemoryListNotifier(this._repository, this._supabase, this.patientId)
       : super(MemoryListState()) {
     _loadMemories();
   }
@@ -42,8 +45,16 @@ class MemoryListNotifier extends StateNotifier<MemoryListState> {
   Future<void> _loadMemories() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await _repository.init();
-      final memories = _repository.getMemories(patientId);
+      final data = await _supabase
+          .from('memory_cards')
+          .select()
+          .eq('patient_id', patientId)
+          .order('event_date', ascending: false);
+
+      final memories = (data as List)
+          .map((m) => Memory.fromJson(m as Map<String, dynamic>))
+          .toList();
+
       state = state.copyWith(memories: memories, isLoading: false);
     } catch (e) {
       state = state.copyWith(
@@ -54,17 +65,7 @@ class MemoryListNotifier extends StateNotifier<MemoryListState> {
   }
 
   Future<void> refresh() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      await _repository.syncMemories(patientId);
-      final memories = _repository.getMemories(patientId);
-      state = state.copyWith(memories: memories, isLoading: false);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to sync memories: $e',
-      );
-    }
+    await _loadMemories();
   }
 }
 
@@ -73,7 +74,8 @@ final memoryListProvider =
     StateNotifierProvider.family<MemoryListNotifier, MemoryListState, String>(
         (ref, patientId) {
   final repository = ref.watch(memoryRepositoryProvider);
-  return MemoryListNotifier(repository, patientId);
+  final supabase = ref.watch(supabaseClientProvider);
+  return MemoryListNotifier(repository, supabase, patientId);
 });
 
 // Memory Upload State for Caregiver
@@ -110,7 +112,6 @@ class MemoryUploadNotifier extends StateNotifier<MemoryUploadState> {
   Future<void> uploadMemory(Memory memory) async {
     state = state.copyWith(isUploading: true, error: null, success: false);
     try {
-      await _repository.init();
       await _repository.addMemory(memory);
       state = state.copyWith(isUploading: false, success: true);
     } catch (e) {
@@ -124,7 +125,6 @@ class MemoryUploadNotifier extends StateNotifier<MemoryUploadState> {
   Future<void> updateMemory(Memory memory) async {
     state = state.copyWith(isUploading: true, error: null, success: false);
     try {
-      await _repository.init();
       await _repository.updateMemory(memory);
       state = state.copyWith(isUploading: false, success: true);
     } catch (e) {
@@ -135,11 +135,10 @@ class MemoryUploadNotifier extends StateNotifier<MemoryUploadState> {
     }
   }
 
-  Future<void> deleteMemory(String id) async {
+  Future<void> deleteMemory(Memory memory) async {
     state = state.copyWith(isUploading: true, error: null, success: false);
     try {
-      await _repository.init();
-      await _repository.deleteMemory(id);
+      await _repository.deleteMemory(memory);
       state = state.copyWith(isUploading: false, success: true);
     } catch (e) {
       state = state.copyWith(

@@ -1,3 +1,21 @@
+// lib/screens/caregiver/dashboard/viewmodels/caregiver_dashboard_viewmodel.dart
+//
+// ─── LAYER 2 ViewModel ───────────────────────────────────────────────────────
+//
+// Single source of truth wiring:
+//   patientSelectionProvider (Patient model) drives all dashboard data.
+//   The ViewModel never holds its own patient list — it reacts to
+//   patientSelectionProvider and loads data for whichever patient is selected.
+//
+// Key design decisions:
+//   • NOT autoDispose — dashboard lives in an IndexedStack and must keep state
+//     when the tab is off-screen.
+//   • Uses ref.listen inside the Provider body to react to patient changes
+//     without causing rebuild storms in the UI.
+//   • All heavy fetching is async-safe: guarded against disposed state.
+//   • No print() in production — uses debugPrint with assert gate.
+// ─────────────────────────────────────────────────────────────────────────────
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/caregiver_patient_link.dart';
@@ -5,10 +23,13 @@ import '../../../../data/models/dashboard_stats.dart';
 import '../../../../data/models/reminder.dart';
 import '../../../../data/models/voice_query.dart';
 import '../../../../data/repositories/dashboard_repository.dart';
+import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
 import '../../../../providers/service_providers.dart';
 
-/// Patient Status Model
-/// Used to display current patient status in the dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+// Support models
+// ─────────────────────────────────────────────────────────────────────────────
+
 class PatientStatus {
   final String locationName;
   final bool isSafe;
@@ -16,62 +37,72 @@ class PatientStatus {
   final int completedReminders;
   final int totalReminders;
 
-  PatientStatus({
+  const PatientStatus({
     required this.locationName,
     required this.isSafe,
-    DateTime? lastActive,
+    required this.lastActive,
     this.completedReminders = 0,
     this.totalReminders = 0,
-  }) : lastActive = lastActive ?? DateTime.now();
+  });
 }
 
-/// Weekly Stat Model
-/// Used for analytics chart
 class WeeklyStat {
   final String day;
   final double engagement;
 
-  WeeklyStat({
-    required this.day,
-    required this.engagement,
-  });
+  const WeeklyStat({required this.day, required this.engagement});
 }
 
-/// Caregiver Dashboard State
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+
 class CaregiverDashboardState {
   final bool isLoading;
   final bool isOffline;
   final DateTime? lastUpdated;
   final String? error;
 
-  // Patient selection
-  final List<CaregiverPatientLink> linkedPatients;
+  // Derived from patientSelectionProvider — never set locally
+  final String? selectedPatientId; // null = no patient selected
+  final String selectedPatientName;
+  final String? selectedPatientPhotoUrl;
+
+  // Legacy compat: needed by old widgets still using CaregiverPatientLink
   final CaregiverPatientLink? selectedPatient;
+  final List<CaregiverPatientLink> linkedPatients;
 
   // Dashboard data
   final DashboardStats stats;
   final Reminder? nextReminder;
   final List<VoiceQuery> recentVoiceInteractions;
 
-  CaregiverDashboardState({
+  const CaregiverDashboardState({
     this.isLoading = false,
     this.isOffline = false,
     this.lastUpdated,
     this.error,
-    this.linkedPatients = const [],
+    this.selectedPatientId,
+    this.selectedPatientName = 'No Patient Selected',
+    this.selectedPatientPhotoUrl,
     this.selectedPatient,
+    this.linkedPatients = const [],
     DashboardStats? stats,
     this.nextReminder,
     this.recentVoiceInteractions = const [],
-  }) : stats = stats ?? DashboardStats();
+  }) : stats = stats ?? const DashboardStats();
 
   CaregiverDashboardState copyWith({
     bool? isLoading,
     bool? isOffline,
     DateTime? lastUpdated,
     String? error,
-    List<CaregiverPatientLink>? linkedPatients,
+    bool clearError = false,
+    String? selectedPatientId,
+    String? selectedPatientName,
+    String? selectedPatientPhotoUrl,
     CaregiverPatientLink? selectedPatient,
+    List<CaregiverPatientLink>? linkedPatients,
     DashboardStats? stats,
     Reminder? nextReminder,
     List<VoiceQuery>? recentVoiceInteractions,
@@ -80,9 +111,13 @@ class CaregiverDashboardState {
       isLoading: isLoading ?? this.isLoading,
       isOffline: isOffline ?? this.isOffline,
       lastUpdated: lastUpdated ?? this.lastUpdated,
-      error: error,
-      linkedPatients: linkedPatients ?? this.linkedPatients,
+      error: clearError ? null : (error ?? this.error),
+      selectedPatientId: selectedPatientId ?? this.selectedPatientId,
+      selectedPatientName: selectedPatientName ?? this.selectedPatientName,
+      selectedPatientPhotoUrl:
+          selectedPatientPhotoUrl ?? this.selectedPatientPhotoUrl,
       selectedPatient: selectedPatient ?? this.selectedPatient,
+      linkedPatients: linkedPatients ?? this.linkedPatients,
       stats: stats ?? this.stats,
       nextReminder: nextReminder ?? this.nextReminder,
       recentVoiceInteractions:
@@ -90,126 +125,91 @@ class CaregiverDashboardState {
     );
   }
 
-  /// Convenience getters for backward compatibility with UI
-  String get selectedPatientName =>
-      selectedPatient?.patientName ?? 'No Patient Selected';
+  // ── Convenience getters used by UI widgets ──────────────────────────────
 
-  PatientStatus get patientStatus {
-    return PatientStatus(
-      locationName: selectedPatient?.patientName ?? 'Unknown',
-      isSafe: stats.isInSafeZone,
-      lastActive: stats.lastVoiceInteraction,
-      completedReminders: stats.remindersCompleted,
-      totalReminders: stats.remindersCompleted +
-          stats.remindersPending +
-          stats.remindersMissed,
-    );
-  }
+  bool get hasPatientSelected =>
+      selectedPatientId != null && selectedPatientId!.isNotEmpty;
+
+  PatientStatus get patientStatus => PatientStatus(
+        locationName: selectedPatientName,
+        isSafe: stats.isInSafeZone,
+        lastActive: stats.lastVoiceInteraction ?? DateTime.now(),
+        completedReminders: stats.remindersCompleted,
+        totalReminders: stats.remindersCompleted +
+            stats.remindersPending +
+            stats.remindersMissed,
+      );
 
   List<WeeklyStat> get weeklyStats {
-    // Generate 7 days of stats (placeholder - adjust based on actual data)
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days
-        .map((day) => WeeklyStat(
-              day: day,
+        .map((d) => WeeklyStat(
+              day: d,
               engagement: stats.adherencePercentage / 100.0,
             ))
         .toList();
   }
 }
 
-/// Caregiver Dashboard ViewModel
-/// Manages state and business logic for the caregiver dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+// ViewModel
+// ─────────────────────────────────────────────────────────────────────────────
+
 class CaregiverDashboardViewModel
     extends StateNotifier<CaregiverDashboardState> {
   final DashboardRepository _repository;
-  final String caregiverId;
 
-  CaregiverDashboardViewModel(this._repository, this.caregiverId)
-      : super(CaregiverDashboardState()) {
-    _init();
-  }
+  CaregiverDashboardViewModel(this._repository)
+      : super(const CaregiverDashboardState());
 
-  /// Initialize dashboard
-  Future<void> _init() async {
-    await loadLinkedPatients();
-  }
+  // ── Called by the provider body when selected patient changes ───────────
 
-  /// Load linked patients
-  Future<void> loadLinkedPatients() async {
-    state = state.copyWith(isLoading: true, error: null);
+  void onPatientChanged(
+      String? patientId, String patientName, String? photoUrl) {
+    if (state.selectedPatientId == patientId) return; // idempotent
 
-    try {
-      final patients = await _repository.getLinkedPatients(caregiverId);
+    state = state.copyWith(
+      selectedPatientId: patientId,
+      selectedPatientName: patientName,
+      selectedPatientPhotoUrl: photoUrl,
+      // Reset dashboard data on patient switch
+      stats: const DashboardStats(),
+      nextReminder: null,
+      recentVoiceInteractions: [],
+      clearError: true,
+    );
 
-      if (patients.isEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          linkedPatients: [],
-          error: 'No linked patients found',
-        );
-        return;
-      }
-
-      // Select first patient or primary caregiver's patient
-      final primary = patients.firstWhere(
-        (p) => p.isPrimary,
-        orElse: () => patients.first,
-      );
-
-      state = state.copyWith(
-        isLoading: false,
-        linkedPatients: patients,
-        selectedPatient: primary,
-        lastUpdated: DateTime.now(),
-      );
-
-      // Load dashboard data for selected patient
-      await loadDashboardData();
-    } catch (e) {
-      print('Error loading linked patients: $e');
-      state = state.copyWith(
-        isLoading: false,
-        isOffline: true,
-        error: 'Could not load patients. Check your connection.',
-      );
+    if (patientId != null && patientId.isNotEmpty) {
+      loadDashboardData(patientId);
     }
   }
 
-  /// Select a patient
-  Future<void> selectPatient(CaregiverPatientLink patient) async {
-    if (state.selectedPatient?.id == patient.id) return;
+  // ── Data loading ────────────────────────────────────────────────────────
 
-    state = state.copyWith(selectedPatient: patient);
-    await loadDashboardData();
-  }
-
-  /// Load dashboard data for selected patient
-  Future<void> loadDashboardData() async {
-    if (state.selectedPatient == null) return;
-
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> loadDashboardData(String patientId) async {
+    if (!mounted) return;
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final patientId = state.selectedPatient!.patientId;
-
-      // Load all dashboard data in parallel
       final results = await Future.wait([
         _repository.getDashboardStats(patientId),
         _repository.getNextReminder(patientId),
         _repository.getRecentVoiceInteractions(patientId),
       ]);
 
+      if (!mounted) return;
+
       state = state.copyWith(
         isLoading: false,
+        isOffline: false,
         stats: results[0] as DashboardStats,
         nextReminder: results[1] as Reminder?,
         recentVoiceInteractions: results[2] as List<VoiceQuery>,
         lastUpdated: DateTime.now(),
-        isOffline: false,
       );
     } catch (e) {
-      print('Error loading dashboard data: $e');
+      _log('loadDashboardData error: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         isOffline: true,
@@ -218,38 +218,58 @@ class CaregiverDashboardViewModel
     }
   }
 
-  /// Refresh dashboard
   Future<void> refresh() async {
-    await loadDashboardData();
+    final pid = state.selectedPatientId;
+    if (pid == null || pid.isEmpty) return;
+    await loadDashboardData(pid);
   }
 
-  /// Sync dashboard (background)
-  Future<void> sync() async {
-    try {
-      await _repository.syncDashboard(caregiverId);
-      await loadLinkedPatients();
-    } catch (e) {
-      print('Background sync error: $e');
-    }
-  }
-
-  /// Clear error
   void clearError() {
-    state = state.copyWith(error: null);
+    state = state.copyWith(clearError: true);
+  }
+
+  void _log(String msg) {
+    assert(() {
+      debugPrint('[CaregiverDashboard] $msg');
+      return true;
+    }());
   }
 }
 
-/// Riverpod Provider for Caregiver Dashboard
-///
-/// This provider creates a CaregiverDashboardViewModel instance
-/// Use this to access the dashboard state and methods in your UI
-///
-/// Note: This uses .family to accept a caregiverId parameter
-/// Usage: ref.watch(caregiverDashboardProvider(caregiverId))
-final caregiverDashboardProvider = StateNotifierProvider.autoDispose
-    .family<CaregiverDashboardViewModel, CaregiverDashboardState, String>(
+// ─────────────────────────────────────────────────────────────────────────────
+// Riverpod Provider — NOT autoDispose (lives in IndexedStack)
+//
+// Reacts to patientSelectionProvider via ref.listen in the provider body.
+// This keeps the ViewModel state alive and avoids rebuild storms in the UI.
+// ─────────────────────────────────────────────────────────────────────────────
+final caregiverDashboardProvider = StateNotifierProvider.family<
+    CaregiverDashboardViewModel, CaregiverDashboardState, String>(
   (ref, caregiverId) {
     final repository = ref.watch(dashboardRepositoryProvider);
-    return CaregiverDashboardViewModel(repository, caregiverId);
+    final vm = CaregiverDashboardViewModel(repository);
+
+    // ── React to patientSelectionProvider changes ─────────────────────────
+    // This is the ONLY place patient data flows into the dashboard ViewModel.
+    // fireImmediately loads data for the currently selected patient on first build.
+    ref.listen<PatientState>(
+      patientSelectionProvider,
+      (previous, next) {
+        final patient = next.selectedPatient;
+        vm.onPatientChanged(
+          patient?.id,
+          patient?.fullName ?? 'No Patient Selected',
+          patient?.profileImageUrl,
+        );
+      },
+      fireImmediately: true,
+    );
+
+    return vm;
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backward-compat alias used by caregiver_dashboard_tab.dart
+// Re-maps to the unified provider for zero migration cost.
+// ─────────────────────────────────────────────────────────────────────────────
+final caregiverDashboardViewModelProvider = caregiverDashboardProvider;

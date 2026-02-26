@@ -1,9 +1,13 @@
+// lib/screens/caregiver/dashboard/caregiver_dashboard_screen.dart
+//
+// ─── LAYER 1: Navigation Shell ───────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../services/realtime_service.dart'; // Added
+import '../../../../data/models/sos_alert.dart';
 import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
 import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../services/realtime_service.dart';
 import '../memories/caregiver_memories_screen.dart';
 import '../patients/caregiver_patients_screen.dart';
 import '../profile/caregiver_profile_screen.dart';
@@ -19,137 +23,274 @@ class CaregiverDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _CaregiverDashboardScreenState
-    extends ConsumerState<CaregiverDashboardScreen> {
+    extends ConsumerState<CaregiverDashboardScreen>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
+
+  // SOS guard: prevents stacking multiple emergency dialogs
+  bool _sosDialogVisible = false;
+
+  // ProviderSubscription lives outside build() → no re-attachment risk
+  ProviderSubscription<AsyncValue<SosAlert?>>? _sosSubscription;
+
+  // ── Screens ── created once, IndexedStack keeps them alive ─────────────────
+  late final List<Widget> _screens = const [
+    CaregiverDashboardTab(), // index 0 — main dashboard
+    CaregiverPatientsScreen(), // index 1
+    CaregiverMemoriesScreen(), // index 2
+    CaregiverRemindersScreen(), // index 3
+    CaregiverProfileScreen(), // index 4
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Pre-fetch linked patients so they are ready for the Dashboard Dropdowns
-    Future.microtask(() {
+    WidgetsBinding.instance.addObserver(this);
+
+    // ── Patient list bootstrap ─────────────────────────────────────────────
+    // Defer until after first frame so the Provider container is ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(patientSelectionProvider.notifier).fetchLinkedPatients();
+
+      // ── Attach SOS listener ONCE, here in initState ────────────────────
+      // Using listenManual so it is never re-attached on rebuild.
+      _sosSubscription = ref.listenManual(
+        realtimeSosStreamProvider,
+        (previous, next) {
+          next.whenData((alert) {
+            if (alert == null || alert.status != 'active') return;
+            if (_sosDialogVisible) return; // deduplicate dialogs
+            if (!mounted) return;
+            _showEmergencyDialog(alert);
+          });
+        },
+        fireImmediately: false,
+      );
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Dynamically retrieve the currently selected patient ID from the unified state
-    // (kept for SOS listener and any future direct usage)
-    ref.watch(patientSelectionProvider).selectedPatient?.id;
+  void dispose() {
+    _sosSubscription?.close();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-    final List<Widget> screens = [
-      const CaregiverDashboardTab(),
-      const CaregiverPatientsScreen(),
-      const CaregiverMemoriesScreen(), // reads patientSelectionProvider internally
-      const CaregiverRemindersScreen(),
-      const CaregiverProfileScreen(),
-    ];
-    // Listen for Realtime SOS Alerts
-    ref.listen(realtimeSosStreamProvider, (prev, next) {
-      next.whenData((alert) {
-        if (alert != null && alert.isActive) {
-          _showEmergencyDialog(alert);
-        }
-      });
+  // ── Navigation ─────────────────────────────────────────────────────────────
+
+  void _onTabSelected(int index) {
+    if (_currentIndex == index) return; // no-op same tab
+    setState(() => _currentIndex = index);
+  }
+
+  // ── SOS Dialog ─────────────────────────────────────────────────────────────
+
+  void _showEmergencyDialog(SosAlert alert) {
+    _sosDialogVisible = true;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _SosAlertDialog(
+        alert: alert,
+        onViewDetails: () {
+          Navigator.of(ctx).pop();
+          // Placeholder for emergency alert screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Navigating to Emergency Alert Screen...')),
+          );
+        },
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
+    ).then((_) {
+      _sosDialogVisible = false;
     });
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch ONLY the unread-alert count — no other data needed at shell level.
+    // Using .select() to prevent rebuild when unrelated state changes.
+    final unreadAlerts = ref.watch(
+      patientSelectionProvider
+          .select((_) => 0), // placeholder: wire to real badge count
+    );
 
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: screens,
+        children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        indicatorColor: Colors.teal.shade50,
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: Colors.teal),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: GestureDetector(
-              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
-              child: const Icon(Icons.people_outline),
-            ),
-            selectedIcon: GestureDetector(
-              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
-              child: const Icon(Icons.people, color: Colors.teal),
-            ),
-            label: 'Patients',
-          ),
-          NavigationDestination(
-            icon: GestureDetector(
-              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
-              child: const Icon(Icons.photo_library_outlined),
-            ),
-            selectedIcon: GestureDetector(
-              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
-              child: const Icon(Icons.photo_library, color: Colors.teal),
-            ),
-            label: 'Memories',
-          ),
-          NavigationDestination(
-            icon: GestureDetector(
-              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
-              child: const Icon(Icons.assignment_outlined),
-            ),
-            selectedIcon: GestureDetector(
-              onLongPress: () => PatientBottomSheetPicker.show(context, ref),
-              child: const Icon(Icons.assignment, color: Colors.teal),
-            ),
-            label: 'Reminders',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: Colors.teal),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: _CaregiverNavBar(
+        currentIndex: _currentIndex,
+        unreadAlerts: unreadAlerts,
+        onDestinationSelected: _onTabSelected,
+        onLongPress: () => PatientBottomSheetPicker.show(context, ref),
       ),
     );
   }
+}
 
-  void _showEmergencyDialog(dynamic alert) {
-    // Using dynamic to avoid deep import if model not convenient, but better use SosEvent
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.red.shade50,
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded,
-                color: Colors.red.shade800, size: 30),
-            const SizedBox(width: 10),
-            const Text('SOS EMERGENCY',
-                style:
-                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ],
+// ─────────────────────────────────────────────────────────────────────────────
+// Extracted NavigationBar — keeps build() leanest possible
+// ─────────────────────────────────────────────────────────────────────────────
+class _CaregiverNavBar extends StatelessWidget {
+  final int currentIndex;
+  final int unreadAlerts;
+  final ValueChanged<int> onDestinationSelected;
+  final VoidCallback onLongPress;
+
+  const _CaregiverNavBar({
+    required this.currentIndex,
+    required this.unreadAlerts,
+    required this.onDestinationSelected,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: onDestinationSelected,
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      indicatorColor: Colors.teal.shade50,
+      destinations: [
+        const NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard, color: Colors.teal),
+          label: 'Dashboard',
         ),
-        content: const Text(
-          'A patient has triggered an SOS alert! Immediate attention required.',
-          style: TextStyle(fontSize: 16),
+        _longPressDestination(
+          icon: Icons.people_outline,
+          selectedIcon: Icons.people,
+          label: 'Patients',
+          onLongPress: onLongPress,
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Navigate to alert map/details if implemented
-              Navigator.pop(context);
-            },
-            child: const Text('VIEW DETAILS',
-                style:
-                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        _longPressDestination(
+          icon: Icons.photo_library_outlined,
+          selectedIcon: Icons.photo_library,
+          label: 'Memories',
+          onLongPress: onLongPress,
+        ),
+        _longPressDestination(
+          icon: Icons.assignment_outlined,
+          selectedIcon: Icons.assignment,
+          label: 'Reminders',
+          onLongPress: onLongPress,
+        ),
+        const NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          selectedIcon: Icon(Icons.person, color: Colors.teal),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+
+  NavigationDestination _longPressDestination({
+    required IconData icon,
+    required IconData selectedIcon,
+    required String label,
+    required VoidCallback onLongPress,
+  }) {
+    return NavigationDestination(
+      icon: GestureDetector(
+        onLongPress: onLongPress,
+        child: Icon(icon),
+      ),
+      selectedIcon: GestureDetector(
+        onLongPress: onLongPress,
+        child: Icon(selectedIcon, color: Colors.teal),
+      ),
+      label: label,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOS Alert Dialog — extracted widget, no state leaks
+// ─────────────────────────────────────────────────────────────────────────────
+class _SosAlertDialog extends StatelessWidget {
+  final SosAlert alert;
+  final VoidCallback onViewDetails;
+  final VoidCallback onDismiss;
+
+  const _SosAlertDialog({
+    required this.alert,
+    required this.onViewDetails,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.red.shade50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded,
+              color: Colors.red.shade800, size: 32),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'SOS EMERGENCY',
+              style: TextStyle(
+                  color: Colors.red, fontWeight: FontWeight.bold, fontSize: 20),
+            ),
           ),
         ],
       ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'A patient has triggered an emergency alert!',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Triggered at ${_formatTime(alert.triggeredAt)}',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+          ),
+          if (alert.locationLat != null && alert.locationLng != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, size: 14, color: Colors.red.shade700),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${alert.locationLat!.toStringAsFixed(4)}, '
+                    '${alert.locationLng!.toStringAsFixed(4)}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: onDismiss,
+          child: Text('Dismiss', style: TextStyle(color: Colors.grey.shade600)),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+          onPressed: onViewDetails,
+          child: const Text('VIEW DETAILS'),
+        ),
+      ],
     );
+  }
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
 }

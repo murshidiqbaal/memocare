@@ -102,8 +102,7 @@ class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
   /// Load query history from repository
   Future<void> _loadHistory() async {
     try {
-      await _repository.init();
-      final history = _repository.getQueries(patientId);
+      final history = await _repository.getQueries(patientId);
       state = state.copyWith(queryHistory: history);
     } catch (e) {
       print('Load history error: $e');
@@ -195,7 +194,6 @@ class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
         queryText: query,
         responseText: response,
         createdAt: DateTime.now(),
-        isSynced: false,
       );
 
       await _repository.addQuery(voiceQuery);
@@ -247,7 +245,6 @@ class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
 
   /// Refresh history
   Future<void> refreshHistory() async {
-    await _repository.syncQueries(patientId);
     await _loadHistory();
   }
 

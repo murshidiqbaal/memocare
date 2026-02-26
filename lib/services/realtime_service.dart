@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/models/location_alert.dart'; // Added
 import '../data/models/reminder.dart';
-import '../data/models/sos_event.dart';
+import '../data/models/sos_alert.dart';
 import '../data/repositories/reminder_repository.dart';
 import '../providers/service_providers.dart';
 import 'notification/reminder_notification_service.dart';
@@ -16,7 +17,7 @@ final realtimeReminderStreamProvider =
   return service.reminderStream;
 });
 
-final realtimeSosStreamProvider = StreamProvider.autoDispose<SosEvent?>((ref) {
+final realtimeSosStreamProvider = StreamProvider.autoDispose<SosAlert?>((ref) {
   final service = ref.watch(realtimeServiceProvider);
   return service.sosStream;
 });
@@ -43,8 +44,8 @@ class RealtimeService {
   final _reminderController = StreamController<List<Reminder>>.broadcast();
   Stream<List<Reminder>> get reminderStream => _reminderController.stream;
 
-  final _sosController = StreamController<SosEvent?>.broadcast();
-  Stream<SosEvent?> get sosStream => _sosController.stream;
+  final _sosController = StreamController<SosAlert?>.broadcast();
+  Stream<SosAlert?> get sosStream => _sosController.stream;
 
   RealtimeService(
     this._supabase,
@@ -121,13 +122,26 @@ class RealtimeService {
       _caregiverChannel!.onPostgresChanges(
         event: PostgresChangeEvent.insert,
         schema: 'public',
-        table: 'sos_events',
+        table: 'sos_alerts',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'caregiver_id',
+          value: caregiverId,
+        ),
+        callback: (payload) => _handleSosAlert(payload),
+      );
+
+      // Location Alerts (Geofence)
+      _caregiverChannel!.onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'location_alerts',
         filter: PostgresChangeFilter(
           type: PostgresChangeFilterType.eq,
           column: 'patient_id',
           value: pid,
         ),
-        callback: (payload) => _handleSosAlert(payload),
+        callback: (payload) => _handleLocationAlert(payload),
       );
 
       // Reminder Adherence (Updates)
@@ -178,10 +192,9 @@ class RealtimeService {
       if (eventType == PostgresChangeEvent.insert) {
         if (newRecord.isEmpty) return;
         final reminder = Reminder.fromJson(newRecord);
-        await _reminderRepo.upsertFromRealtime(reminder);
 
         if (isPatient) {
-          if (reminder.remindAt.isAfter(DateTime.now())) {
+          if (reminder.reminderTime.isAfter(DateTime.now())) {
             await _notificationService.scheduleReminder(reminder);
           }
           _refreshReminderStream(reminder.patientId);
@@ -189,7 +202,6 @@ class RealtimeService {
       } else if (eventType == PostgresChangeEvent.update) {
         if (newRecord.isEmpty) return;
         final reminder = Reminder.fromJson(newRecord);
-        await _reminderRepo.upsertFromRealtime(reminder);
 
         if (isPatient) {
           if (reminder.isCompleted) {
@@ -205,7 +217,6 @@ class RealtimeService {
       } else if (eventType == PostgresChangeEvent.delete) {
         final id = oldRecord['id'] as String?;
         if (id != null) {
-          await _reminderRepo.deleteFromRealtime(id);
           if (isPatient) {
             await _notificationService.cancelNotification(id.hashCode);
             final user = _supabase.auth.currentUser;
@@ -224,12 +235,12 @@ class RealtimeService {
       if (newRecord.isEmpty) return;
 
       try {
-        final sosEvent = SosEvent.fromJson(newRecord);
-        _sosController.add(sosEvent);
+        final sosAlert = SosAlert.fromJson(newRecord);
+        _sosController.add(sosAlert);
 
         _notificationService.showEmergencyNotification(
-          title: 'SOS ALERT',
-          body: 'Patient has triggered an emergency alert!',
+          title: '🚨 Emergency SOS',
+          body: 'Patient needs help immediately!',
         );
       } catch (e) {
         print('RealtimeService: Error handling SOS: $e');
@@ -237,9 +248,44 @@ class RealtimeService {
     }
   }
 
-  void _refreshReminderStream(String patientId) {
-    final reminders = _reminderRepo.getReminders(patientId);
-    _reminderController.add(reminders);
+  void _handleLocationAlert(PostgresChangePayload payload) {
+    if (payload.eventType == PostgresChangeEvent.insert) {
+      final newRecord = payload.newRecord;
+      if (newRecord.isEmpty) return;
+
+      try {
+        final alert = LocationAlert.fromJson(newRecord);
+
+        _notificationService.showEmergencyNotification(
+          title: 'GEOFENCE BREACH',
+          body: 'Patient has left their safe zone!',
+        );
+
+        // Map to SosAlert for caregiver dashboard alert dialog
+        final mappedAlert = SosAlert(
+          id: alert.id ?? '',
+          patientId: alert.patientId,
+          caregiverId: alert.caregiverId,
+          triggeredAt: alert.createdAt ?? DateTime.now(),
+          status: 'active',
+          locationLat: alert.latitude,
+          locationLng: alert.longitude,
+          note: 'Geofence Breach',
+        );
+        _sosController.add(mappedAlert);
+      } catch (e) {
+        print('RealtimeService: Error handling Location Alert: $e');
+      }
+    }
+  }
+
+  Future<void> _refreshReminderStream(String patientId) async {
+    try {
+      final reminders = await _reminderRepo.getReminders(patientId);
+      _reminderController.add(reminders);
+    } catch (e) {
+      print('RealtimeService: _refreshReminderStream error: $e');
+    }
   }
 
   void dispose() {

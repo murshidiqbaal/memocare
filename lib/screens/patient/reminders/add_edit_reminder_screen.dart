@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../services/notification/notification_permission_service.dart';
 import '../home/viewmodels/home_viewmodel.dart';
 import 'widgets/voice_recorder_widget.dart';
 
@@ -36,9 +37,9 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
     final r = widget.existingReminder;
     _titleController = TextEditingController(text: r?.title);
     _descController = TextEditingController(text: r?.description);
-    _selectedDate = r?.remindAt ?? DateTime.now();
+    _selectedDate = r?.reminderTime ?? DateTime.now();
     _selectedTime = r != null
-        ? TimeOfDay(hour: r.remindAt.hour, minute: r.remindAt.minute)
+        ? TimeOfDay(hour: r.reminderTime.hour, minute: r.reminderTime.minute)
         : TimeOfDay.now();
     _frequency = r?.repeatRule ?? ReminderFrequency.once;
     _type = r?.type ?? ReminderType.medication;
@@ -72,6 +73,27 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
     if (_formKey.currentState!.validate()) {
       FocusScope.of(context).unfocus(); // Close keyboard
 
+      // Ensure permissions before saving
+      final permService = NotificationPermissionService();
+      final isReady = await permService.ensureNotificationsReady();
+      if (!isReady && mounted) {
+        showDialog(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Permission Required'),
+            content:
+                const Text('Please allow notifications to save reminders.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       final finalDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -100,12 +122,12 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         id: widget.existingReminder?.id ?? const Uuid().v4(),
         title: _titleController.text,
         description: _descController.text,
-        remindAt: finalDateTime,
+        reminderTime: finalDateTime,
         repeatRule: _frequency,
         type: _type,
         localAudioPath: _audioPath,
         patientId: effectivePatientId,
-        createdBy: currentUserId,
+        caregiverId: currentUserId,
         createdAt: widget.existingReminder?.createdAt ?? DateTime.now(),
         // If editing, preserve status, else pending
         status: widget.existingReminder?.status ?? ReminderStatus.pending,

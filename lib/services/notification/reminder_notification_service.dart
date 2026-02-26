@@ -1,10 +1,10 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart'; // Add for Color
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:flutter/material.dart'; // Add for Color
 import 'package:go_router/go_router.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -60,7 +60,7 @@ class ReminderNotificationService {
     // 4. Ensure Permissions (Android 13+, Exact Alarm, Battery Optimization)
     await _permissionService.ensureNotificationsReady();
 
-    // 5. Reschedule all to ensure consistency
+    // 5. Reschedule all to ensure consistency (Now handled via Supabase Auth State)
     await _rescheduleAllReminders();
   }
 
@@ -127,6 +127,7 @@ class ReminderNotificationService {
         useCustomSound: true,
         androidScheduleMode: scheduleMode,
       );
+      print('✅ Scheduled notification for ${reminder.title} at $scheduledDate');
       print(
           'Scheduled (${scheduleMode.name}+Sound) for ${reminder.title} at $scheduledDate');
     } catch (e1) {
@@ -150,6 +151,8 @@ class ReminderNotificationService {
           useCustomSound: false, // Fallback to default sound
           androidScheduleMode: scheduleMode,
         );
+        print(
+            '✅ Scheduled notification for ${reminder.title} at $scheduledDate');
         print(
             'Scheduled (${scheduleMode.name}+DefaultSound) for ${reminder.title} at $scheduledDate');
       } catch (e2) {
@@ -217,7 +220,7 @@ class ReminderNotificationService {
     // ... (Same logic as before)
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate =
-        tz.TZDateTime.from(reminder.remindAt, tz.local);
+        tz.TZDateTime.from(reminder.reminderTime, tz.local);
 
     if (scheduledDate.isBefore(now)) {
       if (reminder.repeatRule == ReminderFrequency.daily) {
@@ -296,27 +299,30 @@ class ReminderNotificationService {
     await _notificationsPlugin.cancelAll();
   }
 
-  /// Read from Hive and reschedule all suitable reminders
+  /// Fetch from Supabase and reschedule all suitable reminders
   Future<void> _rescheduleAllReminders() async {
     try {
-      Box<Reminder> box;
-      if (Hive.isBoxOpen('reminders_box')) {
-        box = Hive.box<Reminder>('reminders_box');
-      } else {
-        box = await Hive.openBox<Reminder>('reminders_box');
-      }
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
 
-      print('Rescheduling all reminders from Hive...');
+      print('Rescheduling all reminders from Supabase...');
       await _notificationsPlugin.cancelAll();
 
+      final response = await Supabase.instance.client
+          .from('reminders')
+          .select()
+          .eq('patient_id', user.id);
+
+      final List<dynamic> data = response;
       final now = DateTime.now();
       int scheduledCount = 0;
 
-      for (var reminder in box.values) {
+      for (var json in data) {
+        final reminder = Reminder.fromJson(json);
         if (reminder.status == ReminderStatus.completed) continue;
 
         if (reminder.repeatRule == ReminderFrequency.once &&
-            reminder.remindAt
+            reminder.reminderTime
                 .isBefore(now.subtract(const Duration(seconds: 30)))) {
           continue;
         }

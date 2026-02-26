@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../data/models/person.dart';
 import '../../../../data/repositories/people_repository.dart';
 import '../../../../providers/service_providers.dart';
@@ -20,8 +21,7 @@ class PeopleViewModel extends StateNotifier<PeopleState> {
 
   Future<void> _loadPeople() async {
     state = PeopleState(isLoading: true, people: state.people);
-    await _repository.init();
-    final people = _repository.getPeople(patientId);
+    final people = await _repository.getPeople(patientId);
     state = PeopleState(people: people, isLoading: false);
   }
 
@@ -49,8 +49,7 @@ class PeopleViewModel extends StateNotifier<PeopleState> {
 
   Future<void> refresh() async {
     state = PeopleState(people: state.people, isLoading: true);
-    await _repository.syncPeople(patientId);
-    _loadPeople();
+    await _loadPeople();
   }
 }
 

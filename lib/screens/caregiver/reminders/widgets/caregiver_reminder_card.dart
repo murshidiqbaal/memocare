@@ -28,7 +28,7 @@ class CaregiverReminderCard extends StatelessWidget {
       statusText = 'Completed';
     } else if (reminder.status == ReminderStatus.missed ||
         (reminder.status == ReminderStatus.pending &&
-            reminder.remindAt.isBefore(DateTime.now()))) {
+            reminder.reminderTime.isBefore(DateTime.now()))) {
       statusColor = Colors.red;
       statusIcon = Icons.warning;
       statusText = 'Missed';
@@ -70,7 +70,7 @@ class CaregiverReminderCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            DateFormat('h:mm a').format(reminder.remindAt),
+                            DateFormat('h:mm a').format(reminder.reminderTime),
                             style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontWeight: FontWeight.w500),

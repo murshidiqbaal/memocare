@@ -1,24 +1,27 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/patient_profile.dart';
 
 class PatientProfileRepository {
   final SupabaseClient _supabase;
-  final Box<PatientProfile> _profileBox;
 
-  PatientProfileRepository(this._supabase, this._profileBox);
+  // Optional in-memory cache
+  PatientProfile? _cachedProfile;
 
-  /// Get profile with offline-first logic
-  Future<PatientProfile?> getProfile(String userId) async {
-    // 1. Try local first for instant UI
-    final cached = _profileBox.get(userId);
+  PatientProfileRepository(this._supabase);
+
+  /// Get profile directly from Supabase
+  Future<PatientProfile?> getProfile(String userId,
+      {bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _cachedProfile != null &&
+        _cachedProfile!.id == userId) {
+      return _cachedProfile;
+    }
 
     try {
-      // 2. Fetch from both tables
       // A. Get base profile (full_name, phone_number)
       final profileResponse = await _supabase
           .from('profiles')
@@ -27,7 +30,7 @@ class PatientProfileRepository {
           .maybeSingle();
 
       if (profileResponse == null) {
-        return cached; // User doesn't exist
+        return null; // User doesn't exist
       }
 
       // B. Get patient-specific data
@@ -97,25 +100,24 @@ class PatientProfileRepository {
 
       final remoteProfile = PatientProfile.fromJson(mergedData);
 
-      // 4. Cache it
-      await _profileBox.put(userId, remoteProfile);
+      // Cache merely in-memory
+      _cachedProfile = remoteProfile;
       return remoteProfile;
     } catch (e) {
-      // If offline or error, return cached
       print('Profile fetch error: $e');
-      return cached;
+      if (!forceRefresh &&
+          _cachedProfile != null &&
+          _cachedProfile!.id == userId) {
+        return _cachedProfile;
+      }
+      return null;
     }
   }
 
   /// Update profile with sync logic
   Future<void> updateProfile(PatientProfile profile) async {
-    // 1. Save locally first (Optimistic)
-    await _profileBox.put(profile.id, profile.copyWith(isSynced: false));
-
     try {
-      // 2. Push to Supabase (Split updates)
-
-      // A. Update 'patients' table with patient-specific fields
+      // 1. Update 'patients' table with patient-specific fields
       final patientData = {
         'id': profile.id,
         'date_of_birth': profile.dateOfBirth?.toIso8601String(),
@@ -133,7 +135,7 @@ class PatientProfileRepository {
       // Upsert on patients table
       final patientFuture = _supabase.from('patients').upsert(patientData);
 
-      // B. Update 'profiles' (base) table
+      // 2. Update 'profiles' (base) table
       final profileData = {
         'id': profile.id,
         'full_name': profile.fullName,
@@ -143,17 +145,13 @@ class PatientProfileRepository {
       final profileFuture =
           _supabase.from('profiles').update(profileData).eq('id', profile.id);
 
-      // C. Update 'caregiver_patient_links' tables if needed? use triggers?
-      // No, usually just patient table is enough if we join correctly.
-
       // Run parallel
       await Future.wait([patientFuture, profileFuture]);
 
-      // 3. Mark as synced
-      await _profileBox.put(profile.id, profile.copyWith(isSynced: true));
+      // 3. Update in-memory cache
+      _cachedProfile = profile;
     } catch (e) {
-      // Remain unsynced but local is updated
-      print('Profile update error (offline?): $e');
+      print('Profile update error: $e');
       rethrow; // Re-throw to let UI handle error
     }
   }
@@ -178,18 +176,6 @@ class PatientProfileRepository {
     } catch (e) {
       print('Image upload error: $e');
       return null;
-    }
-  }
-
-  /// Sync all unsynced profiles
-  Future<void> syncPendingProfiles() async {
-    final unsynced = _profileBox.values.where((p) => !p.isSynced).toList();
-    for (var profile in unsynced) {
-      try {
-        await updateProfile(profile);
-      } catch (e) {
-        debugPrint('Failed to sync profile ${profile.id}: $e');
-      }
     }
   }
 }

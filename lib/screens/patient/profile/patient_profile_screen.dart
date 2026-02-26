@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/utils/profile_completion_helper.dart';
 import '../../../data/models/patient_profile.dart';
+import '../../../data/models/safe_zone.dart';
 import '../../../features/linking/presentation/controllers/link_controller.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/profile_photo_provider.dart'; // Ensure this key provider is imported
-import '../../../widgets/editable_avatar.dart'; // Added
+import '../../../providers/profile_photo_provider.dart';
+import '../../../providers/safe_zone_provider.dart';
+import '../../../widgets/editable_avatar.dart';
 import 'edit_patient_profile_screen.dart';
+import 'safe_zone_picker_screen.dart';
 import 'viewmodels/patient_profile_viewmodel.dart';
 
 /// View-only Patient Profile Screen with Hero Animation and Profile Completion
@@ -45,10 +47,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
 
     // Refresh profile if edit was successful
     if (result == true && mounted) {
-      final provider = widget.patientId != null
-          ? patientMonitoringProvider(widget.patientId!)
-          : patientProfileProvider;
-      ref.invalidate(provider);
+      ref.invalidate(patientProfileProvider(widget.patientId));
     }
   }
 
@@ -78,9 +77,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = widget.patientId != null
-        ? patientMonitoringProvider(widget.patientId!)
-        : patientProfileProvider;
+    final provider = patientProfileProvider(widget.patientId);
 
     final profileState = ref.watch(provider);
     final userProfile = ref.watch(userProfileProvider).valueOrNull;
@@ -254,7 +251,12 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                 // Caregiver Linking Section (Only visible to Patient)
                 if (!isCaregiver) ...[
                   _buildSectionTitle('Caregiver Access', scale),
-                  _buildLinkingSection(scale),
+                  _buildLinkingSection(scale, profile),
+                  SizedBox(height: 24 * scale),
+
+                  // Home Location / Safe Zone Section
+                  _buildSectionTitle('Home Location', scale),
+                  _buildHomeLocationSection(scale, profile.id),
                   SizedBox(height: 24 * scale),
                 ],
 
@@ -297,55 +299,34 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     final uploadState = ref.watch(profilePhotoUploadProvider);
     final isUploading = uploadState is AsyncLoading;
 
-    // We fetch the profile image directly from the patients table as requested
-    return FutureBuilder<Map<String, dynamic>?>(
-        future: Supabase.instance.client
-            .from('patients')
-            .select('profile_photo_url')
-            .eq('id', profile.id)
-            .maybeSingle()
-            .then((value) => value),
-        builder: (context, snapshot) {
-          String? profilePhotoUrl = profile.profileImageUrl;
-
-          if (snapshot.hasData && snapshot.data != null) {
-            final fetchedUrl = snapshot.data!['profile_photo_url'] as String?;
-            if (fetchedUrl != null) {
-              profilePhotoUrl = fetchedUrl;
-            }
-          }
-
-          return Column(
-            children: [
-              // Hero animation for profile avatar
-              // Editable Avatar
-              EditableAvatar(
-                profilePhotoUrl: profilePhotoUrl,
-                isUploading: isUploading,
-                radius: 70 * scale,
-                onTap: () => _pickAndUploadImage(ref),
-              ),
-              SizedBox(height: 16 * scale),
-              Text(
-                profile.fullName,
-                style: TextStyle(
-                  fontSize: 26 * scale,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade800,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (profile.dateOfBirth != null)
-                Text(
-                  '${_calculateAge(profile.dateOfBirth!)} years old',
-                  style: TextStyle(
-                    fontSize: 16 * scale,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-            ],
-          );
-        });
+    return Column(
+      children: [
+        EditableAvatar(
+          profilePhotoUrl: profile.profileImageUrl,
+          isUploading: isUploading,
+          radius: 70 * scale,
+          onTap: () => _pickAndUploadImage(ref),
+        ),
+        SizedBox(height: 16 * scale),
+        Text(
+          profile.fullName,
+          style: TextStyle(
+            fontSize: 26 * scale,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade800,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        if (profile.dateOfBirth != null)
+          Text(
+            '${_calculateAge(profile.dateOfBirth!)} years old',
+            style: TextStyle(
+              fontSize: 16 * scale,
+              color: Colors.grey.shade600,
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildCompletionCard(int completion, String message, double scale) {
@@ -520,7 +501,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     );
   }
 
-  Widget _buildLinkingSection(double scale) {
+  Widget _buildLinkingSection(double scale, PatientProfile profile) {
     final activeCode = ref.watch(activeInviteCodeProvider);
 
     return Column(
@@ -617,195 +598,322 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
         SizedBox(height: 12 * scale),
 
         _buildCard(scale, children: [
-          FutureBuilder<List<dynamic>>(
-            future: Supabase.instance.client
-                .from('caregiver_patient_links')
-                .select('''
-                  *,
-                  caregiver_profiles:caregiver_id (*)
-                ''')
-                .eq('patient_id',
-                    Supabase.instance.client.auth.currentUser?.id ?? '')
-                .order('linked_at', ascending: true),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
+          ref.watch(linkedCaregiversProvider(profile.id)).when(
+                loading: () => const Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Center(child: LinearProgressIndicator()),
-                );
-              }
-              if (snapshot.hasError) {
-                // Return detailed error if fetch fails for easy debugging
-                return Padding(
+                ),
+                error: (error, stack) => Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text('Error loading caregivers: ${snapshot.error}',
+                  child: Text('Error loading caregivers: $error',
                       style: const TextStyle(color: Colors.red)),
-                );
-              }
-
-              final links = snapshot.data ?? <dynamic>[];
-
-              if (links.isEmpty) {
-                return Padding(
-                  padding: EdgeInsets.all(16.0 * scale),
-                  child: const Center(
-                    child: Text(
-                      'No caregivers linked yet.',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                );
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: links.map((link) {
-                  final caregiverProfile =
-                      link['caregiver_profiles'] as Map<String, dynamic>? ?? {};
-
-                  final fullName = 'Linked Caregiver';
-                  final photoUrl =
-                      caregiverProfile['profile_photo_url'] as String?;
-                  final relationship =
-                      caregiverProfile['relationship'] as String?;
-                  final phone =
-                      caregiverProfile['phone'] as String? ?? 'No phone number';
-
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 8 * scale),
-                    padding: EdgeInsets.all(8 * scale),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12 * scale),
-                      color: Colors.teal.shade50.withOpacity(0.5),
-                    ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        radius: 24 * scale,
-                        backgroundColor: Colors.teal.shade100,
-                        backgroundImage:
-                            photoUrl != null ? NetworkImage(photoUrl) : null,
-                        child: photoUrl == null
-                            ? Text(
-                                fullName.isNotEmpty
-                                    ? fullName[0].toUpperCase()
-                                    : 'C',
-                                style: TextStyle(
-                                  color: Colors.teal.shade800,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            : null,
-                      ),
-                      title: Text(
-                        fullName,
-                        style: TextStyle(
-                          fontSize: 16 * scale,
-                          fontWeight: FontWeight.bold,
+                ),
+                data: (links) {
+                  if (links.isEmpty) {
+                    return Padding(
+                      padding: EdgeInsets.all(16.0 * scale),
+                      child: const Center(
+                        child: Text(
+                          'No caregivers linked yet.',
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (relationship != null)
-                            Text(relationship,
-                                style: TextStyle(color: Colors.teal.shade700)),
-                          Text(phone, style: TextStyle(fontSize: 13 * scale)),
-                        ],
-                      ),
-                      trailing: const Icon(Icons.verified, color: Colors.teal),
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(16 * scale)),
-                            contentPadding: EdgeInsets.all(24 * scale),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircleAvatar(
-                                  radius: 40 * scale,
-                                  backgroundColor: Colors.teal.shade100,
-                                  backgroundImage: photoUrl != null
-                                      ? NetworkImage(photoUrl)
-                                      : null,
-                                  child: photoUrl == null
-                                      ? Text(
-                                          fullName.isNotEmpty
-                                              ? fullName[0].toUpperCase()
-                                              : 'C',
-                                          style: TextStyle(
-                                              fontSize: 32 * scale,
-                                              color: Colors.teal.shade800,
-                                              fontWeight: FontWeight.bold),
-                                        )
-                                      : null,
-                                ),
-                                SizedBox(height: 16 * scale),
-                                Text(
-                                  fullName,
-                                  style: TextStyle(
-                                      fontSize: 20 * scale,
-                                      fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center,
-                                ),
-                                SizedBox(height: 8 * scale),
-                                if (relationship != null) ...[
-                                  Text(
-                                    relationship,
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: links.map((link) {
+                      final caregiverProfile =
+                          link['caregiver_profiles'] as Map<String, dynamic>? ??
+                              {};
+
+                      final fullName = 'Linked Caregiver';
+                      final photoUrl =
+                          caregiverProfile['profile_photo_url'] as String?;
+                      final relationship =
+                          caregiverProfile['relationship'] as String?;
+                      final phone = caregiverProfile['phone'] as String? ??
+                          'No phone number';
+
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 8 * scale),
+                        padding: EdgeInsets.all(8 * scale),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12 * scale),
+                          color: Colors.teal.shade50.withOpacity(0.5),
+                        ),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            radius: 24 * scale,
+                            backgroundColor: Colors.teal.shade100,
+                            backgroundImage: photoUrl != null
+                                ? NetworkImage(photoUrl)
+                                : null,
+                            child: photoUrl == null
+                                ? Text(
+                                    fullName.isNotEmpty
+                                        ? fullName[0].toUpperCase()
+                                        : 'C',
                                     style: TextStyle(
-                                        fontSize: 16 * scale,
-                                        color: Colors.teal.shade700),
-                                  ),
-                                  SizedBox(height: 8 * scale),
-                                ],
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.phone,
-                                        size: 16 * scale,
-                                        color: Colors.grey.shade600),
-                                    SizedBox(width: 8 * scale),
-                                    Text(
-                                      phone,
-                                      style: TextStyle(
-                                          fontSize: 16 * scale,
-                                          color: Colors.grey.shade600),
+                                      color: Colors.teal.shade800,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                  ],
-                                ),
-                                SizedBox(height: 24 * scale),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.teal,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(8 * scale)),
-                                      padding: EdgeInsets.symmetric(
-                                          vertical: 12 * scale),
-                                    ),
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Close'),
-                                  ),
-                                )
-                              ],
+                                  )
+                                : null,
+                          ),
+                          title: Text(
+                            fullName,
+                            style: TextStyle(
+                              fontSize: 16 * scale,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        );
-                      },
-                    ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (relationship != null)
+                                Text(relationship,
+                                    style:
+                                        TextStyle(color: Colors.teal.shade700)),
+                              Text(phone,
+                                  style: TextStyle(fontSize: 13 * scale)),
+                            ],
+                          ),
+                          trailing:
+                              const Icon(Icons.verified, color: Colors.teal),
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(16 * scale)),
+                                contentPadding: EdgeInsets.all(24 * scale),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 40 * scale,
+                                      backgroundColor: Colors.teal.shade100,
+                                      backgroundImage: photoUrl != null
+                                          ? NetworkImage(photoUrl)
+                                          : null,
+                                      child: photoUrl == null
+                                          ? Text(
+                                              fullName.isNotEmpty
+                                                  ? fullName[0].toUpperCase()
+                                                  : 'C',
+                                              style: TextStyle(
+                                                  fontSize: 32 * scale,
+                                                  color: Colors.teal.shade800,
+                                                  fontWeight: FontWeight.bold),
+                                            )
+                                          : null,
+                                    ),
+                                    SizedBox(height: 16 * scale),
+                                    Text(
+                                      fullName,
+                                      style: TextStyle(
+                                          fontSize: 20 * scale,
+                                          fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    SizedBox(height: 8 * scale),
+                                    if (relationship != null) ...[
+                                      Text(
+                                        relationship,
+                                        style: TextStyle(
+                                            fontSize: 16 * scale,
+                                            color: Colors.teal.shade700),
+                                      ),
+                                      SizedBox(height: 8 * scale),
+                                    ],
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.phone,
+                                            size: 16 * scale,
+                                            color: Colors.grey.shade600),
+                                        SizedBox(width: 8 * scale),
+                                        Text(
+                                          phone,
+                                          style: TextStyle(
+                                              fontSize: 16 * scale,
+                                              color: Colors.grey.shade600),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 24 * scale),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.teal,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                      8 * scale)),
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 12 * scale),
+                                        ),
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Close'),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }).toList(),
                   );
-                }).toList(),
-              );
-            },
-          ),
+                },
+              ),
         ]),
       ],
+    );
+  }
+
+  Widget _buildHomeLocationSection(double scale, String patientId) {
+    final safeZoneAsync = ref.watch(patientSafeZoneProvider(patientId));
+
+    return _buildCard(scale, children: [
+      safeZoneAsync.when(
+        data: (zone) {
+          if (zone == null) {
+            return Column(
+              children: [
+                Icon(Icons.home_outlined,
+                    size: 48 * scale, color: Colors.grey.shade400),
+                SizedBox(height: 12 * scale),
+                Text(
+                  'Set Home Location',
+                  style: TextStyle(
+                    fontSize: 16 * scale,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                SizedBox(height: 8 * scale),
+                Text(
+                  'Setting a home location helps caregivers know you are safe.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13 * scale,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                SizedBox(height: 16 * scale),
+                ElevatedButton.icon(
+                  onPressed: () => _navigateToSafeZonePicker(patientId, null),
+                  icon: const Icon(Icons.add_location_alt),
+                  label: const Text('Set Location'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8 * scale),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10 * scale),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.home,
+                        color: Colors.teal.shade700, size: 24 * scale),
+                  ),
+                  SizedBox(width: 12 * scale),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          zone.label,
+                          style: TextStyle(
+                            fontSize: 16 * scale,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        SizedBox(height: 4 * scale),
+                        Text(
+                          '${zone.latitude.toStringAsFixed(4)}, ${zone.longitude.toStringAsFixed(4)}',
+                          style: TextStyle(
+                            fontSize: 13 * scale,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        SizedBox(height: 4 * scale),
+                        Text(
+                          'Radius: ${zone.radiusMeters}m',
+                          style: TextStyle(
+                            fontSize: 13 * scale,
+                            color: Colors.teal.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16 * scale),
+              OutlinedButton.icon(
+                onPressed: () => _navigateToSafeZonePicker(patientId, zone),
+                icon: const Icon(Icons.edit_location_alt),
+                label: const Text('Edit Location'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.teal,
+                  side: BorderSide(color: Colors.teal.shade200),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8 * scale),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Padding(
+          padding: EdgeInsets.all(16 * scale),
+          child: Text('Failed to load safe zone: $err',
+              style: const TextStyle(color: Colors.red)),
+        ),
+      ),
+    ]);
+  }
+
+  void _navigateToSafeZonePicker(String patientId, SafeZone? zone) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SafeZonePickerScreen(
+          patientId: patientId,
+          initialLatitude: zone?.latitude,
+          initialLongitude: zone?.longitude,
+          initialRadiusMeters: zone?.radiusMeters,
+          existingZoneId: zone?.id,
+          initialLabel: zone?.label,
+        ),
+      ),
     );
   }
 

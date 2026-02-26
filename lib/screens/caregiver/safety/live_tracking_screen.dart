@@ -20,6 +20,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   GoogleMapController? _mapController;
 
   LocationLog? _currentLocation;
+  // ignore: unused_field
   SafeZone? _safeZone;
   final Set<Marker> _markers = {};
   final Set<Circle> _circles = {};
@@ -39,7 +40,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
         Circle(
           circleId: const CircleId('safe_zone'),
           center: LatLng(zone.latitude, zone.longitude),
-          radius: zone.radius,
+          radius: zone.radiusMeters.toDouble(),
           fillColor: Colors.teal.withOpacity(0.1),
           strokeColor: Colors.teal,
           strokeWidth: 2,

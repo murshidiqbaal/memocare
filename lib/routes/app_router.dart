@@ -12,6 +12,7 @@ import '../screens/caregiver/dashboard/caregiver_dashboard_screen.dart';
 import '../screens/patient/connections/patient_connections_screen.dart';
 import '../screens/patient/home/patient_home_screen.dart';
 import '../screens/patient/reminders/reminder_alert_screen.dart';
+import '../screens/shared/notification_test_screen.dart';
 import '../screens/shared/splash_screen.dart';
 import '../widgets/realtime_initializer.dart'; // Added import
 
@@ -70,6 +71,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/caregiver-connections',
         builder: (context, state) => const CaregiverConnectionsScreen(),
+      ),
+      // ── Notification Test Screen (dev/QA only) ────────────────────────
+      GoRoute(
+        path: '/notification-test',
+        builder: (context, state) => const NotificationTestScreen(),
       ),
     ],
     redirect: (context, state) {

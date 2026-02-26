@@ -91,8 +91,7 @@ class CreateReminderNotifier extends AsyncNotifier<void> {
 
       // Create reminder in database
       await repository.createReminderForPatient(
-        reminder: reminder.copyWith(patientId: patientId),
-        createdBy: user.id,
+        reminder: reminder.copyWith(patientId: patientId, caregiverId: user.id),
       );
 
       // Schedule notification

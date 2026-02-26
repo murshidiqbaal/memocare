@@ -1,62 +1,48 @@
-import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'patient_profile.g.dart';
 
 @JsonSerializable()
-@HiveType(typeId: 8)
-class PatientProfile extends HiveObject {
-  @HiveField(0)
+class PatientProfile {
   final String id;
 
-  @HiveField(1)
+  @JsonKey(name: 'user_id')
+  final String? userId;
+
   @JsonKey(name: 'full_name')
   final String fullName;
 
-  @HiveField(2)
   @JsonKey(name: 'date_of_birth')
   final DateTime? dateOfBirth;
 
-  @HiveField(3)
   final String? gender;
 
-  @HiveField(4)
-  @JsonKey(name: 'phone_number')
+  @JsonKey(name: 'phone') // ✅ FIXED
   final String? phoneNumber;
 
-  @HiveField(5)
   final String? address;
 
-  @HiveField(6)
   @JsonKey(name: 'emergency_contact_name')
   final String? emergencyContactName;
 
-  @HiveField(7)
   @JsonKey(name: 'emergency_contact_phone')
   final String? emergencyContactPhone;
 
-  @HiveField(8)
   @JsonKey(name: 'medical_notes')
   final String? medicalNotes;
 
-  @HiveField(9)
   @JsonKey(name: 'profile_photo_url')
   final String? profileImageUrl;
 
-  @HiveField(10)
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
 
-  @HiveField(11)
   @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
 
-  @HiveField(12)
-  @JsonKey(ignore: true)
-  final bool isSynced;
-
   PatientProfile({
     required this.id,
+    this.userId,
     required this.fullName,
     this.dateOfBirth,
     this.gender,
@@ -68,7 +54,6 @@ class PatientProfile extends HiveObject {
     this.profileImageUrl,
     this.createdAt,
     this.updatedAt,
-    this.isSynced = true,
   });
 
   factory PatientProfile.fromJson(Map<String, dynamic> json) =>
@@ -78,6 +63,7 @@ class PatientProfile extends HiveObject {
 
   PatientProfile copyWith({
     String? id,
+    String? userId,
     String? fullName,
     DateTime? dateOfBirth,
     String? gender,
@@ -88,11 +74,10 @@ class PatientProfile extends HiveObject {
     String? medicalNotes,
     String? profileImageUrl,
     DateTime? createdAt,
-    DateTime? updatedAt,
-    bool? isSynced,
   }) {
     return PatientProfile(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       fullName: fullName ?? this.fullName,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,
@@ -104,8 +89,6 @@ class PatientProfile extends HiveObject {
       medicalNotes: medicalNotes ?? this.medicalNotes,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      isSynced: isSynced ?? this.isSynced,
     );
   }
 }

@@ -1,5 +1,11 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    # @JsonKey annotations inside @freezed factory constructors are valid
+    # but the analyzer incorrectly flags them - this is a known false positive
+    invalid_annotation_target: ignore
+
 linter:
   rules:
     - prefer_const_constructors

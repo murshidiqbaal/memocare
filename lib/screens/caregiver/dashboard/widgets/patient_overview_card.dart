@@ -163,7 +163,7 @@ class PatientOverviewCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          _formatTime(nextReminder!.remindAt),
+                          _formatTime(nextReminder!.reminderTime),
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade700,

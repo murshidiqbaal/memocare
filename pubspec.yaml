@@ -18,8 +18,6 @@ dependencies:
   supabase_flutter: ^2.5.6
 
   # ---------------- LOCAL STORAGE ----------------
-  
-  hive_flutter: ^1.1.0
   shared_preferences: ^2.3.2
 
   # ---------------- AUDIO ----------------
@@ -72,7 +70,6 @@ dependencies:
   qr_flutter: ^4.1.0
   speech_to_text: ^7.3.0
   flutter_tts: ^4.0.2
-  build_runner: ^2.4.13
   timezone: ^0.10.1
   flutter_timezone: ^5.0.1
   flutter_local_notifications_platform_interface: ^10.0.0
@@ -85,8 +82,10 @@ dependencies:
 
   mockito: ^5.4.4
   firebase_core: ^4.4.0
-  hive: ^2.2.3
   url_launcher: ^6.3.2
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+  
 
 
 dev_dependencies:
@@ -96,9 +95,11 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   freezed: ^2.5.2
   json_serializable: ^6.8.0
-  hive_generator: ^2.0.1
   riverpod_generator: ^2.4.0
   flutter_launcher_icons: ^0.14.4
+  build_runner: ^2.4.13
+  hive_generator: ^2.0.1
+  analyzer: ^6.4.1
 
 flutter_launcher_icons:
   android: true

@@ -20,7 +20,9 @@ enum QueryType {
 class MemoryQueryEngine {
   final ReminderRepository _reminderRepo;
   final PeopleRepository _peopleRepo;
+  // ignore: unused_field
   final MemoryRepository _memoryRepo;
+  // ignore: unused_field
   final SupabaseClient _supabase;
 
   MemoryQueryEngine(
@@ -118,14 +120,14 @@ class MemoryQueryEngine {
   Future<String> _handleReminderQuery(String patientId) async {
     try {
       await _reminderRepo.init();
-      final reminders = _reminderRepo.getReminders(patientId);
+      final reminders = await _reminderRepo.getReminders(patientId);
 
       // Get today's pending reminders
       final now = DateTime.now();
       final todayReminders = reminders.where((r) {
-        return r.remindAt.day == now.day &&
-            r.remindAt.month == now.month &&
-            r.remindAt.year == now.year &&
+        return r.reminderTime.day == now.day &&
+            r.reminderTime.month == now.month &&
+            r.reminderTime.year == now.year &&
             r.status == ReminderStatus.pending;
       }).toList();
 
@@ -134,13 +136,13 @@ class MemoryQueryEngine {
       }
 
       // Find the next upcoming reminder
-      todayReminders.sort((a, b) => a.remindAt.compareTo(b.remindAt));
+      todayReminders.sort((a, b) => a.reminderTime.compareTo(b.reminderTime));
       final nextReminder = todayReminders.firstWhere(
-        (r) => r.remindAt.isAfter(now),
+        (r) => r.reminderTime.isAfter(now),
         orElse: () => todayReminders.first,
       );
 
-      final timeStr = _formatTime(nextReminder.remindAt);
+      final timeStr = _formatTime(nextReminder.reminderTime);
       return 'Yes, you have ${nextReminder.title} at $timeStr today.';
     } catch (e) {
       return 'Let me check your reminders. You have some tasks scheduled for today.';
@@ -151,14 +153,14 @@ class MemoryQueryEngine {
   Future<String> _handlePastActivityQuery(String patientId) async {
     try {
       await _reminderRepo.init();
-      final reminders = _reminderRepo.getReminders(patientId);
+      final reminders = await _reminderRepo.getReminders(patientId);
 
       // Get yesterday's completed reminders
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
       final yesterdayReminders = reminders.where((r) {
-        return r.remindAt.day == yesterday.day &&
-            r.remindAt.month == yesterday.month &&
-            r.remindAt.year == yesterday.year &&
+        return r.reminderTime.day == yesterday.day &&
+            r.reminderTime.month == yesterday.month &&
+            r.reminderTime.year == yesterday.year &&
             r.status == ReminderStatus.completed;
       }).toList();
 
@@ -177,8 +179,7 @@ class MemoryQueryEngine {
   /// Handle person-related queries
   Future<String> _handlePersonQuery(String patientId) async {
     try {
-      await _peopleRepo.init();
-      final people = _peopleRepo.getPeople(patientId);
+      final people = await _peopleRepo.getPeople(patientId);
 
       if (people.isEmpty) {
         return 'Your family and friends care about you. They visit regularly.';
@@ -196,13 +197,13 @@ class MemoryQueryEngine {
   Future<String> _handleAppointmentQuery(String patientId) async {
     try {
       await _reminderRepo.init();
-      final reminders = _reminderRepo.getReminders(patientId);
+      final reminders = await _reminderRepo.getReminders(patientId);
 
       // Find upcoming appointments
       final now = DateTime.now();
       final appointments = reminders.where((r) {
         return r.type == ReminderType.appointment &&
-            r.remindAt.isAfter(now) &&
+            r.reminderTime.isAfter(now) &&
             r.status == ReminderStatus.pending;
       }).toList();
 
@@ -210,11 +211,11 @@ class MemoryQueryEngine {
         return "You don't have any appointments scheduled right now.";
       }
 
-      appointments.sort((a, b) => a.remindAt.compareTo(b.remindAt));
+      appointments.sort((a, b) => a.reminderTime.compareTo(b.reminderTime));
       final next = appointments.first;
 
-      final dateStr = _formatDate(next.remindAt);
-      final timeStr = _formatTime(next.remindAt);
+      final dateStr = _formatDate(next.reminderTime);
+      final timeStr = _formatTime(next.reminderTime);
       return 'Your next appointment is ${next.title} on $dateStr at $timeStr.';
     } catch (e) {
       return "Let me check your appointments. I'll help you remember.";

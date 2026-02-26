@@ -82,10 +82,10 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
       (r) => r.id == widget.reminderId,
       orElse: () => Reminder(
         id: 'error',
-        patientId: 'error',
+        caregiverId: '', patientId: 'error',
         title: 'Reminder Not Found',
         type: ReminderType.task,
-        remindAt: DateTime.now(),
+        reminderTime: DateTime.now(),
         createdAt: DateTime.now(),
       ), // Fallback
     );
@@ -148,7 +148,7 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
                 const SizedBox(width: 8),
                 Text(
                   DateFormat('h:mm a  •  EEEE, d MMM')
-                      .format(reminder.remindAt),
+                      .format(reminder.reminderTime),
                   style: TextStyle(fontSize: 18, color: Colors.grey.shade700),
                 ),
               ],
@@ -288,10 +288,10 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     // Snooze Logic - just 10 mins for now as requested in minimal scope
-                    // Update remindAt to now + 10 mins
+                    // Update reminderTime to now + 10 mins
                     // Call updateReminder
                     final updated = reminder.copyWith(
-                      remindAt: DateTime.now().add(const Duration(minutes: 10)),
+                      reminderTime: DateTime.now().add(const Duration(minutes: 10)),
                       isSnoozed: true,
                       snoozeDurationMinutes: 10,
                       lastSnoozedAt: DateTime.now(),

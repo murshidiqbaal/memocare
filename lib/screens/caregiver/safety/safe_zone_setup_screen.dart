@@ -14,6 +14,7 @@ class SafeZoneSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
+  // ignore: unused_field
   GoogleMapController? _mapController;
   LatLng _center = const LatLng(37.422, -122.084); // Default (Googleplex)
   double _radius = 100; // meters
@@ -68,18 +69,23 @@ class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
     setState(() => _isLoading = true);
 
     // Mock Patient ID connection (in real app, specific to selected patient)
+    // ignore: unused_local_variable
     final profile = ref.read(userProfileProvider);
     // Assume caregiver is managing a specific patient, or patient is setting for themselves?
     // User request: "Caregiver Safe-Zone Setup". So we need a target patient.
     // We'll use a dummy 'patient_1' or derived.
     const patientId = 'patient_1';
 
-    final zone = SafeZone.create(
+    // ignore: unused_local_variable
+    final zone = SafeZone(
+      id: 'mock',
       patientId: patientId,
-      lat: _center.latitude,
-      lng: _center.longitude,
-      radius: _radius,
-      name: 'Safe Zone ${DateTime.now().minute}',
+      latitude: _center.latitude,
+      longitude: _center.longitude,
+      radiusMeters: _radius.toInt(),
+      label: 'Safe Zone ${DateTime.now().minute}',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     // Stub Save

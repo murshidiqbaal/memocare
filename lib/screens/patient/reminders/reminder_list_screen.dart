@@ -144,10 +144,6 @@ class ReminderListScreen extends ConsumerWidget {
   Widget _buildReminderCard(
       BuildContext context, Reminder reminder, HomeViewModel viewModel) {
     final isDone = reminder.status == ReminderStatus.completed;
-    final isMissed = reminder.status == ReminderStatus.missed;
-
-    // Determine status color (though UI uses icon color mainly)
-    // kept for logic parity
 
     return Card(
       elevation: 2,
@@ -207,7 +203,8 @@ class ReminderListScreen extends ConsumerWidget {
                                 size: 14, color: Colors.grey),
                             const SizedBox(width: 4),
                             Text(
-                              DateFormat('h:mm a').format(reminder.remindAt),
+                              DateFormat('h:mm a')
+                                  .format(reminder.reminderTime),
                               style: const TextStyle(
                                   color: Colors.grey,
                                   fontWeight: FontWeight.w500),

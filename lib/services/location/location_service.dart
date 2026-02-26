@@ -28,9 +28,6 @@ class LocationTrackingService {
 
   /// Initialize the service
   Future<void> init() async {
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
     await _localNotifications.initialize(
       settings: const InitializationSettings(),
     );
@@ -172,7 +169,7 @@ class LocationTrackingService {
           zone.latitude,
           zone.longitude,
         );
-        if (distance <= zone.radius) {
+        if (distance <= zone.radiusMeters) {
           isSafe = true;
           break;
         }

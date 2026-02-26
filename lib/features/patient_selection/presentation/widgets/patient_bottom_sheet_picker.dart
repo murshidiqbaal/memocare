@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/patient_selection_provider.dart';
+import 'patient_list_card_call_button.dart';
 
 class PatientBottomSheetPicker {
   static void show(BuildContext context, WidgetRef ref) {
@@ -205,10 +206,19 @@ class _BottomSheetContent extends ConsumerWidget {
                                 fontSize: 16,
                               ),
                             ),
-                            trailing: isSelected
-                                ? Icon(Icons.check_circle,
-                                    color: theme.colorScheme.primary)
-                                : null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected)
+                                  Icon(Icons.check_circle,
+                                      color: theme.colorScheme.primary),
+                                if (isSelected) const SizedBox(width: 16),
+                                PatientListCardCallButton(
+                                  phone: patient.phoneNumber,
+                                  emergencyPhone: patient.emergencyContactPhone,
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
