@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/models/emergency_alert.dart';
 import '../data/repositories/emergency_alert_repository.dart';
+import '../services/call_service.dart';
 import 'service_providers.dart';
 
 /// Provider for Emergency Alert Repository
@@ -43,9 +43,10 @@ final alertHistoryProvider =
 /// State notifier for managing SOS countdown and sending
 class EmergencySOSController extends StateNotifier<EmergencySOSState> {
   final EmergencyAlertRepository _repository;
+  final CallService _callService;
   final Ref _ref;
 
-  EmergencySOSController(this._repository, this._ref)
+  EmergencySOSController(this._repository, this._callService, this._ref)
       : super(const EmergencySOSState.idle());
 
   /// Start SOS countdown
@@ -138,14 +139,8 @@ class EmergencySOSController extends StateNotifier<EmergencySOSState> {
       (failure) => print('Could not get caregiver phone: ${failure.message}'),
       (phone) async {
         if (phone != null && phone.isNotEmpty) {
-          final Uri launchUri = Uri(
-            scheme: 'tel',
-            path: phone,
-          );
           try {
-            if (await canLaunchUrl(launchUri)) {
-              await launchUrl(launchUri);
-            }
+            await _callService.initiateCall(phone);
           } catch (e) {
             print('Error launching call: $e');
           }
@@ -159,7 +154,8 @@ class EmergencySOSController extends StateNotifier<EmergencySOSState> {
 final emergencySOSControllerProvider = StateNotifierProvider.autoDispose<
     EmergencySOSController, EmergencySOSState>((ref) {
   final repository = ref.watch(emergencyAlertRepositoryProvider);
-  return EmergencySOSController(repository, ref);
+  final callService = ref.watch(callServiceProvider);
+  return EmergencySOSController(repository, callService, ref);
 });
 
 /// Emergency SOS State

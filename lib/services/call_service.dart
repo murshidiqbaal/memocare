@@ -6,6 +6,31 @@ final callServiceProvider = Provider<CallService>((ref) {
 });
 
 class CallService {
+  /// Initiates a phone call to the provided number.
+  Future<void> initiateCall(String phone) async {
+    if (phone.trim().isEmpty) {
+      throw const CallServiceException('No contact number available.');
+    }
+
+    final String cleanNumber = phone.replaceAll(RegExp(r'\s+'), '');
+    final Uri phoneUri = Uri(scheme: 'tel', path: cleanNumber);
+
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        final launched = await launchUrl(phoneUri);
+        if (!launched) {
+          throw const CallServiceException('Failed to launch dialer.');
+        }
+      } else {
+        throw const CallServiceException(
+            'Device does not support phone calls or permission denied.');
+      }
+    } catch (e) {
+      if (e is CallServiceException) rethrow;
+      throw CallServiceException('Could not initiate call: $e');
+    }
+  }
+
   /// Calls the patient using their primary phone or fallback emergency phone.
   /// Throws an exception if no valid number is found or if parsing fails.
   Future<void> callPatient({

@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/emotional_theme_extension.dart';
 
 class MemoryReviewWidget extends StatelessWidget {
   const MemoryReviewWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: emotionalTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: emotionalTheme.primary!.withOpacity(0.1)),
       ),
       child: Row(
         children: [
@@ -19,7 +22,7 @@ class MemoryReviewWidget extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: Colors.pink.shade50,
+              color: emotionalTheme.primary?.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
               image: const DecorationImage(
                 image: AssetImage(
@@ -27,20 +30,24 @@ class MemoryReviewWidget extends StatelessWidget {
                 fit: BoxFit.cover,
               ),
             ),
-            child: const Icon(Icons.photo, color: Colors.pinkAccent),
+            child: Icon(Icons.photo, color: emotionalTheme.primary),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "Today's Memory",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: emotionalTheme.textPrimary),
                 ),
                 Text(
                   'Recall session active. Last viewed: 2 hours ago.',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  style: TextStyle(
+                      color: emotionalTheme.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
                 InkWell(
@@ -48,7 +55,7 @@ class MemoryReviewWidget extends StatelessWidget {
                   child: Text(
                     'Review Timeline >',
                     style: TextStyle(
-                      color: Colors.pinkAccent.shade700,
+                      color: emotionalTheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

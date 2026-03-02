@@ -43,25 +43,6 @@ class PatientProfileRepository {
       // Prioritize patient table URL, then profiles table URL, then fallback to bucket
       String? photoUrl = patientResponse?['profile_photo_url'];
 
-      // If null, check profiles table (might use avatar_url or profile_photo_url)
-      if (photoUrl == null) {
-        // Re-fetch or rely on the initial fetch if we included it
-        // Initial fetch: .select('full_name, phone_number') -> let's expand it
-        // But we can just use another query if needed, or expand the initial one above.
-        // Let's assume we expand the initial query in a moment.
-        // Actually, let's just do it here.
-
-        // Expanding the initial query above:
-        // final profileResponse = await _supabase.from('profiles').select('full_name, phone_number, avatar_url, profile_photo_url')...
-
-        // Since I can't edit previous lines in this Replace block easily without expanding context,
-        // I will assume I modify the initial query too.
-
-        // Wait, let's use the fetched profileResponse.
-        // However, I need to know keys.
-        // Let's use getPublicUrl as final fallback.
-      }
-
       // 3. Merge the data
       final Map<String, dynamic> mergedData = {
         'id': userId,
@@ -78,15 +59,6 @@ class PatientProfileRepository {
       // Resolve final photo URL
       String? resolvedPhotoUrl = patientResponse?['profile_photo_url'] ??
           findPhotoUrl(profileResponse);
-
-      if (resolvedPhotoUrl == null) {
-        // Fallback to bucket URL
-        // We use a timestamp to avoid aggressive caching of potentially old/wrong default
-        // But for a fallback, we just want the file if it exists.
-        final path = 'patients/$userId/profile.jpg';
-        resolvedPhotoUrl =
-            _supabase.storage.from('profile-photos').getPublicUrl(path);
-      }
 
       // Add patient-specific fields if they exist
       if (patientResponse != null) {

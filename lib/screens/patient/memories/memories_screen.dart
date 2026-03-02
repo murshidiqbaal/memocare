@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/emotional_theme_extension.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/memory_providers.dart';
 
@@ -14,31 +15,36 @@ class MemoriesScreen extends ConsumerWidget {
     final user = ref.watch(currentUserProvider);
     final patientId = user?.id;
 
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
+
     if (patientId == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         appBar: AppBar(
           title: const Text('My Memories'),
-          backgroundColor: Colors.white,
+          backgroundColor: emotionalTheme.background,
           elevation: 0,
-          foregroundColor: Colors.black,
+          foregroundColor: emotionalTheme.textPrimary,
         ),
-        body: const Center(child: Text('Please log in to view memories')),
+        body: Center(
+            child: Text('Please log in to view memories',
+                style: TextStyle(color: emotionalTheme.textPrimary))),
       );
     }
 
     final memoryState = ref.watch(memoryListProvider(patientId));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: emotionalTheme.background,
       appBar: AppBar(
         title: const Text('My Memories'),
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: emotionalTheme.textPrimary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: emotionalTheme.primary),
             onPressed: () {
               ref.read(memoryListProvider(patientId).notifier).refresh();
             },
@@ -84,7 +90,7 @@ class MemoriesScreen extends ConsumerWidget {
                   ),
                 )
               : memoryState.memories.isEmpty
-                  ? _buildEmptyState()
+                  ? _buildEmptyState(context)
                   : RefreshIndicator(
                       onRefresh: () => ref
                           .read(memoryListProvider(patientId).notifier)
@@ -108,20 +114,22 @@ class MemoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.photo_library_outlined,
-              size: 100, color: Colors.grey.shade300),
+              size: 100, color: emotionalTheme.primary?.withOpacity(0.2)),
           const SizedBox(height: 24),
           Text(
             'No Memories Yet',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
+              color: emotionalTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -132,7 +140,7 @@ class MemoriesScreen extends ConsumerWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey.shade500,
+                color: emotionalTheme.textSecondary,
               ),
             ),
           ),
@@ -142,11 +150,17 @@ class MemoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildMemoryCard(BuildContext context, memory) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return GestureDetector(
       onTap: () => _showMemoryDetail(context, memory),
       child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0, // Softer shadow for emotional theme
+        color: emotionalTheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: emotionalTheme.primary!.withOpacity(0.1)),
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,9 +195,10 @@ class MemoriesScreen extends ConsumerWidget {
                 children: [
                   Text(
                     memory.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: emotionalTheme.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -194,7 +209,7 @@ class MemoriesScreen extends ConsumerWidget {
                       DateFormat('MMM dd, yyyy').format(memory.eventDate!),
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: emotionalTheme.textSecondary,
                       ),
                     ),
                 ],
@@ -207,9 +222,13 @@ class MemoriesScreen extends ConsumerWidget {
   }
 
   void _showMemoryDetail(BuildContext context, memory) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        backgroundColor: emotionalTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
           child: Column(
@@ -218,12 +237,17 @@ class MemoriesScreen extends ConsumerWidget {
               if (memory.imageUrl != null)
                 Expanded(
                   flex: 3,
-                  child: CachedNetworkImage(
-                    imageUrl: memory.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorWidget: (context, error, stackTrace) => Container(
-                      color: Colors.grey.shade300,
-                      child: const Icon(Icons.image_not_supported, size: 64),
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                    child: CachedNetworkImage(
+                      imageUrl: memory.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, error, stackTrace) => Container(
+                        color: emotionalTheme.background,
+                        child: Icon(Icons.image_not_supported,
+                            size: 64, color: emotionalTheme.primary),
+                      ),
                     ),
                   ),
                 ),
@@ -236,9 +260,10 @@ class MemoriesScreen extends ConsumerWidget {
                     children: [
                       Text(
                         memory.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
+                          color: emotionalTheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -247,7 +272,7 @@ class MemoriesScreen extends ConsumerWidget {
                           DateFormat('MMMM dd, yyyy').format(memory.eventDate!),
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey.shade600,
+                            color: emotionalTheme.textSecondary,
                           ),
                         ),
                       if (memory.description != null) ...[
@@ -256,7 +281,11 @@ class MemoriesScreen extends ConsumerWidget {
                           child: SingleChildScrollView(
                             child: Text(
                               memory.description!,
-                              style: const TextStyle(fontSize: 16),
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: emotionalTheme.textPrimary,
+                                height: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -266,9 +295,13 @@ class MemoriesScreen extends ConsumerWidget {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: emotionalTheme.primary,
+                          ),
                           child: const Text(
                             'Close',
-                            style: TextStyle(fontSize: 18),
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),

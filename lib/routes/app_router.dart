@@ -1,3 +1,6 @@
+import 'package:dementia_care_app/screens/patient/games/games_screen.dart';
+import 'package:dementia_care_app/screens/patient/games/mini_games/memory_match_game_screen.dart';
+import 'package:dementia_care_app/screens/patient/games/mini_games/reaction_tap_game_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,70 +17,110 @@ import '../screens/patient/home/patient_home_screen.dart';
 import '../screens/patient/reminders/reminder_alert_screen.dart';
 import '../screens/shared/notification_test_screen.dart';
 import '../screens/shared/splash_screen.dart';
-import '../widgets/realtime_initializer.dart'; // Added import
+import '../widgets/realtime_initializer.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateChangesProvider);
-  // Watch profile to trigger redirect when it loads
-  ref.watch(userProfileProvider);
+
+  // watch profile reactively
+  final profileAsync = ref.watch(userProfileProvider);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: '/',
+
+    // ================= ROUTES =================
     routes: [
       GoRoute(
         path: '/',
         builder: (context, state) => const SplashScreen(),
       ),
+
       GoRoute(
         path: '/role-selection',
         builder: (context, state) => const RoleSelectionScreen(),
       ),
+
       GoRoute(
         path: '/login',
         builder: (context, state) => const FlutterLoginScreen(),
       ),
+
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
       ),
+
+      // ================= PATIENT =================
       GoRoute(
         path: '/patient-home',
         builder: (context, state) =>
             const RealtimeInitializer(child: PatientHomeScreen()),
       ),
+
+      // ✅ ================= GAMES =================
+      GoRoute(
+        path: '/games',
+        builder: (context, state) =>
+            const RealtimeInitializer(child: GamesScreen()),
+      ),
+
+      // 🃏 Memory Match
+      GoRoute(
+        path: '/games/memory-match',
+        builder: (context, state) =>
+            const RealtimeInitializer(child: MemoryMatchGameScreen()),
+      ),
+
+      // ⚡ Reaction Tap
+      GoRoute(
+        path: '/games/reaction-tap',
+        builder: (context, state) =>
+            const RealtimeInitializer(child: ReactionTapGameScreen()),
+      ),
+
+      // ================= CAREGIVER =================
       GoRoute(
         path: '/caregiver-dashboard',
         builder: (context, state) =>
             const RealtimeInitializer(child: CaregiverDashboardScreen()),
       ),
-      GoRoute(
-        path: '/admin-panel',
-        builder: (context, state) => const AdminDashboardScreen(),
-      ),
-      GoRoute(
-        path: '/alert/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return ReminderAlertScreen(reminderId: id);
-        },
-      ),
+
       GoRoute(
         path: '/patient-connections',
         builder: (context, state) => const PatientConnectionsScreen(),
       ),
+
       GoRoute(
         path: '/caregiver-connections',
         builder: (context, state) => const CaregiverConnectionsScreen(),
       ),
-      // ── Notification Test Screen (dev/QA only) ────────────────────────
+
+      // ================= ADMIN =================
+      GoRoute(
+        path: '/admin-panel',
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+
+      // ================= ALERT =================
+      GoRoute(
+        path: '/alert/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return ReminderAlertScreen(reminderId: id);
+        },
+      ),
+
+      // ================= DEV =================
       GoRoute(
         path: '/notification-test',
         builder: (context, state) => const NotificationTestScreen(),
       ),
     ],
+
+    // ================= REDIRECT LOGIC =================
     redirect: (context, state) {
       if (authState.isLoading) return null;
 
@@ -85,36 +128,37 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = session != null;
 
       final path = state.uri.toString();
+
       final isSplash = path == '/';
       final isAuthRoute =
           path == '/login' || path == '/register' || path == '/role-selection';
 
-      // 1. If not authenticated
+      // 🔴 NOT AUTHENTICATED
       if (!isAuthenticated) {
         if (isSplash || isAuthRoute) return null;
         return '/login';
       }
 
-      // 2. If authenticated
-      if (isSplash) return null;
+      // 🟢 AUTHENTICATED
+      final profile = profileAsync.valueOrNull;
 
+      // wait until profile loads
+      if (profileAsync.isLoading) return null;
+
+      // 🚫 prevent auth pages after login
       if (isAuthRoute) {
-        // We use 'read' safely because this callback runs reactively
-        final profileAsync = ref.read(userProfileProvider);
-
-        // If profile is still loading or doesn't exist yet, we can't decide.
-        // Ideally, we wait or let them go to a loading/error page.
-        // Assuming profile loads quickly or is cached.
-        final profile = profileAsync.valueOrNull;
-
-        if (profile != null) {
-          if (profile.role == 'caregiver') return '/caregiver-dashboard';
-          if (profile.role == 'admin') return '/admin-panel';
-          return '/patient-home';
-        }
-
-        // Fallback if profile not found yet
+        if (profile?.role == 'caregiver') return '/caregiver-dashboard';
+        if (profile?.role == 'admin') return '/admin-panel';
         return '/patient-home';
+      }
+
+      // 🎮 ROLE GUARD — only patients can access any game route
+      if (path == '/games' ||
+          path == '/games/memory-match' ||
+          path == '/games/reaction-tap') {
+        final role = profile?.role;
+        if (role == 'admin') return '/admin-panel';
+        if (role != 'patient') return '/caregiver-dashboard';
       }
 
       return null;

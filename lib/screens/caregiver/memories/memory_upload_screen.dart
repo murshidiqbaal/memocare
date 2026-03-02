@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/theme/emotional_theme_extension.dart';
 import '../../../data/models/memory.dart';
 import '../../../providers/memory_providers.dart';
 
@@ -130,14 +131,17 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
       }
     });
 
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: emotionalTheme.background,
       appBar: AppBar(
         title:
             Text(widget.existingMemory == null ? 'Add Memory' : 'Edit Memory'),
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: emotionalTheme.textPrimary,
       ),
       body: uploadState.isUploading
           ? const Center(child: CircularProgressIndicator())
@@ -154,9 +158,10 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                       child: Container(
                         height: 200,
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
+                          color: emotionalTheme.primary?.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(
+                              color: emotionalTheme.primary!.withOpacity(0.1)),
                         ),
                         child: _localPhotoPath != null
                             ? ClipRRect(
@@ -179,7 +184,8 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                                     children: [
                                       Icon(Icons.add_photo_alternate,
                                           size: 64,
-                                          color: Colors.grey.shade400),
+                                          color: emotionalTheme.primary
+                                              ?.withOpacity(0.3)),
                                       const SizedBox(height: 8),
                                       Text(
                                         'Tap to add photo',
@@ -202,9 +208,11 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                         hintText: 'e.g., Family Picnic',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                              color: emotionalTheme.primary!.withOpacity(0.2)),
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: emotionalTheme.surface,
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -224,9 +232,11 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                         hintText: 'Add details about this memory...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                              color: emotionalTheme.primary!.withOpacity(0.2)),
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: emotionalTheme.surface,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -237,14 +247,15 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(
+                              color: emotionalTheme.primary!.withOpacity(0.2)),
                           borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey.shade50,
+                          color: emotionalTheme.surface,
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.calendar_today,
-                                color: Colors.grey.shade700),
+                                color: emotionalTheme.primary),
                             const SizedBox(width: 12),
                             Text(
                               _selectedDate == null
@@ -254,8 +265,8 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 color: _selectedDate == null
-                                    ? Colors.grey.shade600
-                                    : Colors.black,
+                                    ? emotionalTheme.textSecondary
+                                    : emotionalTheme.textPrimary,
                               ),
                             ),
                           ],
@@ -268,7 +279,7 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                     ElevatedButton(
                       onPressed: _saveMemory,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
+                        backgroundColor: emotionalTheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(

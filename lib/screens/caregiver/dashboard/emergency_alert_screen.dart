@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../../data/models/sos_alert.dart';
-import '../../../../services/sos_service.dart';
-import '../../../../services/call_service.dart';
-import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../../../data/models/sos_alert.dart';
+import '../../../../data/repositories/sos_repository.dart';
+import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../../services/call_service.dart';
 
 class EmergencyAlertScreen extends ConsumerStatefulWidget {
   final SosAlert alert;
@@ -20,14 +21,20 @@ class EmergencyAlertScreen extends ConsumerStatefulWidget {
 class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
   bool _isAcknowledging = false;
 
-  void _acknowledgeEmergency() async {
+  Future<void> _acknowledgeEmergency() async {
+    if (_isAcknowledging) return;
     setState(() => _isAcknowledging = true);
+
     try {
-      final sosService = ref.read(sosServiceProvider);
-      await sosService.updateSosStatus(widget.alert.id, 'acknowledged');
+      final repo = ref.read(sosRepositoryProvider);
+      await repo.acknowledgeAlert(widget.alert.id);
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alert acknowledged.')),
+        const SnackBar(
+          content: Text('Alert acknowledged.'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       Navigator.of(context).pop();
     } catch (e) {
@@ -42,10 +49,17 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
 
   void _callPatient() async {
     final linkedPatients = ref.read(patientSelectionProvider).linkedPatients;
-    final patient = linkedPatients.firstWhere(
-      (p) => p.id == widget.alert.patientId,
-      orElse: () => throw Exception('Patient not found'),
-    );
+    final patient = linkedPatients.cast<dynamic>().firstWhere(
+          (p) => p.id == widget.alert.patientId,
+          orElse: () => null,
+        );
+
+    if (patient == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Patient contact details not found.')),
+      );
+      return;
+    }
 
     try {
       final callService = ref.read(callServiceProvider);
@@ -56,7 +70,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())), // Error message from CallService
+        SnackBar(content: Text('Call failed: $e')),
       );
     }
   }
@@ -75,13 +89,13 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final linkedPatients = ref.read(patientSelectionProvider).linkedPatients;
-    final patientName = linkedPatients
-        .firstWhere(
+    final linkedPatients = ref.watch(patientSelectionProvider).linkedPatients;
+    final patient = linkedPatients.cast<dynamic>().firstWhere(
           (p) => p.id == widget.alert.patientId,
-          orElse: () => throw Exception(),
-        )
-        .fullName;
+          orElse: () => null,
+        );
+
+    final patientName = patient?.fullName ?? 'Patient';
 
     return Scaffold(
       backgroundColor: Colors.red.shade50,
@@ -89,97 +103,155 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
         title: const Text('Emergency Alert',
             style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: Colors.red.shade700,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.red.shade700,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Colors.black26, spreadRadius: 0, blurRadius: 10)
-                ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade700,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withValues(alpha: 0.3),
+                      spreadRadius: 2,
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.warning_rounded,
+                        color: Colors.white, size: 80),
+                    const SizedBox(height: 20),
+                    Text(
+                      '$patientName triggered an SOS!',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Triggered at: ${DateFormat('h:mm a - MMM d, yyyy').format(widget.alert.triggeredAt)}',
+                      style:
+                          TextStyle(fontSize: 16, color: Colors.red.shade100),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
+              const SizedBox(height: 40),
+              const Text(
+                'ACTION REQUIRED',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  const Icon(Icons.warning, color: Colors.white, size: 64),
-                  const SizedBox(height: 16),
-                  Text(
-                    '$patientName triggered an SOS!',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                  Expanded(
+                    child: _ActionButton(
+                      onPressed: _callPatient,
+                      icon: Icons.phone,
+                      label: 'Call Patient',
+                      color: Colors.green.shade600,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Time: ${DateFormat('h:mm a - MMM d, yyyy').format(widget.alert.triggeredAt)}',
-                    style: TextStyle(fontSize: 16, color: Colors.red.shade100),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _ActionButton(
+                      onPressed: (widget.alert.locationLat != null &&
+                              widget.alert.locationLng != null)
+                          ? _openMap
+                          : null,
+                      icon: Icons.map,
+                      label: 'Open Map',
+                      color: Colors.blue.shade600,
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 48),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.teal.shade600,
-                      foregroundColor: Colors.white,
+              const SizedBox(height: 80),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red.shade800,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    onPressed: _callPatient,
-                    icon: const Icon(Icons.phone),
-                    label: const Text('Call Patient',
-                        style: TextStyle(fontSize: 18)),
                   ),
+                  onPressed: _isAcknowledging ? null : _acknowledgeEmergency,
+                  child: _isAcknowledging
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('ACKNOWLEDGE ALERT',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blue.shade600,
-                      foregroundColor: Colors.white,
-                    ),
-                    onPressed: (widget.alert.locationLat != null &&
-                            widget.alert.locationLng != null)
-                        ? _openMap
-                        : null,
-                    icon: const Icon(Icons.map),
-                    label:
-                        const Text('Open Map', style: TextStyle(fontSize: 18)),
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red.shade800,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                ),
-                onPressed: _isAcknowledging ? null : _acknowledgeEmergency,
-                child: _isAcknowledging
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('ACKNOWLEDGE ALERT',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
               ),
-            ),
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Marking as acknowledged lets the patient know you are responding.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: Colors.grey.shade300,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 2,
+      ),
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
     );
   }
 }

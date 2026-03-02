@@ -1,18 +1,30 @@
 // lib/screens/caregiver/dashboard/caregiver_dashboard_screen.dart
-//
-// ─── LAYER 1: Navigation Shell ───────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/sos_alert.dart';
 import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
 import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../providers/sos_provider.dart';
 import '../../../services/realtime_service.dart';
 import '../memories/caregiver_memories_screen.dart';
 import '../patients/caregiver_patients_screen.dart';
 import '../profile/caregiver_profile_screen.dart';
 import '../reminders/caregiver_reminders_screen.dart';
 import 'caregiver_dashboard_tab.dart';
+import 'emergency_alert_screen.dart';
+
+// ── Design Tokens ─────────────────────────────────────────────────────────────
+class _DS {
+  static const teal700 = Color(0xFF00695C);
+  static const teal50 = Color(0xFFE0F2F1);
+
+  static const coral = Color(0xFFFF5252);
+  static const surface = Color(0xFFF8FAFB);
+  static const white = Color(0xFFFFFFFF);
+  static const ink900 = Color(0xFF0D1B1E);
+  static const ink400 = Color(0xFF8A9EA2);
+}
 
 class CaregiverDashboardScreen extends ConsumerStatefulWidget {
   const CaregiverDashboardScreen({super.key});
@@ -26,41 +38,29 @@ class _CaregiverDashboardScreenState
     extends ConsumerState<CaregiverDashboardScreen>
     with WidgetsBindingObserver {
   int _currentIndex = 0;
-
-  // SOS guard: prevents stacking multiple emergency dialogs
   bool _sosDialogVisible = false;
-
-  // ProviderSubscription lives outside build() → no re-attachment risk
   ProviderSubscription<AsyncValue<SosAlert?>>? _sosSubscription;
 
-  // ── Screens ── created once, IndexedStack keeps them alive ─────────────────
   late final List<Widget> _screens = const [
-    CaregiverDashboardTab(), // index 0 — main dashboard
-    CaregiverPatientsScreen(), // index 1
-    CaregiverMemoriesScreen(), // index 2
-    CaregiverRemindersScreen(), // index 3
-    CaregiverProfileScreen(), // index 4
+    CaregiverDashboardTab(),
+    CaregiverPatientsScreen(),
+    CaregiverMemoriesScreen(),
+    CaregiverRemindersScreen(),
+    CaregiverProfileScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // ── Patient list bootstrap ─────────────────────────────────────────────
-    // Defer until after first frame so the Provider container is ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(patientSelectionProvider.notifier).fetchLinkedPatients();
-
-      // ── Attach SOS listener ONCE, here in initState ────────────────────
-      // Using listenManual so it is never re-attached on rebuild.
       _sosSubscription = ref.listenManual(
         realtimeSosStreamProvider,
         (previous, next) {
           next.whenData((alert) {
             if (alert == null || alert.status != 'active') return;
-            if (_sosDialogVisible) return; // deduplicate dialogs
-            if (!mounted) return;
+            if (_sosDialogVisible || !mounted) return;
             _showEmergencyDialog(alert);
           });
         },
@@ -76,55 +76,39 @@ class _CaregiverDashboardScreenState
     super.dispose();
   }
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
-
   void _onTabSelected(int index) {
-    if (_currentIndex == index) return; // no-op same tab
+    if (_currentIndex == index) return;
     setState(() => _currentIndex = index);
   }
 
-  // ── SOS Dialog ─────────────────────────────────────────────────────────────
-
   void _showEmergencyDialog(SosAlert alert) {
     _sosDialogVisible = true;
-
     showDialog<void>(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
       builder: (ctx) => _SosAlertDialog(
         alert: alert,
         onViewDetails: () {
           Navigator.of(ctx).pop();
-          // Placeholder for emergency alert screen
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Navigating to Emergency Alert Screen...')),
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (_) => EmergencyAlertScreen(alert: alert)),
           );
         },
         onDismiss: () => Navigator.of(ctx).pop(),
       ),
-    ).then((_) {
-      _sosDialogVisible = false;
-    });
+    ).then((_) => _sosDialogVisible = false);
   }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    // Watch ONLY the unread-alert count — no other data needed at shell level.
-    // Using .select() to prevent rebuild when unrelated state changes.
-    final unreadAlerts = ref.watch(
-      patientSelectionProvider
-          .select((_) => 0), // placeholder: wire to real badge count
-    );
-
+    final unreadAlerts = ref.watch(sosBadgeCountProvider);
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: _CaregiverNavBar(
+      backgroundColor: _DS.surface,
+      body: IndexedStack(index: _currentIndex, children: _screens),
+      bottomNavigationBar: _PremiumNavBar(
         currentIndex: _currentIndex,
         unreadAlerts: unreadAlerts,
         onDestinationSelected: _onTabSelected,
@@ -135,84 +119,138 @@ class _CaregiverDashboardScreenState
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Extracted NavigationBar — keeps build() leanest possible
+// Premium Navigation Bar
 // ─────────────────────────────────────────────────────────────────────────────
-class _CaregiverNavBar extends StatelessWidget {
+class _PremiumNavBar extends StatelessWidget {
   final int currentIndex;
   final int unreadAlerts;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onLongPress;
 
-  const _CaregiverNavBar({
+  const _PremiumNavBar({
     required this.currentIndex,
     required this.unreadAlerts,
     required this.onDestinationSelected,
     required this.onLongPress,
   });
 
+  static const _items = [
+    _NavItem(icon: Icons.grid_view_rounded, label: 'Home'),
+    _NavItem(icon: Icons.people_alt_rounded, label: 'Patients'),
+    _NavItem(icon: Icons.photo_library_rounded, label: 'Memories'),
+    _NavItem(icon: Icons.assignment_rounded, label: 'Reminders'),
+    _NavItem(icon: Icons.person_rounded, label: 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: currentIndex,
-      onDestinationSelected: onDestinationSelected,
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
-      indicatorColor: Colors.teal.shade50,
-      destinations: [
-        const NavigationDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          selectedIcon: Icon(Icons.dashboard, color: Colors.teal),
-          label: 'Dashboard',
-        ),
-        _longPressDestination(
-          icon: Icons.people_outline,
-          selectedIcon: Icons.people,
-          label: 'Patients',
-          onLongPress: onLongPress,
-        ),
-        _longPressDestination(
-          icon: Icons.photo_library_outlined,
-          selectedIcon: Icons.photo_library,
-          label: 'Memories',
-          onLongPress: onLongPress,
-        ),
-        _longPressDestination(
-          icon: Icons.assignment_outlined,
-          selectedIcon: Icons.assignment,
-          label: 'Reminders',
-          onLongPress: onLongPress,
-        ),
-        const NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person, color: Colors.teal),
-          label: 'Profile',
-        ),
-      ],
-    );
-  }
+    return Container(
+      decoration: BoxDecoration(
+        color: _DS.white,
+        boxShadow: [
+          BoxShadow(
+            color: _DS.ink900.withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_items.length, (i) {
+              final isSelected = currentIndex == i;
+              final item = _items[i];
+              final showBadge = i == 0 && unreadAlerts > 0;
 
-  NavigationDestination _longPressDestination({
-    required IconData icon,
-    required IconData selectedIcon,
-    required String label,
-    required VoidCallback onLongPress,
-  }) {
-    return NavigationDestination(
-      icon: GestureDetector(
-        onLongPress: onLongPress,
-        child: Icon(icon),
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => onDestinationSelected(i),
+                  onLongPress: (i > 0 && i < 4) ? onLongPress : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? _DS.teal50 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            AnimatedScale(
+                              scale: isSelected ? 1.15 : 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(
+                                item.icon,
+                                size: 22,
+                                color: isSelected ? _DS.teal700 : _DS.ink400,
+                              ),
+                            ),
+                            if (showBadge)
+                              Positioned(
+                                top: -4,
+                                right: -6,
+                                child: Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: const BoxDecoration(
+                                    color: _DS.coral,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$unreadAlerts',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 200),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? _DS.teal700 : _DS.ink400,
+                            letterSpacing: 0.2,
+                          ),
+                          child: Text(item.label),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
-      selectedIcon: GestureDetector(
-        onLongPress: onLongPress,
-        child: Icon(selectedIcon, color: Colors.teal),
-      ),
-      label: label,
     );
   }
 }
 
+class _NavItem {
+  final IconData icon;
+  final String label;
+  const _NavItem({required this.icon, required this.label});
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// SOS Alert Dialog — extracted widget, no state leaks
+// Premium SOS Alert Dialog
 // ─────────────────────────────────────────────────────────────────────────────
 class _SosAlertDialog extends StatelessWidget {
   final SosAlert alert;
@@ -227,64 +265,156 @@ class _SosAlertDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.red.shade50,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded,
-              color: Colors.red.shade800, size: 32),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'SOS EMERGENCY',
-              style: TextStyle(
-                  color: Colors.red, fontWeight: FontWeight.bold, fontSize: 20),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _DS.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: _DS.coral.withOpacity(0.25),
+              blurRadius: 40,
+              spreadRadius: 4,
+              offset: const Offset(0, 8),
             ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'A patient has triggered an emergency alert!',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Triggered at ${_formatTime(alert.triggeredAt)}',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-          ),
-          if (alert.locationLat != null && alert.locationLng != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Red header ──
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFEBEE),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
               child: Row(
                 children: [
-                  Icon(Icons.location_on, size: 14, color: Colors.red.shade700),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${alert.locationLat!.toStringAsFixed(4)}, '
-                    '${alert.locationLng!.toStringAsFixed(4)}',
-                    style: const TextStyle(fontSize: 13),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _DS.coral,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.warning_amber_rounded,
+                        color: Colors.white, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SOS ALERT',
+                        style: TextStyle(
+                          color: _DS.coral,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Emergency Triggered',
+                        style: TextStyle(
+                          color: Color(0xFFB71C1C),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-        ],
+
+            // ── Body ──
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'A patient has triggered an emergency alert. Please respond immediately.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF455A64),
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _InfoRow(
+                    icon: Icons.access_time_rounded,
+                    label: 'Triggered',
+                    value: _formatTime(alert.triggeredAt),
+                  ),
+                  if (alert.locationLat != null &&
+                      alert.locationLng != null) ...[
+                    const SizedBox(height: 8),
+                    _InfoRow(
+                      icon: Icons.location_on_rounded,
+                      label: 'Location',
+                      value:
+                          '${alert.locationLat!.toStringAsFixed(4)}, ${alert.locationLng!.toStringAsFixed(4)}',
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onDismiss,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _DS.ink400,
+                            side: const BorderSide(color: Color(0xFFCFD8DC)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text('Dismiss',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton(
+                          onPressed: onViewDetails,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _DS.coral,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.open_in_new_rounded, size: 16),
+                              SizedBox(width: 6),
+                              Text('View Details',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: onDismiss,
-          child: Text('Dismiss', style: TextStyle(color: Colors.grey.shade600)),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-          onPressed: onViewDetails,
-          child: const Text('VIEW DETAILS'),
-        ),
-      ],
     );
   }
 
@@ -292,5 +422,34 @@ class _SosAlertDialog extends StatelessWidget {
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _InfoRow(
+      {required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: _DS.ink400),
+        const SizedBox(width: 6),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12, color: _DS.ink400, fontWeight: FontWeight.w500)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: _DS.ink900,
+                  fontWeight: FontWeight.w600)),
+        ),
+      ],
+    );
   }
 }

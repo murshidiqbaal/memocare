@@ -4,9 +4,13 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/theme/emotional_theme_extension.dart';
 import '../../../providers/game_providers.dart';
+import 'mini_games/shape_sorter_game.dart';
+import 'mini_games/word_puzzle_game.dart';
 
 class GamesScreen extends ConsumerStatefulWidget {
   const GamesScreen({super.key});
@@ -21,15 +25,17 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
   @override
   Widget build(BuildContext context) {
     final patientId = Supabase.instance.client.auth.currentUser?.id;
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
 
     if (patientId == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         appBar: AppBar(
           title: const Text('Brain Games'),
-          backgroundColor: Colors.white,
+          backgroundColor: emotionalTheme.background,
           elevation: 0,
-          foregroundColor: Colors.black,
+          foregroundColor: emotionalTheme.textPrimary,
         ),
         body: const Center(child: Text('Please log in to play games')),
       );
@@ -41,16 +47,26 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         patientId: patientId,
         onExit: () => setState(() => _selectedGame = null),
       );
+    } else if (_selectedGame == 'word_puzzle') {
+      return WordPuzzleGame(
+        patientId: patientId,
+        onExit: () => setState(() => _selectedGame = null),
+      );
+    } else if (_selectedGame == 'shape_sorter') {
+      return ShapeSorterGame(
+        patientId: patientId,
+        onExit: () => setState(() => _selectedGame = null),
+      );
     }
 
     // Otherwise show game selection menu
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: emotionalTheme.background,
       appBar: AppBar(
         title: const Text('Brain Games'),
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: emotionalTheme.textPrimary,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -60,7 +76,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
             title: 'Memory Match',
             description: 'Match pairs of cards to improve memory',
             icon: Icons.grid_on,
-            color: Colors.purple,
+            color: emotionalTheme.primary!,
             onTap: () => setState(() => _selectedGame = 'memory_match'),
           ),
           _buildGameCard(
@@ -69,11 +85,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
             description: 'Find words to keep your mind sharp',
             icon: Icons.text_fields,
             color: Colors.orange,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon!')),
-              );
-            },
+            onTap: () => setState(() => _selectedGame = 'word_puzzle'),
           ),
           _buildGameCard(
             context,
@@ -81,11 +93,52 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
             description: 'Sort shapes by color and type',
             icon: Icons.category,
             color: Colors.green,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon!')),
-              );
-            },
+            onTap: () => setState(() => _selectedGame = 'shape_sorter'),
+          ),
+
+          // // ─── Divider ───────────────────────────────────────────────────
+          // const Padding(
+          //   padding: EdgeInsets.symmetric(vertical: 8),
+          //   child: Row(
+          //     children: [
+          //       Expanded(child: Divider()),
+          //       Padding(
+          //         padding: EdgeInsets.symmetric(horizontal: 12),
+          //         child: Text(
+          //           'NEW GAMES',
+          //           style: TextStyle(
+          //             fontSize: 11,
+          //             fontWeight: FontWeight.bold,
+          //             color: Colors.grey,
+          //             letterSpacing: 1.2,
+          //           ),
+          //         ),
+          //       ),
+          //       Expanded(child: Divider()),
+          //     ],
+          //   ),
+          // ),
+
+          // // 🃏 Memory Match — standalone route
+          // _buildGameCard(
+          //   context,
+          //   title: 'Memory Match',
+          //   description: 'Flip cards and find matching pairs',
+          //   icon: Icons.grid_view_rounded,
+          //   color: const Color(0xFF7C3AED),
+          //   badge: 'New',
+          //   onTap: () => context.push('/games/memory-match'),
+          // ),
+
+          // ⚡ Reaction Tap — standalone route
+          _buildGameCard(
+            context,
+            title: 'Reaction Tap',
+            description: 'Tap as fast as you can when the button turns green',
+            icon: Icons.flash_on_rounded,
+            color: const Color(0xFF0EA5E9),
+            badge: 'New',
+            onTap: () => context.push('/games/reaction-tap'),
           ),
         ],
       ),
@@ -99,14 +152,21 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
+    String? badge,
   }) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return Card(
-      elevation: 2,
+      elevation: 0,
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: emotionalTheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: color.withValues(alpha: 0.1)),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -125,12 +185,35 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              badge,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: color,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -317,15 +400,20 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
   }
 
   void _showCompletionDialog(int score) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Row(
+        backgroundColor: emotionalTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
           children: [
-            Icon(Icons.emoji_events, color: Colors.amber, size: 32),
-            SizedBox(width: 12),
-            Text('Congratulations!'),
+            Icon(Icons.emoji_events, color: emotionalTheme.primary, size: 32),
+            const SizedBox(width: 12),
+            Text('Congratulations!',
+                style: TextStyle(color: emotionalTheme.textPrimary)),
           ],
         ),
         content: Column(
@@ -333,10 +421,11 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
           children: [
             Text(
               'You completed the game!',
-              style: TextStyle(fontSize: 18, color: Colors.grey.shade700),
+              style:
+                  TextStyle(fontSize: 18, color: emotionalTheme.textSecondary),
             ),
             const SizedBox(height: 16),
-            _buildStatRow('Score', score.toString(), Colors.purple),
+            _buildStatRow('Score', score.toString(), emotionalTheme.primary!),
             _buildStatRow('Moves', moves.toString(), Colors.blue),
             _buildStatRow(
               'Time',
@@ -360,8 +449,10 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
                 _initializeGame();
               });
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-            child: const Text('Play Again'),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: emotionalTheme.primary),
+            child:
+                const Text('Play Again', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -397,11 +488,13 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
 
   @override
   Widget build(BuildContext context) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: emotionalTheme.background,
       appBar: AppBar(
         title: const Text('Memory Match'),
-        backgroundColor: Colors.purple,
+        backgroundColor: emotionalTheme.primary,
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -423,17 +516,20 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
           // Stats bar
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.white,
+            color: emotionalTheme.surface,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatChip('Moves', moves.toString(), Icons.touch_app),
                 _buildStatChip(
+                    emotionalTheme, 'Moves', moves.toString(), Icons.touch_app),
+                _buildStatChip(
+                  emotionalTheme,
                   'Time',
                   '${stopwatch.elapsed.inMinutes}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2, '0')}',
                   Icons.timer,
                 ),
                 _buildStatChip(
+                  emotionalTheme,
                   'Pairs',
                   '$matchedPairs/${icons.length}',
                   Icons.check_circle,
@@ -463,28 +559,31 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
     );
   }
 
-  Widget _buildStatChip(String label, String value, IconData icon) {
+  Widget _buildStatChip(EmotionalThemeExtension emotionalTheme, String label,
+      String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.purple, size: 24),
+        Icon(icon, color: emotionalTheme.primary, size: 24),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.purple,
+            color: emotionalTheme.primary,
           ),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 12, color: emotionalTheme.textSecondary),
         ),
       ],
     );
   }
 
   Widget _buildCard(GameCard card, int index) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return GestureDetector(
       onTap: () => _onCardTap(index),
       child: AnimatedContainer(
@@ -492,7 +591,7 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
         decoration: BoxDecoration(
           color: card.isFaceUp || card.isMatched
               ? Colors.white
-              : Colors.purple.shade400,
+              : emotionalTheme.primary?.withOpacity(0.8),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -506,7 +605,9 @@ class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
             ? Icon(
                 card.icon,
                 size: 40,
-                color: card.isMatched ? Colors.green : Colors.purple,
+                color: card.isMatched
+                    ? emotionalTheme.success
+                    : emotionalTheme.primary,
               )
             : const Icon(
                 Icons.question_mark,

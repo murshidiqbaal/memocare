@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/emotional_theme_extension.dart';
 import '../../../data/models/memory.dart';
 import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
 import '../../../features/patient_selection/providers/patient_selection_provider.dart';
@@ -18,15 +19,18 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
     final patientState = ref.watch(patientSelectionProvider);
     final patientId = patientState.selectedPatient?.id ?? '';
 
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
+
     // No patient selected
     if (patientId.isEmpty) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         appBar: AppBar(
           title: const PatientSelectorDropdown(),
-          backgroundColor: Colors.white,
+          backgroundColor: emotionalTheme.background,
           elevation: 0,
-          foregroundColor: Colors.black,
+          foregroundColor: emotionalTheme.textPrimary,
         ),
         body: Center(
           child: Column(
@@ -49,7 +53,10 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
                 onPressed: () => PatientBottomSheetPicker.show(context, ref),
                 icon: const Icon(Icons.person_search),
                 label: const Text('Select Patient'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: emotionalTheme.primary,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
           ),
@@ -61,12 +68,12 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
     final viewModel = ref.read(memoryViewModelProvider(patientId).notifier);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: emotionalTheme.background,
       appBar: AppBar(
         title: const PatientSelectorDropdown(),
-        backgroundColor: Colors.white,
+        backgroundColor: emotionalTheme.background,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: emotionalTheme.textPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),
@@ -133,28 +140,34 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
         onPressed: () => _navigateToUpload(context, ref, null, patientId),
         label: const Text('Add Memory'),
         icon: const Icon(Icons.add_photo_alternate),
-        backgroundColor: Colors.teal,
+        backgroundColor: emotionalTheme.primary,
+        foregroundColor: Colors.white,
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.photo_library_outlined,
-              size: 80, color: Colors.grey.shade300),
+              size: 80, color: emotionalTheme.primary?.withOpacity(0.3)),
           const SizedBox(height: 16),
           Text(
             'No memories yet',
-            style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+            style: TextStyle(
+                fontSize: 18,
+                color: emotionalTheme.textPrimary,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             'Add photos and stories to help\nyour loved one remember.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade400),
+            style: TextStyle(color: emotionalTheme.textSecondary),
           ),
         ],
       ),
@@ -168,12 +181,18 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
     MemoryViewModel viewModel,
     String patientId,
   ) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return GestureDetector(
       onTap: () => _navigateToUpload(context, ref, memory, patientId),
       onLongPress: () => _showDeleteDialog(context, memory, viewModel),
       child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        color: emotionalTheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: emotionalTheme.primary!.withOpacity(0.1)),
+        ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -203,9 +222,10 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
                       ),
                     )
                   : Container(
-                      color: Colors.teal.shade50,
+                      color: emotionalTheme.primary?.withOpacity(0.05),
                       child: Icon(Icons.photo,
-                          size: 48, color: Colors.teal.shade200),
+                          size: 48,
+                          color: emotionalTheme.primary?.withOpacity(0.3)),
                     ),
             ),
             Padding(

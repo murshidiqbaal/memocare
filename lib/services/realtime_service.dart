@@ -122,7 +122,7 @@ class RealtimeService {
       _caregiverChannel!.onPostgresChanges(
         event: PostgresChangeEvent.insert,
         schema: 'public',
-        table: 'sos_alerts',
+        table: 'sos_messages',
         filter: PostgresChangeFilter(
           type: PostgresChangeFilterType.eq,
           column: 'caregiver_id',
@@ -271,6 +271,7 @@ class RealtimeService {
           locationLat: alert.latitude,
           locationLng: alert.longitude,
           note: 'Geofence Breach',
+          message: 'Safe zone breach detected',
         );
         _sosController.add(mappedAlert);
       } catch (e) {

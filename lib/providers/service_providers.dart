@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/repositories/caregiver_repository.dart';
 import '../data/repositories/dashboard_repository.dart';
+import '../data/repositories/location_repository.dart';
 import '../data/repositories/memory_repository.dart';
 import '../data/repositories/patient_connection_repository.dart';
 import '../data/repositories/patient_profile_repository.dart'; // Added
@@ -108,6 +109,12 @@ final patientProfileRepositoryProvider =
     Provider<PatientProfileRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   return PatientProfileRepository(supabase);
+});
+
+// Location Repository Provider
+final locationRepositoryProvider = Provider<LocationRepository>((ref) {
+  final supabase = ref.watch(supabaseClientProvider);
+  return LocationRepository(supabase);
 });
 
 // TTS Service Provider

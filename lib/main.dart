@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config/supabase_config.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/memocare_theme.dart';
 import 'providers/service_providers.dart';
 import 'routes/app_router.dart';
 import 'services/fcm_service.dart';
@@ -54,9 +54,8 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'MemoCare',
-      theme: AppTheme
-          .lightTheme, // Applied the requested rich aesthetics (via AppTheme)
-      darkTheme: AppTheme.darkTheme,
+      theme: MemoCareTheme.lightTheme,
+      darkTheme: MemoCareTheme.darkTheme,
       themeMode: ThemeMode.system,
       routerConfig: router,
       debugShowCheckedModeBanner: false,

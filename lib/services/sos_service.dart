@@ -99,12 +99,12 @@ class SosService {
 
   Future<void> updateSosStatus(String alertId, String newStatus) async {
     await _supabase
-        .from('sos_alerts')
+        .from('sos_messages')
         .update({'status': newStatus}).eq('id', alertId);
   }
 
   Future<void> _processInsert(List<Map<String, dynamic>> payloads) async {
-    await _supabase.from('sos_alerts').insert(payloads);
+    await _supabase.from('sos_messages').insert(payloads);
   }
 
   Future<void> _queueOfflineSOS(List<Map<String, dynamic>> payloads) async {

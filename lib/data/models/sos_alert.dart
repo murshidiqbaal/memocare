@@ -9,9 +9,12 @@ class SosAlert {
   final String patientId;
   @JsonKey(name: 'caregiver_id')
   final String? caregiverId;
+  final String? message; // Added per prompt
   final String status; // active | acknowledged | resolved
-  @JsonKey(name: 'triggered_at')
+  @JsonKey(name: 'created_at') // Renamed from triggered_at per prompt
   final DateTime triggeredAt;
+  @JsonKey(name: 'acknowledged_at')
+  final DateTime? acknowledgedAt;
   @JsonKey(name: 'location_lat')
   final double? locationLat;
   @JsonKey(name: 'location_lng')
@@ -22,8 +25,10 @@ class SosAlert {
     required this.id,
     required this.patientId,
     this.caregiverId,
-    this.status = 'active',
+    this.message,
+    this.status = 'pending',
     required this.triggeredAt,
+    this.acknowledgedAt,
     this.locationLat,
     this.locationLng,
     this.note,

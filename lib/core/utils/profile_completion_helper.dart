@@ -1,99 +1,96 @@
 import 'package:dementia_care_app/data/models/patient_profile.dart';
 
-/// Helper class for calculating patient profile completion
-/// Used for gamification and encouraging complete profiles
+/// Healthcare-grade weighted profile completion
+/// Designed for dementia safety prioritization
 class ProfileCompletionHelper {
-  /// Calculate profile completion percentage (0-100)
+  // ================= WEIGHTS =================
+  static const int _fullNameWeight = 15;
+  static const int _dobWeight = 15;
+  static const int _emergencyNameWeight = 20;
+  static const int _emergencyPhoneWeight = 20;
+  static const int _phoneWeight = 10;
+  static const int _photoWeight = 20;
+
+  static const int _genderWeight = 4;
+  static const int _addressWeight = 3;
+  static const int _medicalNotesWeight = 3;
+
+  static const int _totalWeight = 100;
+
+  static bool _hasText(String? value) =>
+      value != null && value.trim().isNotEmpty;
+
+  /// 🎯 Main weighted completion calculator
   static int calculateCompletion(PatientProfile profile) {
-    int totalFields = 9; // Total number of optional + required fields
-    int completedFields = 0;
+    int score = 0;
 
-    // Required field (always counted as complete if profile exists)
-    if (profile.fullName.isNotEmpty) completedFields++;
+    // 🔴 CRITICAL SAFETY FIELDS
+    if (_hasText(profile.fullName)) score += _fullNameWeight;
+    if (profile.dateOfBirth != null) score += _dobWeight;
+    if (_hasText(profile.emergencyContactName)) {
+      score += _emergencyNameWeight;
+    }
+    if (_hasText(profile.emergencyContactPhone)) {
+      score += _emergencyPhoneWeight;
+    }
+    if (_hasText(profile.phoneNumber)) score += _phoneWeight;
+    if (_hasText(profile.profileImageUrl)) score += _photoWeight;
 
-    // Optional but important fields
-    if (profile.dateOfBirth != null) completedFields++;
-    if (profile.gender != null && profile.gender!.isNotEmpty) {
-      completedFields++;
-    }
-    if (profile.phoneNumber != null && profile.phoneNumber!.isNotEmpty) {
-      completedFields++;
-    }
-    if (profile.address != null && profile.address!.isNotEmpty) {
-      completedFields++;
-    }
-    if (profile.emergencyContactName != null &&
-        profile.emergencyContactName!.isNotEmpty) {
-      completedFields++;
-    }
-    if (profile.emergencyContactPhone != null &&
-        profile.emergencyContactPhone!.isNotEmpty) {
-      completedFields++;
-    }
-    if (profile.medicalNotes != null && profile.medicalNotes!.isNotEmpty) {
-      completedFields++;
-    }
-    if (profile.profileImageUrl != null &&
-        profile.profileImageUrl!.isNotEmpty) {
-      completedFields++;
-    }
+    // 🟡 OPTIONAL ENRICHMENT
+    if (_hasText(profile.gender)) score += _genderWeight;
+    if (_hasText(profile.address)) score += _addressWeight;
+    if (_hasText(profile.medicalNotes)) score += _medicalNotesWeight;
 
-    return ((completedFields / totalFields) * 100).round();
+    // Safety clamp
+    if (score > _totalWeight) return 100;
+    if (score < 0) return 0;
+
+    return score;
   }
 
-  /// Get a user-friendly completion status message
+  /// 🧠 User-friendly message (improved)
   static String getCompletionMessage(int percentage) {
-    if (percentage == 100) {
-      return 'Profile Complete! 🎉';
-    } else if (percentage >= 80) {
-      return 'Almost there!';
-    } else if (percentage >= 50) {
-      return 'Good progress';
-    } else if (percentage >= 25) {
-      return 'Getting started';
-    } else {
-      return 'Let\'s complete your profile';
-    }
+    if (percentage >= 100) return 'Profile Complete! 🎉';
+    if (percentage >= 90) return 'Safety ready — great job!';
+    if (percentage >= 75) return 'Almost there!';
+    if (percentage >= 50) return 'Good progress';
+    if (percentage >= 25) return 'Getting started';
+    return 'Let’s complete your profile';
   }
 
-  /// Get missing fields for better UX
+  /// 🔍 Missing fields (prioritized)
   static List<String> getMissingFields(PatientProfile profile) {
-    List<String> missing = [];
+    final missing = <String>[];
 
+    // Critical first
+    if (!_hasText(profile.fullName)) missing.add('Full Name');
     if (profile.dateOfBirth == null) missing.add('Date of Birth');
-    if (profile.gender == null || profile.gender!.isEmpty) {
-      missing.add('Gender');
-    }
-    if (profile.phoneNumber == null || profile.phoneNumber!.isEmpty) {
-      missing.add('Phone Number');
-    }
-    if (profile.address == null || profile.address!.isEmpty) {
-      missing.add('Address');
-    }
-    if (profile.emergencyContactName == null ||
-        profile.emergencyContactName!.isEmpty) {
+    if (!_hasText(profile.emergencyContactName)) {
       missing.add('Emergency Contact Name');
     }
-    if (profile.emergencyContactPhone == null ||
-        profile.emergencyContactPhone!.isEmpty) {
+    if (!_hasText(profile.emergencyContactPhone)) {
       missing.add('Emergency Contact Phone');
     }
-    if (profile.medicalNotes == null || profile.medicalNotes!.isEmpty) {
-      missing.add('Medical Notes');
-    }
-    if (profile.profileImageUrl == null || profile.profileImageUrl!.isEmpty) {
-      missing.add('Profile Photo');
-    }
+    if (!_hasText(profile.phoneNumber)) missing.add('Phone Number');
+    if (!_hasText(profile.profileImageUrl)) missing.add('Profile Photo');
+
+    // Optional
+    if (!_hasText(profile.gender)) missing.add('Gender');
+    if (!_hasText(profile.address)) missing.add('Address');
+    if (!_hasText(profile.medicalNotes)) missing.add('Medical Notes');
 
     return missing;
   }
 
-  /// Check if critical safety fields are complete
-  /// (Emergency contact information)
+  /// 🚨 Critical safety readiness (unchanged but hardened)
   static bool hasCriticalInfo(PatientProfile profile) {
-    return profile.emergencyContactName != null &&
-        profile.emergencyContactName!.isNotEmpty &&
-        profile.emergencyContactPhone != null &&
-        profile.emergencyContactPhone!.isNotEmpty;
+    return _hasText(profile.emergencyContactName) &&
+        _hasText(profile.emergencyContactPhone);
+  }
+
+  /// 🧠 NEW — Safety readiness score (very useful for dashboards)
+  static bool isSafetyReady(PatientProfile profile) {
+    final completion = calculateCompletion(profile);
+    return completion >= 80 && hasCriticalInfo(profile);
   }
 }

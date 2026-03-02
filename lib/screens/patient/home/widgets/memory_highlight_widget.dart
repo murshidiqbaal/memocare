@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/emotional_theme_extension.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/memory_providers.dart';
 
@@ -49,18 +50,21 @@ class MemoryHighlightCard extends ConsumerWidget {
 
     final displayMemory = latestMemory ?? latestAny;
 
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: emotionalTheme.surface,
         borderRadius: BorderRadius.circular(12 * scale),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.15),
+            color: emotionalTheme.primary!.withOpacity(0.15),
             blurRadius: 20 * scale,
             offset: Offset(0, 8 * scale),
           ),
           BoxShadow(
-            color: Colors.pink.withOpacity(0.08),
+            color: emotionalTheme.secondary!.withOpacity(0.08),
             blurRadius: 30 * scale,
             offset: Offset(0, 12 * scale),
           ),
@@ -79,7 +83,7 @@ class MemoryHighlightCard extends ConsumerWidget {
                 fit: StackFit.expand,
                 children: [
                   // ── Photo from Supabase storage or placeholder ──────────
-                  _buildPhotoArea(memoryState, latestMemory, scale),
+                  _buildPhotoArea(context, memoryState, latestMemory, scale),
 
                   // ── Warm gradient overlay ──────────────────────────────
                   Container(
@@ -137,7 +141,7 @@ class MemoryHighlightCard extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 16 * scale,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
+                    color: emotionalTheme.textSecondary,
                     letterSpacing: 0.2,
                   ),
                   textAlign: TextAlign.center,
@@ -149,8 +153,8 @@ class MemoryHighlightCard extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: onViewDay,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo.shade50,
-                      foregroundColor: Colors.indigo.shade700,
+                      backgroundColor: emotionalTheme.primary?.withOpacity(0.1),
+                      foregroundColor: emotionalTheme.primary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20 * scale),
@@ -182,16 +186,20 @@ class MemoryHighlightCard extends ConsumerWidget {
   }
 
   Widget _buildPhotoArea(
+    BuildContext context,
     MemoryListState? memoryState,
     dynamic latestMemory,
     double scale,
   ) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     // Still loading
     if (memoryState == null || memoryState.isLoading) {
       return Container(
-        color: Colors.indigo.shade50,
-        child: const Center(
-          child: CircularProgressIndicator(strokeWidth: 2),
+        color: emotionalTheme.background,
+        child: Center(
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: emotionalTheme.primary),
         ),
       );
     }
@@ -203,33 +211,37 @@ class MemoryHighlightCard extends ConsumerWidget {
         imageUrl: latestMemory.imageUrl as String,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
-          color: Colors.indigo.shade50,
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          color: emotionalTheme.background,
+          child: Center(
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: emotionalTheme.primary)),
         ),
-        errorWidget: (context, url, error) => _placeholder(scale),
+        errorWidget: (context, url, error) => _placeholder(context, scale),
       );
     }
 
     // No photo available → warm illustrated placeholder
-    return _placeholder(scale);
+    return _placeholder(context, scale);
   }
 
-  Widget _placeholder(double scale) {
+  Widget _placeholder(BuildContext context, double scale) {
+    final emotionalTheme =
+        Theme.of(context).extension<EmotionalThemeExtension>()!;
     return Container(
-      color: Colors.indigo.shade50,
+      color: emotionalTheme.background,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.photo_library_outlined,
             size: 64 * scale,
-            color: Colors.indigo.shade200,
+            color: emotionalTheme.primary?.withOpacity(0.4),
           ),
           SizedBox(height: 8 * scale),
           Text(
             'Memories will appear here',
             style: TextStyle(
-              color: Colors.indigo.shade300,
+              color: emotionalTheme.textSecondary,
               fontSize: 14 * scale,
             ),
           ),
