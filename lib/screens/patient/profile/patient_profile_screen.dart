@@ -169,7 +169,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                 _buildCard(
                   scale,
                   children: [
-                    _buildInfoRow('Full Name', profile.fullName,
+                    _buildInfoRow('Full Name', profile.fullName ?? 'Not Set',
                         Icons.person_outline, scale),
                     if (profile.dateOfBirth != null)
                       _buildInfoRow(
@@ -309,7 +309,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
         ),
         SizedBox(height: 16 * scale),
         Text(
-          profile.fullName,
+          profile.fullName ?? 'Memocare Patient',
           style: TextStyle(
             fontSize: 26 * scale,
             fontWeight: FontWeight.bold,
@@ -624,17 +624,22 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: links.map((link) {
+                      final caregiverProfileRaw = link['caregiver_profiles'];
                       final caregiverProfile =
-                          link['caregiver_profiles'] as Map<String, dynamic>? ??
-                              {};
+                          caregiverProfileRaw is Map<String, dynamic>
+                              ? caregiverProfileRaw
+                              : <String, dynamic>{};
 
-                      final fullName = 'Linked Caregiver';
+                      final fullName =
+                          caregiverProfile['full_name']?.toString() ??
+                              'Linked Caregiver';
                       final photoUrl =
-                          caregiverProfile['profile_photo_url'] as String?;
+                          caregiverProfile['profile_photo_url']?.toString();
                       final relationship =
-                          caregiverProfile['relationship'] as String?;
-                      final phone = caregiverProfile['phone'] as String? ??
-                          'No phone number';
+                          caregiverProfile['relationship']?.toString();
+                      final phone =
+                          caregiverProfile['phone_number']?.toString() ??
+                              'No phone number';
 
                       return Container(
                         margin: EdgeInsets.only(bottom: 8 * scale),
@@ -648,10 +653,11 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                           leading: CircleAvatar(
                             radius: 24 * scale,
                             backgroundColor: Colors.teal.shade100,
-                            backgroundImage: photoUrl != null
-                                ? NetworkImage(photoUrl)
-                                : null,
-                            child: photoUrl == null
+                            backgroundImage:
+                                (photoUrl != null && photoUrl.isNotEmpty)
+                                    ? NetworkImage(photoUrl)
+                                    : null,
+                            child: (photoUrl == null || photoUrl.isEmpty)
                                 ? Text(
                                     fullName.isNotEmpty
                                         ? fullName[0].toUpperCase()
@@ -697,10 +703,12 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                                     CircleAvatar(
                                       radius: 40 * scale,
                                       backgroundColor: Colors.teal.shade100,
-                                      backgroundImage: photoUrl != null
+                                      backgroundImage: (photoUrl != null &&
+                                              photoUrl.isNotEmpty)
                                           ? NetworkImage(photoUrl)
                                           : null,
-                                      child: photoUrl == null
+                                      child: (photoUrl == null ||
+                                              photoUrl.isEmpty)
                                           ? Text(
                                               fullName.isNotEmpty
                                                   ? fullName[0].toUpperCase()
@@ -856,7 +864,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                         ),
                         SizedBox(height: 4 * scale),
                         Text(
-                          '${zone.latitude.toStringAsFixed(4)}, ${zone.longitude.toStringAsFixed(4)}',
+                          '${zone.centerLatitude.toStringAsFixed(4)}, ${zone.centerLongitude.toStringAsFixed(4)}',
                           style: TextStyle(
                             fontSize: 13 * scale,
                             color: Colors.grey.shade600,
@@ -907,9 +915,9 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
       MaterialPageRoute(
         builder: (context) => SafeZonePickerScreen(
           patientId: patientId,
-          initialLatitude: zone?.latitude,
-          initialLongitude: zone?.longitude,
-          initialRadiusMeters: zone?.radiusMeters,
+          initialLatitude: zone?.centerLatitude,
+          initialLongitude: zone?.centerLongitude,
+          initialRadiusMeters: zone?.radiusMeters.toInt(),
           existingZoneId: zone?.id,
           initialLabel: zone?.label,
         ),

@@ -51,12 +51,12 @@ class SafeZoneController extends StateNotifier<SafeZoneState> {
       final zone = SafeZone(
         id: existingId ?? const Uuid().v4(),
         patientId: patientId,
-        latitude: latitude,
-        longitude: longitude,
         radiusMeters: radiusMeters,
         label: label,
         createdAt: now,
         updatedAt: now,
+        centerLatitude: latitude,
+        centerLongitude: longitude,
       );
 
       await _repository.upsertSafeZone(zone);

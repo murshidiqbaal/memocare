@@ -7,8 +7,10 @@ class SafeZone {
   final String id;
   @JsonKey(name: 'patient_id')
   final String patientId;
-  final double latitude;
-  final double longitude;
+  @JsonKey(name: 'centerLatitude')
+  final double centerLatitude;
+  @JsonKey(name: 'centerLongitude')
+  final double centerLongitude;
   @JsonKey(name: 'radius_meters')
   final int radiusMeters;
   final String label;
@@ -20,8 +22,8 @@ class SafeZone {
   SafeZone({
     required this.id,
     required this.patientId,
-    required this.latitude,
-    required this.longitude,
+    required this.centerLatitude,
+    required this.centerLongitude,
     required this.radiusMeters,
     required this.label,
     required this.createdAt,
@@ -36,8 +38,8 @@ class SafeZone {
   SafeZone copyWith({
     String? id,
     String? patientId,
-    double? latitude,
-    double? longitude,
+    double? centerLatitude,
+    double? centerLongitude,
     int? radiusMeters,
     String? label,
     DateTime? createdAt,
@@ -46,8 +48,8 @@ class SafeZone {
     return SafeZone(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
+      centerLatitude: centerLatitude ?? this.centerLatitude,
+      centerLongitude: centerLongitude ?? this.centerLongitude,
       radiusMeters: radiusMeters ?? this.radiusMeters,
       label: label ?? this.label,
       createdAt: createdAt ?? this.createdAt,

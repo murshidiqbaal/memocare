@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -30,18 +31,21 @@ final patientProfileProvider =
     return supabase
         .from('patients')
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
+        .eq('id', userId) // Fixed: use 'id' column instead of 'user_id'
         .map(_mapSinglePatientSafely);
   },
 );
 
-/// 🧠 Safe mapper (prevents crashes & multi-row issues)
 PatientProfile? _mapSinglePatientSafely(List<Map<String, dynamic>> rows) {
   if (rows.isEmpty) return null;
 
   try {
-    return PatientProfile.fromJson(rows.first);
-  } catch (_) {
+    final firstRow = rows.first;
+    // Extra safety: ensure primary key exists before parsing
+    if (firstRow['id'] == null) return null;
+    return PatientProfile.fromJson(firstRow);
+  } catch (e) {
+    debugPrint('PatientProfile mapping error: $e');
     return null;
   }
 }
@@ -60,6 +64,6 @@ final linkedCaregiversProvider =
         .eq('patient_id', patientId)
         .order('linked_at', ascending: true);
 
-    return List<Map<String, dynamic>>.from(data);
+    return List<Map<String, dynamic>>.from(data ?? []);
   },
 );

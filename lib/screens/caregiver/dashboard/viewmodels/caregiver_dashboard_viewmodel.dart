@@ -23,7 +23,7 @@ import '../../../../data/models/dashboard_stats.dart';
 import '../../../../data/models/reminder.dart';
 import '../../../../data/models/voice_query.dart';
 import '../../../../data/repositories/dashboard_repository.dart';
-import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../../providers/active_patient_provider.dart';
 import '../../../../providers/service_providers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,15 +251,29 @@ final caregiverDashboardProvider = StateNotifierProvider.family<
     // ── React to patientSelectionProvider changes ─────────────────────────
     // This is the ONLY place patient data flows into the dashboard ViewModel.
     // fireImmediately loads data for the currently selected patient on first build.
-    ref.listen<PatientState>(
-      patientSelectionProvider,
-      (previous, next) {
-        final patient = next.selectedPatient;
-        vm.onPatientChanged(
-          patient?.id,
-          patient?.fullName ?? 'No Patient Selected',
-          patient?.profileImageUrl,
-        );
+    ref.listen<String?>(
+      activePatientIdProvider,
+      (previous, nextId) {
+        if (nextId == null) {
+          vm.onPatientChanged(null, 'No Patient Selected', null);
+          return;
+        }
+
+        // Grab patient name from linkedPatientsProvider if available
+        final linkedState = ref.read(linkedPatientsProvider);
+        if (linkedState.hasValue) {
+          final patient = linkedState.value!.firstWhere(
+            (p) => p.id == nextId,
+            orElse: () => linkedState.value!.first,
+          );
+          vm.onPatientChanged(
+            patient.id,
+            patient.fullName ?? 'Linked Patient',
+            patient.profileImageUrl,
+          );
+        } else {
+          vm.onPatientChanged(nextId, 'Loading User...', null);
+        }
       },
       fireImmediately: true,
     );

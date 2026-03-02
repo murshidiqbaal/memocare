@@ -31,11 +31,11 @@ class MockSafetyService {
     return SafeZone(
         id: 'mnock_zone',
         patientId: 'patient_1',
-        latitude: 37.422,
-        longitude: -122.084,
         radiusMeters: 100,
         label: 'Home',
         createdAt: DateTime.now(),
-        updatedAt: DateTime.now());
+        updatedAt: DateTime.now(),
+        centerLatitude: 37.422,
+        centerLongitude: -122.084);
   }
 }

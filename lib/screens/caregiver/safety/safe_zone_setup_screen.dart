@@ -80,12 +80,12 @@ class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
     final zone = SafeZone(
       id: 'mock',
       patientId: patientId,
-      latitude: _center.latitude,
-      longitude: _center.longitude,
       radiusMeters: _radius.toInt(),
       label: 'Safe Zone ${DateTime.now().minute}',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
+      centerLatitude: _center.latitude,
+      centerLongitude: _center.longitude,
     );
 
     // Stub Save

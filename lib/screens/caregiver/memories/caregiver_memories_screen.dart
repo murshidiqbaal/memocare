@@ -5,8 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/emotional_theme_extension.dart';
 import '../../../data/models/memory.dart';
-import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
-import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../providers/active_patient_provider.dart';
 import '../../../widgets/patient_selector_dropdown.dart';
 import 'memory_upload_screen.dart';
 import 'memory_viewmodel.dart';
@@ -16,8 +15,7 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final patientState = ref.watch(patientSelectionProvider);
-    final patientId = patientState.selectedPatient?.id ?? '';
+    final patientId = ref.watch(activePatientIdProvider) ?? '';
 
     final emotionalTheme =
         Theme.of(context).extension<EmotionalThemeExtension>()!;
@@ -50,7 +48,10 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed: () => PatientBottomSheetPicker.show(context, ref),
+                onPressed: () {
+                  // No-op for now as we don't have the BottomSheet picker anymore
+                  // Caregiver can change patient from Top App Bar
+                },
                 icon: const Icon(Icons.person_search),
                 label: const Text('Select Patient'),
                 style: ElevatedButton.styleFrom(

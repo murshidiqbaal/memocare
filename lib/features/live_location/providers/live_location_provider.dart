@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../providers/service_providers.dart';
-import '../../patient_selection/providers/patient_selection_provider.dart';
+import '../../../providers/active_patient_provider.dart';
 import '../data/patient_location_model.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,8 +17,7 @@ import '../data/patient_location_model.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 final liveLocationStreamProvider =
     StreamProvider.autoDispose<PatientLocation?>((ref) {
-  final selectedPatientId =
-      ref.watch(patientSelectionProvider.select((s) => s.selectedPatient?.id));
+  final selectedPatientId = ref.watch(activePatientIdProvider);
 
   if (selectedPatientId == null || selectedPatientId.isEmpty) {
     return Stream.value(null);

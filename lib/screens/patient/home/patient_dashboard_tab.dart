@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../../../providers/emergency_alert_provider.dart'; // Added import for SOS controller
-import '../../../providers/service_providers.dart';
 import '../../../widgets/sos_countdown_dialog.dart'; // Added import for SOS Dialog
 import '../memories/memories_screen.dart';
 import 'viewmodels/home_viewmodel.dart';
@@ -15,8 +14,8 @@ import 'widgets/memory_highlight_widget.dart';
 import 'widgets/offline_status_widget.dart';
 import 'widgets/patient_app_bar_widget.dart';
 import 'widgets/reminder_section_card.dart';
-import 'widgets/section_title.dart';
 import 'widgets/safety_status_card.dart'; // Added
+import 'widgets/section_title.dart';
 
 /// Patient Dashboard Tab - Healthcare-grade dementia-friendly UI
 ///
@@ -120,28 +119,28 @@ class PatientDashboardTab extends ConsumerWidget {
 
                         const SizedBox(height: 16),
                         // Quick Test Button for Local Notifications
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            final notifService =
-                                ref.read(reminderNotificationServiceProvider);
-                            await notifService.showEmergencyNotification(
-                              title: 'Test Local Popup',
-                              body:
-                                  'This notification uses your new launcher icon!',
-                            );
-                          },
-                          icon: const Icon(Icons.notifications_active),
-                          label: const Text('Test Local Notification'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 24 * scale),
+                        // ElevatedButton.icon(
+                        //   onPressed: () async {
+                        //     final notifService =
+                        //         ref.read(reminderNotificationServiceProvider);
+                        //     await notifService.showEmergencyNotification(
+                        //       title: 'Test Local Popup',
+                        //       body:
+                        //           'This notification uses your new launcher icon!',
+                        //     );
+                        //   },
+                        //   icon: const Icon(Icons.notifications_active),
+                        //   label: const Text('Test Local Notification'),
+                        //   style: ElevatedButton.styleFrom(
+                        //     backgroundColor: Colors.deepPurple,
+                        //     foregroundColor: Colors.white,
+                        //     padding: const EdgeInsets.symmetric(vertical: 16),
+                        //     shape: RoundedRectangleBorder(
+                        //       borderRadius: BorderRadius.circular(16),
+                        //     ),
+                        //   ),
+                        // ),
+                        // SizedBox(height: 24 * scale),
 
                         // Emergency SOS (Scrollable position above sticky bar area)
                         EmergencySOSCard(

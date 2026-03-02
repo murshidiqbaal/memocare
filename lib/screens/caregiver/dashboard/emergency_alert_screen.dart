@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../data/models/sos_alert.dart';
 import '../../../../data/repositories/sos_repository.dart';
-import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../../providers/active_patient_provider.dart';
 import '../../../../services/call_service.dart';
 
 class EmergencyAlertScreen extends ConsumerStatefulWidget {
@@ -48,7 +48,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
   }
 
   void _callPatient() async {
-    final linkedPatients = ref.read(patientSelectionProvider).linkedPatients;
+    final linkedPatients = ref.read(linkedPatientsProvider).value ?? [];
     final patient = linkedPatients.cast<dynamic>().firstWhere(
           (p) => p.id == widget.alert.patientId,
           orElse: () => null,
@@ -89,7 +89,7 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final linkedPatients = ref.watch(patientSelectionProvider).linkedPatients;
+    final linkedPatients = ref.watch(linkedPatientsProvider).value ?? [];
     final patient = linkedPatients.cast<dynamic>().firstWhere(
           (p) => p.id == widget.alert.patientId,
           orElse: () => null,

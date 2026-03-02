@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../data/models/reminder.dart';
-import '../../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
+import '../../../../providers/active_patient_provider.dart';
 import '../../../../providers/game_analytics_provider.dart';
 import '../../patient/reminders/add_edit_reminder_screen.dart';
 import '../analytics/analytics_dashboard_screen.dart';
@@ -185,7 +185,6 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
         unreadAlerts: unreadAlerts,
         onNotificationTap: () => context.push('/notification-test'),
         onProfileTap: () => context.push('/caregiver-profile'),
-        onPatientPickerTap: () => PatientBottomSheetPicker.show(context, ref),
       ),
       floatingActionButton:
           hasPatient ? _PremiumFab(onPressed: _navigateToAddReminder) : null,
@@ -239,10 +238,7 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
 
                       // No patient
                       if (!hasPatient && !isLoading)
-                        _NoPatientEmptyState(
-                          onSelectPatient: () =>
-                              PatientBottomSheetPicker.show(context, ref),
-                        )
+                        _NoPatientEmptyState()
                       else if (isLoading && !hasPatient)
                         const _SkeletonLoader()
                       else ...[
@@ -282,18 +278,19 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
                           icon: Icons.location_on_rounded,
                           title: 'Live Location',
                           badge: const _LivePill(),
-                          trailing: dashState.selectedPatientName !=
-                                  'No Patient Selected'
+                          trailing: dashState.selectedPatientId != null
                               ? _PatientTag(name: dashState.selectedPatientName)
                               : null,
                         ),
                         _Section(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(20),
-                            child: LivePatientMap(
-                              patientId: dashState.selectedPatientId!,
-                              height: 280,
-                            ),
+                            child: dashState.selectedPatientId == null
+                                ? const _NoPatientSelectedMap()
+                                : LivePatientMap(
+                                    patientId: dashState.selectedPatientId!,
+                                    height: 280,
+                                  ),
                           ),
                         ),
 
@@ -422,6 +419,34 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
   }
 }
 
+//no patient selected map
+class _NoPatientSelectedMap extends StatelessWidget {
+  const _NoPatientSelectedMap();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 280,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.person_search, size: 40, color: Colors.grey),
+          SizedBox(height: 8),
+          Text(
+            'Select a patient to view live location',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Premium AppBar
 // ─────────────────────────────────────────────────────────────────────────────
@@ -431,7 +456,6 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int unreadAlerts;
   final VoidCallback onNotificationTap;
   final VoidCallback onProfileTap;
-  final VoidCallback onPatientPickerTap;
 
   const _PremiumAppBar({
     required this.patientName,
@@ -439,7 +463,6 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.unreadAlerts,
     required this.onNotificationTap,
     required this.onProfileTap,
-    required this.onPatientPickerTap,
   });
 
   @override
@@ -480,50 +503,141 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
 
               // Title + patient selector
               Expanded(
-                child: GestureDetector(
-                  onTap: onPatientPickerTap,
-                  behavior: HitTestBehavior.opaque,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'MemoCare',
-                        style: TextStyle(
-                          color: _DS.ink900,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
+                child: Consumer(builder: (context, ref, child) {
+                  final linkedPatientsAsync = ref.watch(linkedPatientsProvider);
+                  if (linkedPatientsAsync.isLoading) {
+                    return const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('MemoCare',
+                            style: TextStyle(
+                                color: _DS.ink900,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3)),
+                        SizedBox(height: 1),
+                        Text('Loading Patients...',
+                            style: TextStyle(
+                                color: _DS.teal700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    );
+                  }
+                  if (linkedPatientsAsync.hasError ||
+                      linkedPatientsAsync.value == null ||
+                      linkedPatientsAsync.value!.isEmpty) {
+                    return const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('MemoCare',
+                            style: TextStyle(
+                                color: _DS.ink900,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3)),
+                        SizedBox(height: 1),
+                        Text('No Linked Patients',
+                            style: TextStyle(
+                                color: _DS.teal700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    );
+                  }
+
+                  final patients = linkedPatientsAsync.value!;
+
+                  return MenuAnchor(
+                    builder: (BuildContext context, MenuController controller,
+                        Widget? child) {
+                      return GestureDetector(
+                        onTap: () {
+                          if (controller.isOpen) {
+                            controller.close();
+                          } else {
+                            controller.open();
+                          }
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'MemoCare',
+                              style: TextStyle(
+                                color: _DS.ink900,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    color: _DS.teal500,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  patientName,
+                                  style: const TextStyle(
+                                    color: _DS.teal700,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const Icon(Icons.expand_more_rounded,
+                                    color: _DS.teal700, size: 14),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 1),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: _DS.teal500,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            patientName,
-                            style: const TextStyle(
-                              color: _DS.teal700,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Icon(Icons.expand_more_rounded,
-                              color: _DS.teal700, size: 14),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                      );
+                    },
+                    menuChildren: patients.map((patient) {
+                      return MenuItemButton(
+                        onPressed: () {
+                          ref
+                              .read(activePatientIdProvider.notifier)
+                              .setActivePatient(patient.id);
+                        },
+                        leadingIcon: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: _DS.teal100,
+                          backgroundImage: patient.profileImageUrl != null &&
+                                  patient.profileImageUrl!.isNotEmpty
+                              ? NetworkImage(patient.profileImageUrl!)
+                              : null,
+                          child: patient.profileImageUrl == null ||
+                                  patient.profileImageUrl!.isEmpty
+                              ? Text(
+                                  patient.fullName?.isNotEmpty == true
+                                      ? patient.fullName![0].toUpperCase()
+                                      : 'P',
+                                  style: const TextStyle(
+                                      fontSize: 10, color: _DS.teal900))
+                              : null,
+                        ),
+                        child: Text(patient.fullName ?? 'Linked Patient',
+                            style: TextStyle(
+                                fontWeight: patientName == patient.fullName
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: _DS.teal900)),
+                      );
+                    }).toList(),
+                  );
+                }),
               ),
 
               // Actions
@@ -913,28 +1027,12 @@ class _QuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.analytics_rounded,
-            label: 'Analytics',
-            color: _DS.teal700,
-            bgColor: _DS.teal50,
-            onTap: onAnalytics,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.science_rounded,
-            label: 'Test Notifs',
-            color: const Color(0xFF5E35B1),
-            bgColor: const Color(0xFFEDE7F6),
-            onTap: onNotificationTest,
-          ),
-        ),
-      ],
+    return _ActionTile(
+      icon: Icons.analytics_rounded,
+      label: 'Analytics',
+      color: _DS.teal700,
+      bgColor: _DS.teal50,
+      onTap: onAnalytics,
     );
   }
 }
@@ -1018,8 +1116,7 @@ class _UnauthenticatedView extends StatelessWidget {
 }
 
 class _NoPatientEmptyState extends StatelessWidget {
-  final VoidCallback onSelectPatient;
-  const _NoPatientEmptyState({required this.onSelectPatient});
+  const _NoPatientEmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -1044,7 +1141,7 @@ class _NoPatientEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            'No Patient Selected',
+            'No Patients Linked',
             style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -1053,47 +1150,13 @@ class _NoPatientEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Select a patient to view their health insights\nand manage care.',
+            'Connect with a patient using their invite code\nto start managing their care.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: _DS.ink400, height: 1.5),
           ),
           const SizedBox(height: 32),
-          GestureDetector(
-            onTap: onSelectPatient,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 15),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_DS.teal900, _DS.teal700],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: _DS.teal700.withOpacity(0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_alt_rounded, color: Colors.white, size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'Choose Patient',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Optional: Add button here to open invite dialog or navigate to linking screen
+          // Elevated/Action button if a specific linking UI exists on dashboard
         ],
       ),
     );

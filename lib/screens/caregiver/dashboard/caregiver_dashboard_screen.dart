@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/sos_alert.dart';
-import '../../../features/patient_selection/presentation/widgets/patient_bottom_sheet_picker.dart';
-import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+// Imports removed for patient picker
 import '../../../providers/sos_provider.dart';
 import '../../../services/realtime_service.dart';
 import '../memories/caregiver_memories_screen.dart';
@@ -52,9 +51,7 @@ class _CaregiverDashboardScreenState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(patientSelectionProvider.notifier).fetchLinkedPatients();
       _sosSubscription = ref.listenManual(
         realtimeSosStreamProvider,
         (previous, next) {
@@ -112,7 +109,7 @@ class _CaregiverDashboardScreenState
         currentIndex: _currentIndex,
         unreadAlerts: unreadAlerts,
         onDestinationSelected: _onTabSelected,
-        onLongPress: () => PatientBottomSheetPicker.show(context, ref),
+        onLongPress: () {}, // Switcher is in the Appbar now
       ),
     );
   }

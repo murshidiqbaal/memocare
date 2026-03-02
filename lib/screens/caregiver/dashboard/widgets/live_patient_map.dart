@@ -28,6 +28,8 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
     with TickerProviderStateMixin {
   final Completer<GoogleMapController> _controller = Completer();
 
+  ProviderSubscription<AsyncValue<PatientLiveLocation?>>? _locationSub;
+
   // Local state to avoid rebuilding GoogleMap widget for every marker update
   LatLng? _currentPosition;
   Set<Marker> _markers = {};
@@ -35,9 +37,11 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
   bool _followMode = true;
 
   @override
-  Widget build(BuildContext context) {
-    // Listen to location updates instead of watching to prevent full build cycles
-    ref.listen<AsyncValue<PatientLiveLocation?>>(
+  void initState() {
+    super.initState();
+
+    // 🔥 Correct Riverpod listener (NOT inside build)
+    _locationSub = ref.listenManual<AsyncValue<PatientLiveLocation?>>(
       patientLiveLocationProvider(widget.patientId),
       (previous, next) {
         next.whenData((location) {
@@ -47,6 +51,20 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
         });
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _locationSub?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 🛡️ HARD SAFETY GUARD
+    if (widget.patientId.isEmpty) {
+      return SizedBox(height: widget.height);
+    }
 
     final initialLocationAsync =
         ref.watch(patientLiveLocationProvider(widget.patientId));
@@ -85,7 +103,9 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
                   }
                 },
                 onCameraMoveStarted: () {
-                  if (_followMode) setState(() => _followMode = false);
+                  if (_followMode && mounted) {
+                    setState(() => _followMode = false);
+                  }
                 },
                 markers: _markers.isEmpty ? _createMarkers(pos) : _markers,
                 myLocationEnabled: false,
@@ -119,7 +139,7 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
     );
   }
 
-  void _updateLocation(PatientLiveLocation location) async {
+  Future<void> _updateLocation(PatientLiveLocation location) async {
     final newPos = LatLng(location.latitude, location.longitude);
 
     if (mounted) {
@@ -131,8 +151,11 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
 
     if (_followMode || _isFirstLocation) {
       _isFirstLocation = false;
-      final controller = await _controller.future;
-      controller.animateCamera(CameraUpdate.newLatLng(newPos));
+
+      if (_controller.isCompleted) {
+        final controller = await _controller.future;
+        controller.animateCamera(CameraUpdate.newLatLng(newPos));
+      }
     }
   }
 
@@ -160,22 +183,23 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
+        children: const [
+          SizedBox(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.green,
-              shape: BoxShape.circle,
+            child: DecoratedBox(
+              decoration:
+                  BoxDecoration(color: Colors.green, shape: BoxShape.circle),
             ),
           ),
-          const SizedBox(width: 6),
-          const Text(
+          SizedBox(width: 6),
+          Text(
             'Live Tracking',
             style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
         ],
       ),
@@ -202,9 +226,10 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
           Text(
             'Waiting for patient location...',
             style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 13,
-                fontWeight: FontWeight.w500),
+              color: Colors.grey[600],
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

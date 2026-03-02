@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../providers/active_patient_provider.dart';
 import '../../../widgets/patient_selector_dropdown.dart';
 import '../../patient/reminders/add_edit_reminder_screen.dart';
 import 'caregiver_reminder_viewmodel.dart';
@@ -16,7 +16,11 @@ class CaregiverRemindersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(caregiverReminderProvider);
     final viewModel = ref.read(caregiverReminderProvider.notifier);
-    final selectedPatient = ref.watch(patientSelectionProvider).selectedPatient;
+    final activePatientId = ref.watch(activePatientIdProvider);
+    final linkedPatients = ref.watch(linkedPatientsProvider).value ?? [];
+    final selectedPatient = linkedPatients.any((p) => p.id == activePatientId)
+        ? linkedPatients.firstWhere((p) => p.id == activePatientId)
+        : null;
 
     if (selectedPatient == null || state.selectedPatientId.isEmpty) {
       return Scaffold(
@@ -154,7 +158,11 @@ class CaregiverRemindersScreen extends ConsumerWidget {
 
   Widget _buildOverviewHeader(BuildContext context,
       CaregiverReminderViewModel viewModel, WidgetRef ref) {
-    final selectedPatient = ref.watch(patientSelectionProvider).selectedPatient;
+    final activePatientId = ref.watch(activePatientIdProvider);
+    final linkedPatients = ref.watch(linkedPatientsProvider).value ?? [];
+    final selectedPatient = linkedPatients.any((p) => p.id == activePatientId)
+        ? linkedPatients.firstWhere((p) => p.id == activePatientId)
+        : null;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -179,8 +187,8 @@ class CaregiverRemindersScreen extends ConsumerWidget {
                 child: (selectedPatient?.profileImageUrl == null ||
                         selectedPatient!.profileImageUrl!.isEmpty)
                     ? Text(
-                        selectedPatient?.fullName.isNotEmpty == true
-                            ? selectedPatient!.fullName[0].toUpperCase()
+                        selectedPatient?.fullName?.isNotEmpty == true
+                            ? selectedPatient!.fullName![0].toUpperCase()
                             : '?',
                         style: const TextStyle(
                           color: Colors.white,

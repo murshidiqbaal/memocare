@@ -39,7 +39,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       _circles.add(
         Circle(
           circleId: const CircleId('safe_zone'),
-          center: LatLng(zone.latitude, zone.longitude),
+          center: LatLng(zone.centerLatitude!, zone.centerLongitude!),
           radius: zone.radiusMeters.toDouble(),
           fillColor: Colors.teal.withOpacity(0.1),
           strokeColor: Colors.teal,

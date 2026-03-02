@@ -2,20 +2,19 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/patient_selection/providers/patient_selection_provider.dart';
+import '../providers/active_patient_provider.dart';
 
 /// A unified patient selector dropdown that reads from the global
-/// [patientSelectionProvider]. It can be placed in any AppBar.
+/// [activePatientIdProvider]. It can be placed in any AppBar.
 class PatientSelectorDropdown extends ConsumerWidget {
   const PatientSelectorDropdown({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final patientState = ref.watch(patientSelectionProvider);
-    final patients = patientState.linkedPatients;
-    final selectedPatient = patientState.selectedPatient;
+    final linkedPatientsAsync = ref.watch(linkedPatientsProvider);
+    final activePatientId = ref.watch(activePatientIdProvider);
 
-    if (patientState.isLoading && patients.isEmpty) {
+    if (linkedPatientsAsync.isLoading) {
       return const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -31,12 +30,19 @@ class PatientSelectorDropdown extends ConsumerWidget {
       );
     }
 
-    if (patients.isEmpty) {
+    if (linkedPatientsAsync.hasError ||
+        linkedPatientsAsync.value == null ||
+        linkedPatientsAsync.value!.isEmpty) {
       return const Text(
         'No Patients Linked',
         style: TextStyle(color: Colors.grey, fontSize: 16),
       );
     }
+
+    final patients = linkedPatientsAsync.value!;
+    final selectedPatient = patients.any((p) => p.id == activePatientId)
+        ? patients.firstWhere((p) => p.id == activePatientId)
+        : null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -46,9 +52,7 @@ class PatientSelectorDropdown extends ConsumerWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: patients.any((p) => p.id == selectedPatient?.id)
-              ? selectedPatient?.id
-              : null,
+          value: selectedPatient?.id,
           hint: const Text(
             'Select Patient',
             style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
@@ -77,8 +81,8 @@ class PatientSelectorDropdown extends ConsumerWidget {
                     child: (patient.profileImageUrl == null ||
                             patient.profileImageUrl!.isEmpty)
                         ? Text(
-                            patient.fullName.isNotEmpty
-                                ? patient.fullName[0].toUpperCase()
+                            patient.fullName?.isNotEmpty == true
+                                ? patient.fullName![0].toUpperCase()
                                 : '?',
                             style: const TextStyle(
                               fontSize: 10,
@@ -89,17 +93,16 @@ class PatientSelectorDropdown extends ConsumerWidget {
                         : null,
                   ),
                   const SizedBox(width: 8),
-                  Text(patient.fullName),
+                  Text(patient.fullName ?? 'Linked Patient'),
                 ],
               ),
             );
           }).toList(),
           onChanged: (patientId) {
             if (patientId != null) {
-              final selected = patients.firstWhere((p) => p.id == patientId);
               ref
-                  .read(patientSelectionProvider.notifier)
-                  .setSelectedPatient(selected);
+                  .read(activePatientIdProvider.notifier)
+                  .setActivePatient(patientId);
             }
           },
         ),

@@ -64,7 +64,7 @@ class _EditPatientProfileScreenState
   void _loadExistingData() {
     if (widget.existingProfile != null) {
       final profile = widget.existingProfile!;
-      _nameController.text = profile.fullName;
+      _nameController.text = profile.fullName!;
       _phoneController.text = profile.phoneNumber ?? '';
       _addressController.text = profile.address ?? '';
       _emergencyNameController.text = profile.emergencyContactName ?? '';

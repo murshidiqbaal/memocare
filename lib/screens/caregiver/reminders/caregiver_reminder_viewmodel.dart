@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../data/repositories/reminder_repository.dart';
-import '../../../../features/patient_selection/providers/patient_selection_provider.dart';
+import '../../../../providers/active_patient_provider.dart';
 import '../../../../providers/service_providers.dart';
 import '../../../../services/notification/reminder_notification_service.dart';
 import '../../../../services/notification_trigger_service.dart';
@@ -201,7 +201,8 @@ class CaregiverReminderViewModel extends StateNotifier<CaregiverReminderState> {
     return state.reminders
         .where((r) =>
             r.status == ReminderStatus.missed ||
-            (r.status == ReminderStatus.pending && r.reminderTime.isBefore(now)))
+            (r.status == ReminderStatus.pending &&
+                r.reminderTime.isBefore(now)))
         .length;
   }
 }
@@ -218,7 +219,7 @@ final caregiverReminderProvider =
 
   // React to global patient selection changes automatically
   ref.listen<String?>(
-    patientSelectionProvider.select((s) => s.selectedPatient?.id),
+    activePatientIdProvider,
     (_, patientId) {
       if (patientId != null && patientId.isNotEmpty) {
         vm.onPatientChanged(patientId);

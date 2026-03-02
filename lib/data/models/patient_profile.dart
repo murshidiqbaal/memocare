@@ -10,7 +10,7 @@ class PatientProfile {
   final String? userId;
 
   @JsonKey(name: 'full_name')
-  final String fullName;
+  final String? fullName;
 
   @JsonKey(name: 'date_of_birth')
   final DateTime? dateOfBirth;
@@ -43,7 +43,7 @@ class PatientProfile {
   PatientProfile({
     required this.id,
     this.userId,
-    required this.fullName,
+    this.fullName,
     this.dateOfBirth,
     this.gender,
     this.phoneNumber,
