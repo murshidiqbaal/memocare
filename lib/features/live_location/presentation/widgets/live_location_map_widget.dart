@@ -1,33 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../patient_selection/providers/patient_selection_provider.dart';
-// From lib/features/live_location/presentation/widgets/
-//   → ../../ goes to lib/features/live_location/
-//   → ../../../ goes to lib/features/
 import '../../data/patient_location_model.dart';
 import '../../providers/live_location_provider.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LiveLocationMapWidget
-//
-// Production-grade Google Maps widget that:
-//   ✅ Shows real-time patient location (from liveLocationStreamProvider)
-//   ✅ Animates camera smoothly to new positions
-//   ✅ Pulsing animated live-dot in the "last updated" badge
-//   ✅ Follow / unfollow toggle (stops following on manual pan)
-//   ✅ Live "last updated" countdown (ticks every 30s)
-//   ✅ Shimmer loading state
-//   ✅ "Select a patient" empty state
-//   ✅ "Waiting for location" waiting state
-//   ✅ Error banner with connectivity icon
-//   ✅ Stale location warning banner (> 10 min old)
-//   ✅ Complete disposal (map controller, animation, timer)
-// ─────────────────────────────────────────────────────────────────────────────
 class LiveLocationMapWidget extends ConsumerStatefulWidget {
   final double height;
 
@@ -40,17 +22,13 @@ class LiveLocationMapWidget extends ConsumerStatefulWidget {
 
 class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
     with TickerProviderStateMixin {
-  // Google Maps controller (completed once map is created)
-  final Completer<GoogleMapController> _mapController = Completer();
+  final MapController _mapController = MapController();
 
-  // Follow mode: when true, camera animates to each new position
   bool _followPatient = true;
 
-  // Pulsing animation for live-dot and waiting-state icon
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  // Clock timer — refreshes the "X ago" label every 30 seconds
   Timer? _clockTimer;
 
   @override
@@ -73,7 +51,7 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
 
   void _startClockTimer() {
     _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {}); // Force "time ago" label refresh
+      if (mounted) setState(() {});
     });
   }
 
@@ -81,19 +59,13 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
   void dispose() {
     _pulseController.dispose();
     _clockTimer?.cancel();
-    _mapController.future
-        .then((c) => c.dispose())
-        .catchError((_) {}); // Safe — avoids crash if map never completed
     super.dispose();
   }
-
-  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final patientState = ref.watch(patientSelectionProvider);
 
-    // No patient selected — show friendly empty state
     if (!patientState.isPatientSelected) {
       return _buildShell(child: _buildNoPatientState());
     }
@@ -103,7 +75,6 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
     return _buildShell(
       child: Stack(
         children: [
-          // ── Map / Shimmer / Waiting / Error layer ─────────────────────
           locationAsync.when(
             loading: () => _buildShimmer(),
             error: (err, _) => _buildErrorState(err.toString()),
@@ -113,7 +84,7 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
             },
           ),
 
-          // ── Controls overlay ──────────────────────────────────────────
+          // Overlay controls
           Positioned(
             top: 10,
             left: 10,
@@ -121,20 +92,17 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Last-updated badge (only when data is available)
                 locationAsync.whenOrNull(
                       data: (loc) =>
                           loc != null ? _buildLastUpdatedBadge(loc) : null,
                     ) ??
                     const SizedBox.shrink(),
-
-                // Follow toggle pill
                 _buildFollowToggle(),
               ],
             ),
           ),
 
-          // ── Stale location warning banner ─────────────────────────────
+          // Stale banner
           if (locationAsync.valueOrNull?.isStale == true)
             Positioned(
               bottom: 0,
@@ -147,58 +115,63 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
     );
   }
 
-  // ── Map ────────────────────────────────────────────────────────────────────
-
   Widget _buildMap(PatientLocation location) {
     final latLng = LatLng(location.latitude, location.longitude);
 
-    // Animate camera when in follow mode (non-blocking)
     if (_followPatient) {
-      _mapController.future.then((ctrl) {
-        ctrl.animateCamera(
-          CameraUpdate.newCameraPosition(
-              CameraPosition(target: latLng, zoom: 16.5)),
-        );
-      }).catchError((_) {});
+      try {
+        _mapController.move(latLng, 16.5);
+      } catch (_) {}
     }
 
-    return GoogleMap(
-      initialCameraPosition: CameraPosition(target: latLng, zoom: 16.5),
-      onMapCreated: (ctrl) {
-        if (!_mapController.isCompleted) {
-          _mapController.complete(ctrl);
-        }
-      },
-      // User manually panned → stop auto-follow
-      onCameraMoveStarted: () {
-        if (_followPatient && mounted) {
-          setState(() => _followPatient = false);
-        }
-      },
-      markers: {
-        Marker(
-          markerId: MarkerId('patient_${location.patientId}'),
-          position: latLng,
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          anchor: const Offset(0.5, 1.0),
-          infoWindow: InfoWindow(
-            title: '📍 Patient Location',
-            snippet: _formatTimeAgo(location.updatedAt),
-          ),
-          zIndex: 2,
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: latLng,
+        initialZoom: 16.5,
+        onPositionChanged: (position, hasGesture) {
+          if (hasGesture && _followPatient && mounted) {
+            setState(() => _followPatient = false);
+          }
+        },
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.memocare.app',
+          maxZoom: 19,
         ),
-      },
-      myLocationEnabled: false,
-      myLocationButtonEnabled: false,
-      zoomControlsEnabled: true,
-      zoomGesturesEnabled: true,
-      mapToolbarEnabled: false,
-      compassEnabled: true,
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: latLng,
+              width: 44,
+              height: 44,
+              child: Tooltip(
+                message:
+                    '📍 Patient Location\n${_formatTimeAgo(location.updatedAt)}',
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade600,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child:
+                      const Icon(Icons.person, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
-
-  // ── Empty / loading states ─────────────────────────────────────────────────
 
   Widget _buildShimmer() {
     return Shimmer.fromColors(
@@ -291,8 +264,6 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
     );
   }
 
-  // ── Badges & controls ──────────────────────────────────────────────────────
-
   Widget _buildLastUpdatedBadge(PatientLocation location) {
     final timeAgo = _formatTimeAgo(location.updatedAt);
     final isRecent = location.isRecent;
@@ -309,22 +280,19 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Pulsing live dot
           AnimatedBuilder(
             animation: _pulseAnimation,
-            builder: (_, __) {
-              return Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isRecent
-                      ? Color.lerp(Colors.green.shade300, Colors.green.shade700,
-                          _pulseAnimation.value)
-                      : Colors.orange,
-                ),
-              );
-            },
+            builder: (_, __) => Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isRecent
+                    ? Color.lerp(Colors.green.shade300, Colors.green.shade700,
+                        _pulseAnimation.value)
+                    : Colors.orange,
+              ),
+            ),
           ),
           const SizedBox(width: 6),
           Text(
@@ -399,8 +367,6 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
     );
   }
 
-  // ── Outer shell (rounded corners + shadow) ─────────────────────────────────
-
   Widget _buildShell({required Widget child}) {
     return Container(
       height: widget.height,
@@ -421,8 +387,6 @@ class _LiveLocationMapWidgetState extends ConsumerState<LiveLocationMapWidget>
       child: child,
     );
   }
-
-  // ── Utility ────────────────────────────────────────────────────────────────
 
   String _formatTimeAgo(DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);

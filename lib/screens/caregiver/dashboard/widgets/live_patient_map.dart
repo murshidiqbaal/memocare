@@ -1,15 +1,19 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../data/models/patient_live_location.dart';
 import '../../../../providers/location_providers.dart';
 
-/// LivePatientMap Widget
-/// Performance-optimized realtime tracking for Caregiver Dashboard.
+/// LivePatientMap — performance-optimised realtime tracking for the
+/// Caregiver Dashboard, now powered by flutter_map + OSM tiles.
+///
+/// Architecture notes:
+///  • [listenManual] is used (not ref.watch) to avoid rebuilding the entire
+///    map widget tree on every location tick — only markers update.
+///  • [_followMode] auto-pans the camera; toggled off when user manually pans.
 class LivePatientMap extends ConsumerStatefulWidget {
   final String patientId;
   final double height;
@@ -26,28 +30,23 @@ class LivePatientMap extends ConsumerStatefulWidget {
 
 class _LivePatientMapState extends ConsumerState<LivePatientMap>
     with TickerProviderStateMixin {
-  final Completer<GoogleMapController> _controller = Completer();
+  final MapController _mapController = MapController();
 
   ProviderSubscription<AsyncValue<PatientLiveLocation?>>? _locationSub;
 
-  // Local state to avoid rebuilding GoogleMap widget for every marker update
   LatLng? _currentPosition;
-  Set<Marker> _markers = {};
   bool _isFirstLocation = true;
   bool _followMode = true;
 
   @override
   void initState() {
     super.initState();
-
-    // 🔥 Correct Riverpod listener (NOT inside build)
+    // Listen outside build to avoid full widget rebuild on each tick
     _locationSub = ref.listenManual<AsyncValue<PatientLiveLocation?>>(
       patientLiveLocationProvider(widget.patientId),
       (previous, next) {
         next.whenData((location) {
-          if (location != null) {
-            _updateLocation(location);
-          }
+          if (location != null) _updateLocation(location);
         });
       },
     );
@@ -59,9 +58,20 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
     super.dispose();
   }
 
+  void _updateLocation(PatientLiveLocation location) {
+    final newPos = LatLng(location.latitude, location.longitude);
+    if (!mounted) return;
+
+    setState(() => _currentPosition = newPos);
+
+    if (_followMode || _isFirstLocation) {
+      _isFirstLocation = false;
+      _mapController.move(newPos, _mapController.camera.zoom);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 🛡️ HARD SAFETY GUARD
     if (widget.patientId.isEmpty) {
       return SizedBox(height: widget.height);
     }
@@ -89,42 +99,66 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
             return _buildEmptyState();
           }
 
-          // Use internal state if available, otherwise init from first data
           final pos = _currentPosition ??
               LatLng(location!.latitude, location.longitude);
 
           return Stack(
             children: [
-              GoogleMap(
-                initialCameraPosition: CameraPosition(target: pos, zoom: 15),
-                onMapCreated: (controller) {
-                  if (!_controller.isCompleted) {
-                    _controller.complete(controller);
-                  }
-                },
-                onCameraMoveStarted: () {
-                  if (_followMode && mounted) {
-                    setState(() => _followMode = false);
-                  }
-                },
-                markers: _markers.isEmpty ? _createMarkers(pos) : _markers,
-                myLocationEnabled: false,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-                compassEnabled: true,
-                indoorViewEnabled: false,
-                trafficEnabled: false,
-                liteModeEnabled: false,
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: pos,
+                  initialZoom: 15,
+                  // Detect manual pan → disable follow mode
+                  onPositionChanged: (position, hasGesture) {
+                    if (hasGesture && _followMode && mounted) {
+                      setState(() => _followMode = false);
+                    }
+                  },
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.memocare.app',
+                    maxZoom: 19,
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: pos,
+                        width: 40,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade600,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              )
+                            ],
+                          ),
+                          child: const Icon(Icons.person,
+                              color: Colors.white, size: 22),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
 
-              // Map Overlays
+              // Live badge
               Positioned(
                 top: 12,
                 left: 12,
-                child: _buildLocationBadge(location),
+                child: _buildLocationBadge(),
               ),
 
+              // Follow toggle
               Positioned(
                 bottom: 12,
                 right: 12,
@@ -139,39 +173,7 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
     );
   }
 
-  Future<void> _updateLocation(PatientLiveLocation location) async {
-    final newPos = LatLng(location.latitude, location.longitude);
-
-    if (mounted) {
-      setState(() {
-        _currentPosition = newPos;
-        _markers = _createMarkers(newPos);
-      });
-    }
-
-    if (_followMode || _isFirstLocation) {
-      _isFirstLocation = false;
-
-      if (_controller.isCompleted) {
-        final controller = await _controller.future;
-        controller.animateCamera(CameraUpdate.newLatLng(newPos));
-      }
-    }
-  }
-
-  Set<Marker> _createMarkers(LatLng pos) {
-    return {
-      Marker(
-        markerId: const MarkerId('patient_marker'),
-        position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        anchor: const Offset(0.5, 0.5),
-        infoWindow: const InfoWindow(title: 'Patient Current Location'),
-      ),
-    };
-  }
-
-  Widget _buildLocationBadge(PatientLiveLocation? location) {
+  Widget _buildLocationBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -181,9 +183,9 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
           BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
         ],
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        children: [
           SizedBox(
             width: 8,
             height: 8,
@@ -208,7 +210,7 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
 
   Widget _buildFollowToggle() {
     return FloatingActionButton.small(
-      heroTag: 'follow_toggle',
+      heroTag: 'follow_toggle_${widget.patientId}',
       onPressed: () => setState(() => _followMode = !_followMode),
       backgroundColor: _followMode ? Colors.teal : Colors.white,
       foregroundColor: _followMode ? Colors.white : Colors.teal,

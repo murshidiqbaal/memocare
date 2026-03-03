@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../data/models/sos_alert.dart';
 import '../controllers/sos_controller.dart';
@@ -24,55 +23,32 @@ class LiveMapScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
+  final MapController _mapController = MapController();
   LatLng? _currentPosition;
-  Set<Marker> _markers = {};
   double? _distanceInMeters;
 
   @override
   void initState() {
     super.initState();
     _currentPosition = LatLng(widget.alert.latitude, widget.alert.longitude);
-    _updateMarker(_currentPosition!);
     _calculateDistance();
-  }
-
-  void _updateMarker(LatLng position) {
-    setState(() {
-      _markers = {
-        Marker(
-          markerId: const MarkerId('patient'),
-          position: position,
-          infoWindow: InfoWindow(
-              title: widget.patientName, snippet: 'Emergency Live Location'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      };
-    });
   }
 
   Future<void> _calculateDistance() async {
     try {
       final position = await Geolocator.getCurrentPosition();
-      if (_currentPosition != null) {
+      if (_currentPosition != null && mounted) {
         final distance = Geolocator.distanceBetween(
           position.latitude,
           position.longitude,
           _currentPosition!.latitude,
           _currentPosition!.longitude,
         );
-        setState(() {
-          _distanceInMeters = distance;
-        });
+        setState(() => _distanceInMeters = distance);
       }
     } catch (e) {
       debugPrint('Error calculating distance: $e');
     }
-  }
-
-  Future<void> _animateCamera(LatLng position) async {
-    final GoogleMapController controller = await _controller.future;
-    controller.animateCamera(CameraUpdate.newLatLng(position));
   }
 
   Future<void> _resolveSos() async {
@@ -100,26 +76,27 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       await ref
           .read(sosControllerProvider.notifier)
           .resolveSos(widget.alert.id);
-      if (mounted) Navigator.pop(context); // Close map screen
+      if (mounted) Navigator.pop(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to stream updates
     ref.listen(liveLocationStreamProvider(widget.alert.patientId),
         (previous, next) {
       next.whenData((locations) {
         if (locations.isNotEmpty) {
           final loc = locations.first;
           final newPos = LatLng(loc.latitude, loc.longitude);
-          _updateMarker(newPos);
-          _currentPosition = newPos;
-          _animateCamera(newPos);
-          _calculateDistance(); // Recalculate distance dynamically
+          setState(() => _currentPosition = newPos);
+          _mapController.move(newPos, _mapController.camera.zoom);
+          _calculateDistance();
         }
       });
     });
+
+    final pos = _currentPosition ??
+        LatLng(widget.alert.latitude, widget.alert.longitude);
 
     return Scaffold(
       appBar: AppBar(
@@ -130,20 +107,43 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
       ),
       body: Stack(
         children: [
-          GoogleMap(
-            mapType: MapType.normal,
-            initialCameraPosition: CameraPosition(
-              target: _currentPosition!,
-              zoom: 15,
-            ),
-            markers: _markers,
-            myLocationEnabled: true, // Show caregiver location too
-            onMapCreated: (GoogleMapController controller) {
-              _controller.complete(controller);
-            },
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(initialCenter: pos, initialZoom: 15),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.memocare.app',
+                maxZoom: 19,
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: pos,
+                    width: 44,
+                    height: 44,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 6,
+                              offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: const Icon(Icons.warning_amber_rounded,
+                          color: Colors.white, size: 22),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
 
-          // Bottom Sheet with Info & Action
+          // Bottom info card
           Positioned(
             bottom: 30,
             left: 20,
@@ -170,21 +170,15 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Distance',
-                            style: GoogleFonts.outfit(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
+                          Text('Distance',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.grey, fontSize: 12)),
                           Text(
                             _distanceInMeters != null
                                 ? '${(_distanceInMeters! / 1000).toStringAsFixed(1)} km away'
                                 : 'Locating...',
                             style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -201,19 +195,14 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                               width: 8,
                               height: 8,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.red,
-                              ),
+                                  strokeWidth: 2, color: Colors.red),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              'LIVE',
-                              style: TextStyle(
-                                color: Colors.red.shade800,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
+                            Text('LIVE',
+                                style: TextStyle(
+                                    color: Colors.red.shade800,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12)),
                           ],
                         ),
                       ),
@@ -229,16 +218,11 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                            borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: Text(
-                        'MARK AS SAFE / RESOLVE',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: Text('MARK AS SAFE / RESOLVE',
+                          style: GoogleFonts.outfit(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],

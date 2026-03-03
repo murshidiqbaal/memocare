@@ -1,10 +1,9 @@
-import 'dart:async';
-
 import 'package:dementia_care_app/data/models/patient_home_location.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../services/location_tracking_service.dart';
 
@@ -20,10 +19,12 @@ class PatientSetHomeLocationScreen extends ConsumerStatefulWidget {
 
 class _PatientSetHomeLocationScreenState
     extends ConsumerState<PatientSetHomeLocationScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
+  final MapController _mapController = MapController();
   LatLng? _selectedLocation;
-  Set<Circle> _circles = {};
   bool _isLoading = true;
+
+  // Radius fixed at 1 km (1000 m) matching original
+  static const double _radiusMeters = 1000;
 
   @override
   void initState() {
@@ -50,41 +51,27 @@ class _PatientSetHomeLocationScreenState
         throw Exception('Location permissions are permanently denied.');
       }
 
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
+      final loc = LatLng(position.latitude, position.longitude);
       setState(() {
-        _selectedLocation = LatLng(position.latitude, position.longitude);
-        _updateCircle(_selectedLocation!);
+        _selectedLocation = loc;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to get location: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to get location: $e')),
+        );
+      }
     }
   }
 
-  void _updateCircle(LatLng location) {
-    _circles = {
-      Circle(
-        circleId: const CircleId('home_radius'),
-        center: location,
-        radius: 1000, // 1 KM radius
-        fillColor: Colors.teal.withOpacity(0.2),
-        strokeColor: Colors.teal,
-        strokeWidth: 2,
-      ),
-    };
-  }
-
-  void _onMapTapped(LatLng position) {
-    setState(() {
-      _selectedLocation = position;
-      _updateCircle(position);
-    });
+  void _onMapTapped(TapPosition tapPosition, LatLng position) {
+    setState(() => _selectedLocation = position);
   }
 
   Future<void> _saveHomeLocation() async {
@@ -97,30 +84,37 @@ class _PatientSetHomeLocationScreenState
         patientId: widget.patientId,
         latitude: _selectedLocation!.latitude,
         longitude: _selectedLocation!.longitude,
-        radiusMeters: 1000,
+        radiusMeters: _radiusMeters.toInt(),
       ));
 
       // Restart tracking with new home
       final trackingSvc = ref.read(locationTrackingServiceProvider);
       await trackingSvc.startTracking(widget.patientId);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Home location saved successfully! This will monitor your safety.')),
-      );
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Home location saved! This will monitor your safety.'),
+          ),
+        );
+        Navigator.pop(context);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save home: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save home: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final center = _selectedLocation ?? const LatLng(37.7749, -122.4194);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Set Home Location',
@@ -132,6 +126,7 @@ class _PatientSetHomeLocationScreenState
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                // Instruction banner
                 Container(
                   padding: const EdgeInsets.all(16),
                   color: Colors.teal.shade50,
@@ -144,46 +139,79 @@ class _PatientSetHomeLocationScreenState
                     textAlign: TextAlign.center,
                   ),
                 ),
+
+                // Map
                 Expanded(
-                  child: _selectedLocation == null
-                      ? const Center(child: Text('Waiting for location...'))
-                      : GoogleMap(
-                          onMapCreated: (GoogleMapController controller) {
-                            _controller.complete(controller);
-                          },
-                          initialCameraPosition: CameraPosition(
-                            target: _selectedLocation!,
-                            zoom: 14.0,
-                          ),
-                          markers: {
-                            Marker(
-                              markerId: const MarkerId('home'),
-                              position: _selectedLocation!,
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: center,
+                      initialZoom: 14.0,
+                      onTap: _onMapTapped,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.memocare.app',
+                        maxZoom: 19,
+                      ),
+
+                      // 1 km safe-zone circle
+                      if (_selectedLocation != null)
+                        CircleLayer(
+                          circles: [
+                            CircleMarker(
+                              point: _selectedLocation!,
+                              radius: _radiusMeters,
+                              useRadiusInMeter: true,
+                              color: Colors.teal.withOpacity(0.2),
+                              borderColor: Colors.teal,
+                              borderStrokeWidth: 2,
                             ),
-                          },
-                          circles: _circles,
-                          onTap: _onMapTapped,
-                          myLocationEnabled: true,
-                          myLocationButtonEnabled: true,
+                          ],
                         ),
+
+                      // Home pin
+                      if (_selectedLocation != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _selectedLocation!,
+                              width: 48,
+                              height: 48,
+                              child: const Icon(
+                                Icons.location_pin,
+                                size: 48,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
+
+                // Save button
                 Container(
                   padding: const EdgeInsets.all(24),
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _saveHomeLocation,
+                      onPressed: _isLoading ? null : _saveHomeLocation,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: const Text('SAVE HOME LOCATION',
-                          style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white)),
+                      child: const Text(
+                        'SAVE HOME LOCATION',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
                     ),
                   ),
                 ),

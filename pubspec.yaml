@@ -28,7 +28,8 @@ dependencies:
 
   # ---------------- LOCATION & MAPS ----------------
   geolocator: ^14.0.2
-  google_maps_flutter: ^2.6.1
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
   flutter_background_geolocation: ^5.0.4
 
   # ---------------- IMAGES & MEDIA ----------------

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../data/models/location_log.dart';
 import '../../../../data/models/safe_zone.dart';
@@ -17,13 +18,11 @@ class LiveTrackingScreen extends ConsumerStatefulWidget {
 
 class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
   final MockSafetyService _service = MockSafetyService();
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
 
   LocationLog? _currentLocation;
-  // ignore: unused_field
   SafeZone? _safeZone;
-  final Set<Marker> _markers = {};
-  final Set<Circle> _circles = {};
+  LatLng? _patientPosition;
 
   @override
   void initState() {
@@ -36,46 +35,20 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     final zone = await _service.getActiveZone();
     setState(() {
       _safeZone = zone;
-      _circles.add(
-        Circle(
-          circleId: const CircleId('safe_zone'),
-          center: LatLng(zone.centerLatitude!, zone.centerLongitude!),
-          radius: zone.radiusMeters.toDouble(),
-          fillColor: Colors.teal.withOpacity(0.1),
-          strokeColor: Colors.teal,
-          strokeWidth: 2,
-        ),
-      );
     });
   }
 
   void _startListening() {
     _service.getLocationStream().listen((log) {
       if (!mounted) return;
+      final pos = LatLng(log.latitude, log.longitude);
       setState(() {
         _currentLocation = log;
-        _updateMarker(log);
+        _patientPosition = pos;
       });
-
-      // Auto-pan
-      _mapController?.animateCamera(
-          CameraUpdate.newLatLng(LatLng(log.latitude, log.longitude)));
+      // Auto-pan camera to new position
+      _mapController.move(pos, _mapController.camera.zoom);
     });
-  }
-
-  void _updateMarker(LocationLog log) {
-    _markers.clear();
-
-    // Patient Marker
-    _markers.add(Marker(
-        markerId: const MarkerId('patient'),
-        position: LatLng(log.latitude, log.longitude),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-            log.isBreach ? BitmapDescriptor.hueRed : BitmapDescriptor.hueAzure),
-        infoWindow: InfoWindow(
-            title: 'Grandpa Joe',
-            snippet:
-                "Last seen: ${DateFormat('h:mm:ss a').format(log.recordedAt)}")));
   }
 
   @override
@@ -83,6 +56,9 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
     final isBreach = _currentLocation?.isBreach ?? false;
     final statusColor = isBreach ? Colors.red : Colors.teal;
     final statusText = isBreach ? 'OUTSIDE SAFE ZONE' : 'INSIDE SAFE ZONE';
+
+    // Default map center
+    final center = _patientPosition ?? const LatLng(37.422, -122.084);
 
     return Scaffold(
       appBar: AppBar(
@@ -104,7 +80,7 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
       ),
       body: Column(
         children: [
-          // Status Banner
+          // ── Status banner ──────────────────────────────────────────────
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -130,21 +106,66 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
             ),
           ),
 
-          // Map
+          // ── Map ────────────────────────────────────────────────────────
           Expanded(
-            child: GoogleMap(
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(37.422, -122.084),
-                zoom: 16,
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: 16,
               ),
-              onMapCreated: (c) => _mapController = c,
-              markers: _markers,
-              circles: _circles,
-              myLocationButtonEnabled: false,
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.memocare.app',
+                  maxZoom: 19,
+                ),
+
+                // Safe zone circle
+                if (_safeZone != null &&
+                    _safeZone!.centerLatitude != null &&
+                    _safeZone!.centerLongitude != null)
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: LatLng(
+                          _safeZone!.centerLatitude!,
+                          _safeZone!.centerLongitude!,
+                        ),
+                        radius: _safeZone!.radiusMeters.toDouble(),
+                        useRadiusInMeter: true,
+                        color: Colors.teal.withOpacity(0.1),
+                        borderColor: Colors.teal,
+                        borderStrokeWidth: 2,
+                      ),
+                    ],
+                  ),
+
+                // Patient marker
+                if (_patientPosition != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _patientPosition!,
+                        width: 40,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isBreach ? Colors.red : Colors.teal,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(Icons.person,
+                              color: Colors.white, size: 22),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
 
-          // Bottom Info
+          // ── Bottom info bar ────────────────────────────────────────────
           if (_currentLocation != null)
             Container(
               padding: const EdgeInsets.all(16),
@@ -162,15 +183,13 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                 children: [
                   const CircleAvatar(
                     radius: 20,
-                    backgroundImage: AssetImage(
-                        'assets/images/placeholders/elderly_man.jpg'),
                     child: Icon(Icons.person),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Grandpa Joe',
+                      const Text('Patient',
                           style: TextStyle(fontWeight: FontWeight.bold)),
                       Text(
                         "Updated ${DateFormat('h:mm:ss a').format(_currentLocation!.recordedAt)}",
@@ -181,13 +200,14 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                   ),
                   const Spacer(),
                   IconButton(
-                      onPressed: () {
-                        // Refocus
-                        _mapController?.animateCamera(CameraUpdate.newLatLng(
-                            LatLng(_currentLocation!.latitude,
-                                _currentLocation!.longitude)));
-                      },
-                      icon: const Icon(Icons.my_location, color: Colors.teal))
+                    onPressed: () {
+                      if (_patientPosition != null) {
+                        _mapController.move(
+                            _patientPosition!, _mapController.camera.zoom);
+                      }
+                    },
+                    icon: const Icon(Icons.my_location, color: Colors.teal),
+                  )
                 ],
               ),
             )

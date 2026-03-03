@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
-import '../../../../data/models/safe_zone.dart';
-import '../../../../providers/auth_provider.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SafeZoneSetupScreen extends ConsumerStatefulWidget {
   const SafeZoneSetupScreen({super.key});
@@ -14,118 +13,159 @@ class SafeZoneSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
-  // ignore: unused_field
-  GoogleMapController? _mapController;
-  LatLng _center = const LatLng(37.422, -122.084); // Default (Googleplex)
+  final MapController _mapController = MapController();
+  LatLng _center = const LatLng(37.422, -122.084); // Default, replaced by GPS
   double _radius = 100; // meters
-  final Set<Circle> _circles = {};
-  final Set<Marker> _markers = {};
   bool _isLoading = false;
+  String _label = 'Home'; // Default label for the safe zone
 
-  @override
-  void initState() {
-    super.initState();
-    _updateOverlay();
+  // ── Map callbacks ──────────────────────────────────────────────────────────
+
+  void _onMapTap(TapPosition tapPosition, LatLng tappedPos) {
+    setState(() => _center = tappedPos);
   }
 
-  void _onMapTap(LatLng startPos) {
-    setState(() {
-      _center = startPos;
-      _updateOverlay();
-    });
-  }
-
-  void _updateOverlay() {
-    _circles.clear();
-    _markers.clear();
-
-    _circles.add(
-      Circle(
-        circleId: const CircleId('safe_zone'),
-        center: _center,
-        radius: _radius,
-        fillColor: Colors.teal.withOpacity(0.2),
-        strokeColor: Colors.teal,
-        strokeWidth: 2,
-      ),
-    );
-
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('center'),
-        position: _center,
-        draggable: true,
-        onDragEnd: (newPos) {
-          setState(() {
-            _center = newPos;
-            _updateOverlay();
-          });
-        },
-      ),
-    );
-  }
+  // ── Save ───────────────────────────────────────────────────────────────────
 
   Future<void> _saveSafeZone() async {
+    final supabase = Supabase.instance.client;
+    final currentUser = supabase.auth.currentUser;
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You must be logged in to save a safe zone.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
-    // Mock Patient ID connection (in real app, specific to selected patient)
-    // ignore: unused_local_variable
-    final profile = ref.read(userProfileProvider);
-    // Assume caregiver is managing a specific patient, or patient is setting for themselves?
-    // User request: "Caregiver Safe-Zone Setup". So we need a target patient.
-    // We'll use a dummy 'patient_1' or derived.
-    const patientId = 'patient_1';
+    try {
+      final zoneData = {
+        'user_id': currentUser.id,
+        'patient_id': currentUser.id,
+        'label': _label,
+        'center_latitude': _center.latitude,
+        'center_longitude': _center.longitude,
+        'radius_meters': _radius.toInt(),
+        'is_active': true,
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-    // ignore: unused_local_variable
-    final zone = SafeZone(
-      id: 'mock',
-      patientId: patientId,
-      radiusMeters: _radius.toInt(),
-      label: 'Safe Zone ${DateTime.now().minute}',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      centerLatitude: _center.latitude,
-      centerLongitude: _center.longitude,
-    );
+      await supabase
+          .from('safe_zones')
+          .upsert(zoneData, onConflict: 'user_id, label');
 
-    // Stub Save
-    // await Supabase.instance.client.from('safe_zones').insert(zone.toJson());
-    await Future.delayed(const Duration(seconds: 1)); // Mock Network
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Safe Zone Active & Synced')));
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Home location saved successfully!'),
+            backgroundColor: Colors.teal,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } on PostgrestException catch (e) {
+      if (mounted) {
+        final message = e.code == '42501'
+            ? 'Permission denied. Please contact support.'
+            : 'Failed to save safe zone.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+      debugPrint('Supabase error saving safe zone: ${e.message}');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Unexpected error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Setup Safe Zone'),
+        title: const Text('Set Home Location'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Map
+          // ── Map ────────────────────────────────────────────────────────
           Expanded(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _center,
-                zoom: 16,
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _center,
+                initialZoom: 16,
+                onTap: _onMapTap,
               ),
-              onMapCreated: (c) => _mapController = c,
-              onTap: _onMapTap,
-              circles: _circles,
-              markers: _markers,
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.memocare.app',
+                  maxZoom: 19,
+                ),
+
+                // Safe zone circle
+                CircleLayer(
+                  circles: [
+                    CircleMarker(
+                      point: _center,
+                      radius: _radius,
+                      useRadiusInMeter: true,
+                      color: Colors.teal.withOpacity(0.2),
+                      borderColor: Colors.teal,
+                      borderStrokeWidth: 2,
+                    ),
+                  ],
+                ),
+
+                // Draggable center pin (flutter_map Marker with drag via map tap)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _center,
+                      width: 48,
+                      height: 48,
+                      child: GestureDetector(
+                        onPanUpdate: (details) {
+                          // flutter_map doesn't support drag natively on markers;
+                          // tapping the map moves the pin (see onTap above).
+                        },
+                        child: Tooltip(
+                          message: _label,
+                          child: const Icon(
+                            Icons.location_pin,
+                            size: 48,
+                            color: Colors.teal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
 
-          // Controls
+          // ── Controls panel ─────────────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -144,6 +184,39 @@ class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Location Label
+                const Text(
+                  'Location Label',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  initialValue: _label,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Home, Clinic, School',
+                    prefixIcon:
+                        const Icon(Icons.label_outline, color: Colors.teal),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.teal),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _label = val.trim().isEmpty ? 'Home' : val.trim();
+                    });
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // Radius Slider
                 const Text(
                   'Safe Zone Radius',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -159,12 +232,7 @@ class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
                         divisions: 19,
                         activeColor: Colors.teal,
                         label: '${_radius.toInt()}m',
-                        onChanged: (v) {
-                          setState(() {
-                            _radius = v;
-                            _updateOverlay();
-                          });
-                        },
+                        onChanged: (v) => setState(() => _radius = v),
                       ),
                     ),
                     Text(
@@ -174,32 +242,48 @@ class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Tap on map to set center. Drag marker to adjust.',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tap map to set center',
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                    ),
+                  ],
                 ),
+
                 const SizedBox(height: 24),
+
+                // Save Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: ElevatedButton(
+                  child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _saveSafeZone,
+                    icon: _isLoading
+                        ? const SizedBox.shrink()
+                        : const Icon(Icons.home_outlined, color: Colors.white),
+                    label: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Save as Home Location',
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Activate Safe Zone',
-                            style:
-                                TextStyle(fontSize: 16, color: Colors.white)),
                   ),
-                )
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

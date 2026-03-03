@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../providers/safe_zone_provider.dart';
 
@@ -31,17 +30,15 @@ class SafeZonePickerScreen extends ConsumerStatefulWidget {
 }
 
 class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
+  final MapController _mapController = MapController();
 
   LatLng? _selectedLocation;
   int _currentRadius = 100;
-
   bool _isLoadingLocation = true;
 
   @override
   void initState() {
     super.initState();
-
     _currentRadius = widget.initialRadiusMeters ?? 100;
 
     if (widget.initialLatitude != null && widget.initialLongitude != null) {
@@ -84,16 +81,12 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+      final loc = LatLng(position.latitude, position.longitude);
       setState(() {
-        _selectedLocation = LatLng(position.latitude, position.longitude);
+        _selectedLocation = loc;
         _isLoadingLocation = false;
       });
-
-      final controller = await _controller.future;
-      controller.animateCamera(CameraUpdate.newLatLngZoom(
-        _selectedLocation!,
-        16.0,
-      ));
+      _mapController.move(loc, 16.0);
     } catch (e) {
       setState(() => _isLoadingLocation = false);
       _showErrorSnackBar('Unable to determine location');
@@ -107,10 +100,8 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
     );
   }
 
-  void _onMapTapped(LatLng location) {
-    setState(() {
-      _selectedLocation = location;
-    });
+  void _onMapTapped(TapPosition tapPosition, LatLng location) {
+    setState(() => _selectedLocation = location);
   }
 
   Future<void> _saveLocation() async {
@@ -149,6 +140,8 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(safeZoneControllerProvider);
+    // Default fallback center (San Francisco)
+    final center = _selectedLocation ?? const LatLng(37.7749, -122.4194);
 
     return Scaffold(
       appBar: AppBar(
@@ -158,49 +151,60 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
       ),
       body: Stack(
         children: [
-          // The Map
-          _isLoadingLocation
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.teal))
-              : GoogleMap(
-                  mapType: MapType.normal,
-                  initialCameraPosition: CameraPosition(
-                    target: _selectedLocation ??
-                        const LatLng(37.7749, -122.4194), // Default to SF
-                    zoom: 16,
-                  ),
-                  onMapCreated: (GoogleMapController controller) {
-                    _controller.complete(controller);
-                  },
-                  onTap: _onMapTapped,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  compassEnabled: false,
-                  markers: _selectedLocation == null
-                      ? {}
-                      : {
-                          Marker(
-                            markerId: const MarkerId('home_location'),
-                            position: _selectedLocation!,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(
-                                BitmapDescriptor.hueCyan),
-                          ),
-                        },
-                  circles: _selectedLocation == null
-                      ? {}
-                      : {
-                          Circle(
-                            circleId: const CircleId('safe_zone_radius'),
-                            center: _selectedLocation!,
-                            radius: _currentRadius.toDouble(),
-                            fillColor: Colors.teal.withOpacity(0.2),
-                            strokeColor: Colors.teal,
-                            strokeWidth: 2,
-                          ),
-                        },
+          // ── Map ─────────────────────────────────────────────────────────
+          if (_isLoadingLocation)
+            const Center(child: CircularProgressIndicator(color: Colors.teal))
+          else
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: 16.0,
+                onTap: _onMapTapped,
+              ),
+              children: [
+                // OSM tile layer — free, no API key
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.memocare.app',
+                  maxZoom: 19,
                 ),
 
-          // Action Overlay
+                // Safe zone circle
+                if (_selectedLocation != null)
+                  CircleLayer(
+                    circles: [
+                      CircleMarker(
+                        point: _selectedLocation!,
+                        radius: _currentRadius.toDouble(),
+                        useRadiusInMeter: true,
+                        color: Colors.teal.withOpacity(0.2),
+                        borderColor: Colors.teal,
+                        borderStrokeWidth: 2,
+                      ),
+                    ],
+                  ),
+
+                // Pin marker
+                if (_selectedLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _selectedLocation!,
+                        width: 48,
+                        height: 48,
+                        child: const Icon(
+                          Icons.location_pin,
+                          size: 48,
+                          color: Colors.teal,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+
+          // ── Bottom action panel ─────────────────────────────────────────
           Positioned(
             left: 0,
             right: 0,
@@ -239,9 +243,7 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
                           divisions: 9,
                           activeColor: Colors.teal,
                           onChanged: (value) {
-                            setState(() {
-                              _currentRadius = value.toInt();
-                            });
+                            setState(() => _currentRadius = value.toInt());
                           },
                         ),
                       ),
@@ -271,7 +273,7 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
                             ),
                           )
                         : const Text(
-                            'Confirm Details',
+                            'Confirm Home Location',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
