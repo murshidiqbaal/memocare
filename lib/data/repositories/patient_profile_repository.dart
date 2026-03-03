@@ -89,9 +89,15 @@ class PatientProfileRepository {
   /// Update profile with sync logic
   Future<void> updateProfile(PatientProfile profile) async {
     try {
-      // 1. Update 'patients' table with patient-specific fields
-      final patientData = {
+      final now = DateTime.now().toIso8601String();
+
+      // 1. Upsert 'patients' table — all patient-owned fields including
+      //    full_name, phone, and created_at so a new patient row is fully
+      //    populated without requiring a second round-trip.
+      final patientData = <String, dynamic>{
         'id': profile.id,
+        'full_name': profile.fullName,
+        'phone': profile.phoneNumber,
         'date_of_birth': profile.dateOfBirth?.toIso8601String(),
         'gender': profile.gender,
         'address': profile.address,
@@ -99,25 +105,30 @@ class PatientProfileRepository {
         'emergency_contact_name': profile.emergencyContactName,
         'emergency_contact_phone': profile.emergencyContactPhone,
         'profile_photo_url': profile.profileImageUrl,
+        // Set created_at only when this is a brand-new record; upsert will
+        // ignore it if the row already exists (depends on DB default / trigger).
+        'created_at': profile.createdAt?.toIso8601String() ?? now,
+        'updated_at': now,
       };
 
-      // Remove null values to avoid overwriting with nulls
+      // Remove null values to avoid overwriting existing data with nulls
       patientData.removeWhere((key, value) => value == null);
 
-      // Upsert on patients table
+      // Upsert on patients table (insert or update on conflict of 'id')
       final patientFuture = _supabase.from('patients').upsert(patientData);
 
-      // 2. Update 'profiles' (base) table
-      final profileData = {
+      // 2. Also update 'profiles' (base auth table) for full_name / phone
+      final profileData = <String, dynamic>{
         'id': profile.id,
         'full_name': profile.fullName,
         'phone_number': profile.phoneNumber,
       };
+      profileData.removeWhere((key, value) => value == null);
 
       final profileFuture =
           _supabase.from('profiles').update(profileData).eq('id', profile.id);
 
-      // Run parallel
+      // Run both in parallel
       await Future.wait([patientFuture, profileFuture]);
 
       // 3. Update in-memory cache

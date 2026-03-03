@@ -14,7 +14,31 @@ class CaregiverDashCard extends ConsumerWidget {
 
     return caregivers.when(
       data: (list) {
-        if (list.isEmpty) return const SizedBox.shrink();
+        if (list.isEmpty) {
+          // Show a subtle placeholder so you can see the card is rendering
+          return Container(
+            margin: EdgeInsets.only(bottom: 24 * scale),
+            padding: EdgeInsets.symmetric(
+                horizontal: 16 * scale, vertical: 14 * scale),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20 * scale),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.person_search_outlined,
+                    color: Colors.grey.shade400, size: 28 * scale),
+                SizedBox(width: 12 * scale),
+                Text(
+                  'No caregiver linked yet',
+                  style: TextStyle(
+                      color: Colors.grey.shade500, fontSize: 14 * scale),
+                ),
+              ],
+            ),
+          );
+        }
 
         // Primary caregiver is the first one
         final caregiver = list.first;
@@ -125,9 +149,19 @@ class CaregiverDashCard extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const SizedBox
-          .shrink(), // Don't show anything while loading to avoid jump
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => SizedBox(
+        height: 72 * scale,
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (err, _) => Padding(
+        padding: EdgeInsets.only(bottom: 8 * scale),
+        child: Text(
+          'Caregiver load error: $err',
+          style: const TextStyle(color: Colors.red, fontSize: 12),
+        ),
+      ),
     );
   }
 

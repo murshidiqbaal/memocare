@@ -73,25 +73,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Role Selection Cards
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildRoleCard(
-                        value: 'patient',
-                        label: 'I am a Patient',
-                        icon: Icons.elderly,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildRoleCard(
-                        value: 'caregiver',
-                        label: 'I am a Caregiver',
-                        icon: Icons.medical_services,
-                      ),
-                    ),
-                  ],
+                // Role Selection — Radio buttons
+                Text(
+                  'I am signing up as a…',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildRoleCard(
+                  value: 'patient',
+                  label: 'Patient',
+                  subtitle: 'Someone living with dementia or memory loss',
+                  icon: Icons.elderly_outlined,
+                ),
+                const SizedBox(height: 12),
+                _buildRoleCard(
+                  value: 'caregiver',
+                  label: 'Caregiver',
+                  subtitle:
+                      'Family member or professional supporting a patient',
+                  icon: Icons.medical_services_outlined,
                 ),
                 const SizedBox(height: 32),
 
@@ -171,13 +175,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget _buildRoleCard({
     required String value,
     required String label,
+    required String subtitle,
     required IconData icon,
   }) {
     final isSelected = _selectedRole == value;
     return GestureDetector(
       onTap: () => setState(() => _selectedRole = value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
           color: isSelected ? Colors.teal.shade50 : Colors.white,
           border: Border.all(
@@ -188,33 +194,58 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: Colors.teal.withOpacity(0.2),
-                blurRadius: 8,
+                color: Colors.teal.withOpacity(0.15),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
           ],
         ),
-        child: Column(
+        child: Row(
           children: [
+            // Radio button
+            Radio<String>(
+              value: value,
+              groupValue: _selectedRole,
+              onChanged: (v) => setState(() => _selectedRole = v!),
+              activeColor: Colors.teal,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 4),
+            // Icon
             Icon(
               icon,
-              size: 40,
+              size: 32,
               color: isSelected ? Colors.teal : Colors.grey.shade400,
             ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isSelected ? Colors.teal.shade900 : Colors.grey.shade600,
-                fontWeight: FontWeight.bold,
+            const SizedBox(width: 12),
+            // Labels
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? Colors.teal.shade900
+                          : Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isSelected
+                          ? Colors.teal.shade700
+                          : Colors.grey.shade500,
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (isSelected)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Icon(Icons.check_circle, color: Colors.teal, size: 20),
-              )
           ],
         ),
       ),

@@ -38,26 +38,41 @@ class RemoteAuthDatasource {
     // (though I could advise it). Or just allow the client to insert.
 
     if (response.user != null) {
+      final now = DateTime.now().toIso8601String();
+      final userId = response.user!.id;
+
       try {
         // Attempt manual profile insertion
         await _supabase.from('profiles').insert({
-          'id': response.user!.id,
+          'id': userId,
           'email': email,
           'role': role,
           'full_name': fullName,
-          'created_at': DateTime.now().toIso8601String(),
+          'created_at': now,
         });
       } catch (e) {
         // If manual insertion fails, it might be because:
         // 1. A Postgres trigger already created the profile (duplicate key error).
         // 2. Network issue.
         // 3. Permission issue.
-
-        // We log this but don't fail the signup completely if the auth user exists.
-        // However, if strict profile requirement exists, we might want to Rethrow.
-        // For this app, we rethrow so the UI shows an error and the user can try again or contact support.
-        // Ideally, we'd check if profile exists first.
         throw Exception('Failed to create user profile: $e');
+      }
+
+      // For patients, also seed a row in the `patients` table so downstream
+      // queries (e.g. PatientProfileRepository, linkedPatientsProvider) have a
+      // record to hydrate immediately after sign-up.
+      if (role == 'patient') {
+        try {
+          await _supabase.from('patients').insert({
+            'id': userId,
+            'created_at': now,
+          });
+        } catch (e) {
+          // A trigger or prior upsert may have already created the row.
+          // Log but don't abort — the auth + profiles row is the critical path.
+          // ignore: avoid_print
+          print('[Auth] patients row insert skipped (may already exist): $e');
+        }
       }
     }
 

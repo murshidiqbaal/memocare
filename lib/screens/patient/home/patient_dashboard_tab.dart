@@ -1,3 +1,4 @@
+import 'package:dementia_care_app/screens/patient/home/widgets/safety_status_card.dart';
 import 'package:dementia_care_app/screens/patient/reminders/add_edit_reminder_screen.dart';
 import 'package:dementia_care_app/screens/patient/reminders/reminder_list_screen.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +10,10 @@ import '../../../widgets/sos_countdown_dialog.dart'; // Added import for SOS Dia
 import '../memories/memories_screen.dart';
 import 'viewmodels/home_viewmodel.dart';
 import 'widgets/caregiver_dash_card.dart';
-import 'widgets/emergency_sos_card.dart';
 import 'widgets/memory_highlight_widget.dart';
 import 'widgets/offline_status_widget.dart';
 import 'widgets/patient_app_bar_widget.dart';
 import 'widgets/reminder_section_card.dart';
-import 'widgets/safety_status_card.dart'; // Added
 import 'widgets/section_title.dart';
 
 /// Patient Dashboard Tab - Healthcare-grade dementia-friendly UI
@@ -143,9 +142,9 @@ class PatientDashboardTab extends ConsumerWidget {
                         // SizedBox(height: 24 * scale),
 
                         // Emergency SOS (Scrollable position above sticky bar area)
-                        EmergencySOSCard(
-                          onTap: () => _showSOSCountdown(context, ref),
-                        ),
+                        // EmergencySOSCard(
+                        //   onTap: () => _showSOSCountdown(context, ref),
+                        // ),
 
                         // Extra spacing for Sticky Bar safe area
                         SizedBox(height: 100 * scale),

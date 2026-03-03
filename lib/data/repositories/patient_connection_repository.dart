@@ -195,64 +195,82 @@ class PatientConnectionRepository {
     }
   }
 
-  /// Get linked caregivers for the current patient
+  /// Get linked caregivers for the current patient.
+  /// Queries [caregiver_patient_links] filtered by patient_id = current user,
+  /// then enriches each result with full_name / photo from [profiles].
   Future<List<Caregiver>> getLinkedCaregivers() async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return [];
+      if (user == null) {
+        print('[CaregiverDashCard] getLinkedCaregivers: no auth user');
+        return [];
+      }
 
-      // Query caregiver_profiles joined with caregiver_patient_links
-      // We also need the 'profiles' table to get the name, assuming 'user_id' in caregiver_profiles links to 'profiles.id'
-      // Note: Supabase joins depend on foreign keys.
-      // Assuming:
-      // caregiver_profiles.user_id -> auth.users.id (and profiles.id)
-      // caregiver_patient_links.caregiver_id -> caregiver_profiles.id
+      print(
+          '[CaregiverDashCard] getLinkedCaregivers: querying for patient_id=${user.id}');
 
-      // 1. get caregivers
-      final List<dynamic> data = await _supabase
+      // 1. Fetch all link rows where this patient is the patient.
+      //    We also pull caregiver_profiles in the same round-trip.
+      final List<dynamic> links = await _supabase
           .from('caregiver_patient_links')
-          .select('caregiver_profiles(*)')
+          .select('caregiver_id, caregiver_profiles(*)')
           .eq('patient_id', user.id);
 
-      // Now we need to fetch names from 'profiles' table because they are not in caregiver_profiles usually
-      // We'll collect user_ids and fetch profiles in batch or just map if possible.
-      // If we can't join 'profiles' easily here (depends on schema FKs), we do a second query.
+      print('[CaregiverDashCard] raw links count: ${links.length}');
 
-      // Let's rely on what we have. If Fetching profiles is needed:
-      var caregivers = <Caregiver>[];
+      if (links.isEmpty) return [];
 
-      for (var linkItem in data) {
-        final item = linkItem['caregiver_profiles'] as Map<String, dynamic>?;
-        if (item == null) continue;
+      final caregivers = <Caregiver>[];
 
-        String userId = item['user_id'];
+      for (final linkRow in links) {
+        // caregiver_profiles(*) may come back as a Map or null
+        final dynamic rawProfile = linkRow['caregiver_profiles'];
+        final Map<String, dynamic>? profileMap =
+            rawProfile is Map<String, dynamic> ? rawProfile : null;
 
-        // Fetch details from profiles
-        // We select full_name and profile_photo_url (mapped to avatar_url in some schemas, but let's check PatientProfile)
-        // PatientProfile uses 'profile_photo_url'.
-        final profileData = await _supabase
-            .from('profiles')
-            .select('full_name, profile_photo_url, phone_number')
-            .eq('id', userId)
-            .maybeSingle();
+        if (profileMap == null) {
+          print(
+              '[CaregiverDashCard] caregiver_profiles null for link: $linkRow');
+          continue;
+        }
 
-        final fullName = profileData?['full_name'];
-        final photoUrl = profileData?['profile_photo_url'];
-        final phone = profileData?['phone_number'];
+        // caregiver_profiles.user_id → auth.users.id → profiles.id
+        final String? caregiverUserId = profileMap['user_id']?.toString();
 
-        final Map<String, dynamic> merged = Map.from(item);
+        // 2. Enrich with full_name / photo / phone from the base profiles table
+        String? fullName = profileMap['full_name']?.toString();
+        String? photoUrl = profileMap['profile_photo_url']?.toString();
+        String? phone = profileMap['phone']?.toString();
+
+        if (caregiverUserId != null && caregiverUserId.isNotEmpty) {
+          final profileRow = await _supabase
+              .from('profiles')
+              .select('full_name, profile_photo_url, phone_number')
+              .eq('id', caregiverUserId)
+              .maybeSingle();
+
+          if (profileRow != null) {
+            fullName ??= profileRow['full_name']?.toString();
+            photoUrl ??= profileRow['profile_photo_url']?.toString();
+            phone ??= profileRow['phone_number']?.toString();
+          }
+        }
+
+        // Merge into the map that Caregiver.fromJson expects
+        final Map<String, dynamic> merged =
+            Map<String, dynamic>.from(profileMap);
         if (fullName != null) merged['fullName'] = fullName;
-        // Prioritize profile photo from public profile if not in caregiver profile
         if (photoUrl != null) merged['profile_photo_url'] = photoUrl;
-        // Map phone if missing
-        if (phone != null && merged['phone'] == null) merged['phone'] = phone;
+        if (phone != null) merged['phone'] = phone;
+
+        print('[CaregiverDashCard] caregiver merged: fullName=$fullName');
 
         caregivers.add(Caregiver.fromJson(merged));
       }
 
       return caregivers;
-    } catch (e) {
-      print('Error fetching linked caregivers: $e');
+    } catch (e, st) {
+      print('[CaregiverDashCard] getLinkedCaregivers ERROR: $e\n$st');
       return [];
     }
   }
