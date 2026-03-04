@@ -1,3 +1,4 @@
+import 'package:dementia_care_app/providers/location_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +9,11 @@ import '../../../data/models/patient_profile.dart';
 import '../../../data/models/safe_zone.dart';
 import '../../../features/linking/presentation/controllers/link_controller.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/biometric_providers.dart';
 import '../../../providers/profile_photo_provider.dart';
 import '../../../providers/safe_zone_provider.dart';
 import '../../../widgets/editable_avatar.dart';
+import 'biometric_settings_card.dart';
 import 'edit_patient_profile_screen.dart';
 import 'safe_zone_picker_screen.dart';
 import 'viewmodels/patient_profile_viewmodel.dart';
@@ -71,6 +74,8 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     );
 
     if (shouldLogout == true) {
+      // Clear biometric session on logout for security
+      await ref.read(biometricControllerProvider.notifier).onSignOut();
       ref.read(authControllerProvider.notifier).signOut();
     }
   }
@@ -254,14 +259,16 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                   _buildLinkingSection(scale, profile),
                   SizedBox(height: 24 * scale),
 
-                  // Home Location / Safe Zone Section
-                  _buildSectionTitle('Home Location', scale),
+                  // Home Location / Safe Zone Section - Hide if set
                   _buildHomeLocationSection(scale, profile.id),
-                  SizedBox(height: 24 * scale),
                 ],
 
                 // Settings / Sign Out (Only visible to Patient)
                 if (!isCaregiver) ...[
+                  // Biometric Settings
+                  _buildSectionTitle('Security', scale),
+                  BiometricSettingsCard(patientId: profile.id),
+                  SizedBox(height: 24 * scale),
                   _buildSettingsSection(scale),
                 ],
 
@@ -789,125 +796,86 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
   }
 
   Widget _buildHomeLocationSection(double scale, String patientId) {
+    // Both tables checked
     final safeZoneAsync = ref.watch(patientSafeZoneProvider(patientId));
+    final homeLocationAsync = ref.watch(patientHomeLocationProvider(patientId));
 
-    return _buildCard(scale, children: [
-      safeZoneAsync.when(
-        data: (zone) {
-          if (zone == null) {
-            return Column(
-              children: [
-                Icon(Icons.home_outlined,
-                    size: 48 * scale, color: Colors.grey.shade400),
-                SizedBox(height: 12 * scale),
-                Text(
-                  'Set Home Location',
-                  style: TextStyle(
-                    fontSize: 16 * scale,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                SizedBox(height: 8 * scale),
-                Text(
-                  'Setting a home location helps caregivers know you are safe.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13 * scale,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-                SizedBox(height: 16 * scale),
-                ElevatedButton.icon(
-                  onPressed: () => _navigateToSafeZonePicker(patientId, null),
-                  icon: const Icon(Icons.add_location_alt),
-                  label: const Text('Set Location'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8 * scale),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
+    // Combine results to see if ANY location is set
+    final bool hasOldZone =
+        safeZoneAsync.value != null; // Explicit check for data presence
+    final bool hasNewLoc = homeLocationAsync.value != null;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10 * scale),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.home,
-                        color: Colors.teal.shade700, size: 24 * scale),
-                  ),
-                  SizedBox(width: 12 * scale),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    if (hasOldZone || hasNewLoc) {
+      // User already has a home location set, hide this entire section/widget
+      return const SizedBox.shrink();
+    }
+
+    // Otherwise, show the prompt to set location
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Home Location', scale),
+        _buildCard(
+          scale,
+          children: [
+            safeZoneAsync.when(
+              data: (zone) {
+                // Since hasOldZone is false here, zone must be null.
+                return homeLocationAsync.when(
+                  data: (homeLoc) {
+                    // Since hasNewLoc is false here, homeLoc must be null.
+                    return Column(
                       children: [
+                        Icon(Icons.home_outlined,
+                            size: 48 * scale, color: Colors.grey.shade400),
+                        SizedBox(height: 12 * scale),
                         Text(
-                          zone.label,
+                          'Set Home Location',
                           style: TextStyle(
                             fontSize: 16 * scale,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade800,
+                            color: Colors.grey.shade700,
                           ),
                         ),
-                        SizedBox(height: 4 * scale),
+                        SizedBox(height: 8 * scale),
                         Text(
-                          '${zone.centerLatitude.toStringAsFixed(4)}, ${zone.centerLongitude.toStringAsFixed(4)}',
+                          'Setting a home location helps caregivers know you are safe.',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 13 * scale,
-                            color: Colors.grey.shade600,
+                            color: Colors.grey.shade500,
                           ),
                         ),
-                        SizedBox(height: 4 * scale),
-                        Text(
-                          'Radius: ${zone.radiusMeters}m',
-                          style: TextStyle(
-                            fontSize: 13 * scale,
-                            color: Colors.teal.shade700,
-                            fontWeight: FontWeight.w500,
+                        SizedBox(height: 16 * scale),
+                        ElevatedButton.icon(
+                          onPressed: () =>
+                              _navigateToSafeZonePicker(patientId, null),
+                          icon: const Icon(Icons.add_location_alt),
+                          label: const Text('Set Location'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8 * scale),
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 16 * scale),
-              OutlinedButton.icon(
-                onPressed: () => _navigateToSafeZonePicker(patientId, zone),
-                icon: const Icon(Icons.edit_location_alt),
-                label: const Text('Edit Location'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.teal,
-                  side: BorderSide(color: Colors.teal.shade200),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8 * scale),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Padding(
-          padding: EdgeInsets.all(16 * scale),
-          child: Text('Failed to load safe zone: $err',
-              style: const TextStyle(color: Colors.red)),
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Text('Error checking home location: $err'),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Text('Error checking safe zone: $err'),
+            ),
+          ],
         ),
-      ),
-    ]);
+        SizedBox(height: 24 * scale),
+      ],
+    );
   }
 
   void _navigateToSafeZonePicker(String patientId, SafeZone? zone) {

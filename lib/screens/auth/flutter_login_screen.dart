@@ -3,11 +3,17 @@ import 'package:flutter_login/flutter_login.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../providers/biometric_providers.dart';
+import 'enable_biometric_dialog.dart';
 
+/// Login screen with biometric-enable flow.
+///
+/// After successful email+password login:
+///  1. If role == 'patient': checks biometric hardware availability
+///  2. If biometric is available AND NOT yet enabled: shows [EnableBiometricDialog]
+///  3. Router handles home navigation
 class FlutterLoginScreen extends ConsumerWidget {
   const FlutterLoginScreen({super.key});
-
-  Duration get loginTime => const Duration(milliseconds: 2250);
 
   Future<String?> _authUser(WidgetRef ref, LoginData data) async {
     final result = await ref.read(authRepositoryProvider).signIn(
@@ -17,7 +23,7 @@ class FlutterLoginScreen extends ConsumerWidget {
 
     return result.fold(
       (failure) => failure.message,
-      (success) => null, // Success means no error message
+      (success) => null,
     );
   }
 
@@ -25,7 +31,6 @@ class FlutterLoginScreen extends ConsumerWidget {
     final role = data.additionalSignupData?['role']?.toLowerCase() ?? 'patient';
     final validRoles = ['patient', 'caregiver'];
 
-    // Simple validation for role
     if (!validRoles.contains(role)) {
       return 'Role must be either "patient" or "caregiver"';
     }
@@ -44,15 +49,35 @@ class FlutterLoginScreen extends ConsumerWidget {
   }
 
   Future<String?> _recoverPassword(String name) async {
-    // Placeholder for password recovery
     return 'Password recovery is not implemented yet.';
+  }
+
+  /// After login animation completes: check if we should offer biometric.
+  Future<void> _onLoginComplete(BuildContext context, WidgetRef ref) async {
+    final profile = await ref.read(userProfileProvider.future);
+
+    // Only offer biometric to patients
+    if (profile?.role != 'patient') {
+      // Navigate will be handled by GoRouter redirect
+      return;
+    }
+
+    final biometricAvailable =
+        await ref.read(biometricAvailableProvider.future);
+    final biometricAlreadyEnabled =
+        await ref.read(biometricEnabledProvider.future);
+
+    if (biometricAvailable && !biometricAlreadyEnabled && context.mounted) {
+      await showEnableBiometricDialog(context, ref, profile!.id);
+    }
+
+    // GoRouter redirect will fire based on auth state change
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return FlutterLogin(
       title: 'MemoCare',
-      // logo: const AssetImage('assets/images/logo.png'), // No logo available
       onLogin: (loginData) => _authUser(ref, loginData),
       onSignup: (signupData) => _signupUser(ref, signupData),
       onRecoverPassword: _recoverPassword,
@@ -69,7 +94,7 @@ class FlutterLoginScreen extends ConsumerWidget {
           decoration: TextDecoration.underline,
         ),
         textFieldStyle: const TextStyle(
-          color: Colors.black, // Ensure text is visible
+          color: Colors.black,
         ),
       ),
       additionalSignupFields: const [
@@ -89,26 +114,16 @@ class FlutterLoginScreen extends ConsumerWidget {
             'Enter your details. For Role, type "patient" or "caregiver".',
       ),
       userValidator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Email is required';
-        }
-        if (!value.contains('@')) {
-          return 'Enter a valid email address';
-        }
+        if (value == null || value.isEmpty) return 'Email is required';
+        if (!value.contains('@')) return 'Enter a valid email address';
         return null;
       },
       passwordValidator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Password is required';
-        }
-        if (value.length < 6) {
-          return 'Password must be at least 6 characters';
-        }
+        if (value == null || value.isEmpty) return 'Password is required';
+        if (value.length < 6) return 'Password must be at least 6 characters';
         return null;
       },
-      onSubmitAnimationCompleted: () {
-        // AppRouter will handle navigation based on auth state change
-      },
+      onSubmitAnimationCompleted: () => _onLoginComplete(context, ref),
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
+import '../screens/auth/biometric_login_screen.dart';
 import '../screens/auth/flutter_login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/role_selection_screen.dart';
@@ -46,6 +47,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const FlutterLoginScreen(),
+      ),
+
+      GoRoute(
+        path: '/biometric-login',
+        builder: (context, state) => const BiometricLoginScreen(),
       ),
 
       GoRoute(
@@ -135,7 +141,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       // 🔴 NOT AUTHENTICATED
       if (!isAuthenticated) {
-        if (isSplash || isAuthRoute) return null;
+        // Check if patient has biometric enabled on this device
+        // We only navigate to biometric login from splash, not from auth routes
+        if (isSplash) return null; // SplashScreen handles biometric check
+        if (isAuthRoute) return null;
         return '/login';
       }
 

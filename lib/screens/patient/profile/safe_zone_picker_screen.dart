@@ -33,13 +33,13 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
   final MapController _mapController = MapController();
 
   LatLng? _selectedLocation;
-  int _currentRadius = 100;
+  // Fixed radius at 1 km (1000m) for safety standards
+  static const int _currentRadius = 1000;
   bool _isLoadingLocation = true;
 
   @override
   void initState() {
     super.initState();
-    _currentRadius = widget.initialRadiusMeters ?? 100;
 
     if (widget.initialLatitude != null && widget.initialLongitude != null) {
       _selectedLocation =
@@ -228,27 +228,13 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Safe Zone Radius',
+                    'Home Safe Zone',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text('${_currentRadius}m'),
-                      Expanded(
-                        child: Slider(
-                          value: _currentRadius.toDouble(),
-                          min: 50,
-                          max: 500,
-                          divisions: 9,
-                          activeColor: Colors.teal,
-                          onChanged: (value) {
-                            setState(() => _currentRadius = value.toInt());
-                          },
-                        ),
-                      ),
-                      const Text('500m'),
-                    ],
+                  Text(
+                    'A 1 km (1000m) safety zone will be created around your home to monitor your safety.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(

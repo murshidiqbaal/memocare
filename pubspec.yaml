@@ -50,8 +50,12 @@ dependencies:
   shimmer: ^3.0.0
   google_fonts: ^8.0.1
 
+  # ---------------- SECURITY / BIOMETRIC ----------------
+  local_auth: ^2.3.0
+  flutter_secure_storage: ^9.2.4
+  device_info_plus: ^11.4.0
+
   # ---------------- UTILITIES ----------------
-  device_info_plus: ^12.3.0
   intl: ^0.20.2
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

@@ -1,16 +1,26 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class SplashScreen extends StatefulWidget {
+import '../../providers/biometric_providers.dart';
+import '../../providers/auth_provider.dart';
+
+/// Splash screen that performs biometric auto-login when applicable.
+///
+/// Decision tree:
+///  1. If Supabase already has an active session → GoRouter redirects per role.
+///  2. Else if biometric is locally enabled → navigate to BiometricLoginScreen.
+///  3. Else → navigate to role-selection.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -21,13 +31,11 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Initialize animation controller with 2 seconds duration
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
 
-    // Fade in animation for the logo
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -35,7 +43,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Scale up animation for the logo
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -43,7 +50,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Delayed fade in for the text and tagline
     _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
@@ -51,36 +57,40 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Start the animation
     _controller.forward();
 
-    // Navigate to Role Selection after 3 seconds
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        // Using GoRouter context.go to navigate to /role-selection or generic login route
-        // Assuming '/role-selection' or standard initial input.
-        // Based on previous file, '/login' was used in tap.
-        // We will try to go to '/role-selection' if defined, or '/' if that's the home.
-        // Given prompt "Automatically navigate to: Role Selection / Login Screen", I'll assume '/role-selection'
-        // but since I don't see the router config, I'll use pushReplacement to the widget class or a likely route.
-        // Seeing role_selection_screen.dart content, it pushes '/login'.
-        // I'll stick to 'context.go('/role-selection')' or simply push the widget if route isn't guaranteed.
-        // To be safe and adhere to "Complete ready-to-run", I will use a direct route name check
-        // or just use `context.go('/role-selection')` if I am confident, or `Navigator`.
-        // The safest bet given existing go_router logic in file 127 is named routes.
-        // I'll guess '/role-selection'. If not, the user can adjust routes.
-        // Actually, let's use the explicit widget navigation to be 100% sure it works without route config changes.
-        // Wait, go_router is imported. I should use it.
-        // Defaulting to '/role-selection'.
+    // Navigate after animation completes
+    Timer(const Duration(seconds: 3), () => _navigate());
+  }
 
-        try {
-          context.go('/role-selection');
-        } catch (e) {
-          // Fallback if route not defined
-          context.go('/');
-        }
+  Future<void> _navigate() async {
+    if (!mounted) return;
+
+    // If there's already an active Supabase session, GoRouter redirect handles it
+    final session = ref.read(authStateChangesProvider).valueOrNull?.session;
+    if (session != null) {
+      // Already authenticated — GoRouter will redirect to the right home screen
+      try {
+        context.go('/role-selection');
+      } catch (_) {}
+      return;
+    }
+
+    // Check whether biometric login is set up on this device
+    final biometricEnabled =
+        await ref.read(secureStorageServiceProvider).isBiometricEnabled();
+
+    if (!mounted) return;
+
+    if (biometricEnabled) {
+      context.go('/biometric-login');
+    } else {
+      try {
+        context.go('/role-selection');
+      } catch (e) {
+        context.go('/');
       }
-    });
+    }
   }
 
   @override
@@ -110,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
           children: [
             const Spacer(),
 
-            // --- Logo Section ---
+            // Logo
             FadeTransition(
               opacity: _fadeAnimation,
               child: ScaleTransition(
@@ -118,7 +128,6 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Subtle Glow Effect
                     Container(
                       width: 140,
                       height: 140,
@@ -134,7 +143,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ],
                       ),
                     ),
-                    // Icon Background
                     Container(
                       width: 100,
                       height: 100,
@@ -143,15 +151,13 @@ class _SplashScreenState extends State<SplashScreen>
                         color: Colors.white,
                       ),
                       child: Center(
-                        // Brain + Heart Metaphor Icon
                         child: Icon(
-                          Icons.psychology, // Brain/Mind
+                          Icons.psychology,
                           size: 60,
                           color: Colors.teal.shade400,
                         ),
                       ),
                     ),
-                    // Small Heart Badge
                     Positioned(
                       right: 20,
                       bottom: 20,
@@ -162,7 +168,7 @@ class _SplashScreenState extends State<SplashScreen>
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.favorite, // Heart/Care
+                          Icons.favorite,
                           size: 20,
                           color: Colors.pink.shade300,
                         ),
@@ -175,12 +181,10 @@ class _SplashScreenState extends State<SplashScreen>
 
             const SizedBox(height: 32),
 
-            // --- Text Section ---
             FadeTransition(
               opacity: _textFadeAnimation,
               child: Column(
                 children: [
-                  // App Name
                   Text(
                     'MemoCare',
                     style: TextStyle(
@@ -191,7 +195,6 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Tagline
                   Text(
                     'Remember What Matters.',
                     style: TextStyle(
