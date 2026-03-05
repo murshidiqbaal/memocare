@@ -122,15 +122,13 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                 ),
 
                 // Safe zone circle
-                if (_safeZone != null &&
-                    _safeZone!.centerLatitude != null &&
-                    _safeZone!.centerLongitude != null)
+                if (_safeZone != null)
                   CircleLayer(
                     circles: [
                       CircleMarker(
                         point: LatLng(
-                          _safeZone!.centerLatitude!,
-                          _safeZone!.centerLongitude!,
+                          _safeZone!.centerLatitude,
+                          _safeZone!.centerLongitude,
                         ),
                         radius: _safeZone!.radiusMeters.toDouble(),
                         useRadiusInMeter: true,

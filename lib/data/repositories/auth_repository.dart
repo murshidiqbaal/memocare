@@ -2,11 +2,13 @@ import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/failures.dart';
+// import '../../core/security/secure_storage_service.dart';
 import '../../models/user/profile.dart';
 import '../datasources/remote/remote_auth_datasource.dart';
 
 class AuthRepository {
   final RemoteAuthDatasource _remoteDatasource;
+  // final SecureStorageService _storage;
 
   AuthRepository(this._remoteDatasource);
 
@@ -26,6 +28,20 @@ class AuthRepository {
       {required String email, required String password}) async {
     try {
       await _remoteDatasource.signIn(email: email, password: password);
+
+      // After successful login, if biometric was previously enabled,
+      // update the saved session tokens to ensure next biometric login works.
+      // final isEnabled = await _storage.isBiometricEnabled();
+      // if (isEnabled) {
+      //   final session = _remoteDatasource.currentSession;
+      //   if (session != null) {
+      //     await _storage.saveSession(
+      //       accessToken: session.accessToken,
+      //       refreshToken: session.refreshToken ?? '',
+      //     );
+      //   }
+      // }
+
       return const Right(null);
     } catch (e) {
       return Left(AuthFailure(e.toString()));

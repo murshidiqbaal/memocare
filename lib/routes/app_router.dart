@@ -1,3 +1,5 @@
+import 'package:dementia_care_app/screens/auth/biometric_login_screen.dart';
+import 'package:dementia_care_app/screens/auth/flutter_login_screen.dart';
 import 'package:dementia_care_app/screens/patient/games/games_screen.dart';
 import 'package:dementia_care_app/screens/patient/games/mini_games/memory_match_game_screen.dart';
 import 'package:dementia_care_app/screens/patient/games/mini_games/reaction_tap_game_screen.dart';
@@ -7,8 +9,6 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
-import '../screens/auth/biometric_login_screen.dart';
-import '../screens/auth/flutter_login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/role_selection_screen.dart';
 import '../screens/caregiver/connections/caregiver_connections_screen.dart';
@@ -136,8 +136,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final path = state.uri.toString();
 
       final isSplash = path == '/';
-      final isAuthRoute =
-          path == '/login' || path == '/register' || path == '/role-selection';
+      final isAuthRoute = path == '/login' ||
+          path == '/register' ||
+          path == '/role-selection' ||
+          path == '/biometric-login';
 
       // 🔴 NOT AUTHENTICATED
       if (!isAuthenticated) {

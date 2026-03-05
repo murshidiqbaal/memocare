@@ -238,7 +238,7 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
 
                       // No patient
                       if (!hasPatient && !isLoading)
-                        _NoPatientEmptyState()
+                        const _NoPatientEmptyState()
                       else if (isLoading && !hasPatient)
                         const _SkeletonLoader()
                       else ...[
@@ -432,9 +432,9 @@ class _NoPatientSelectedMap extends StatelessWidget {
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
+      child: const Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        children: [
           Icon(Icons.person_search, size: 40, color: Colors.grey),
           SizedBox(height: 8),
           Text(
@@ -682,7 +682,7 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       colors: [
                         _DS.teal100,
                         _DS.teal200,
@@ -1149,7 +1149,7 @@ class _NoPatientEmptyState extends StatelessWidget {
                 letterSpacing: -0.4),
           ),
           const SizedBox(height: 10),
-          Text(
+          const Text(
             'Connect with a patient using their invite code\nto start managing their care.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: _DS.ink400, height: 1.5),

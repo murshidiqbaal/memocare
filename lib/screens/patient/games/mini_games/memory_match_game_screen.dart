@@ -17,14 +17,12 @@ import '../../../../providers/game_providers.dart';
 class _MemCard {
   final int id;
   final IconData icon;
-  bool isFaceUp;
-  bool isMatched;
+  bool isFaceUp = false;
+  bool isMatched = false;
 
   _MemCard({
     required this.id,
     required this.icon,
-    this.isFaceUp = false,
-    this.isMatched = false,
   });
 }
 

@@ -40,6 +40,15 @@ class PatientProfile {
   @JsonKey(name: 'updated_at')
   final DateTime? updatedAt;
 
+  @JsonKey(name: 'biometric_enabled')
+  final bool? biometricEnabled;
+
+  @JsonKey(name: 'trusted_device_id')
+  final String? trustedDeviceId;
+
+  @JsonKey(name: 'last_biometric_login')
+  final DateTime? lastBiometricLogin;
+
   PatientProfile({
     required this.id,
     this.userId,
@@ -54,6 +63,9 @@ class PatientProfile {
     this.profileImageUrl,
     this.createdAt,
     this.updatedAt,
+    this.biometricEnabled,
+    this.trustedDeviceId,
+    this.lastBiometricLogin,
   });
 
   factory PatientProfile.fromJson(Map<String, dynamic> json) =>
@@ -74,6 +86,9 @@ class PatientProfile {
     String? medicalNotes,
     String? profileImageUrl,
     DateTime? createdAt,
+    bool? biometricEnabled,
+    String? trustedDeviceId,
+    DateTime? lastBiometricLogin,
   }) {
     return PatientProfile(
       id: id ?? this.id,
@@ -89,6 +104,9 @@ class PatientProfile {
       medicalNotes: medicalNotes ?? this.medicalNotes,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt ?? this.createdAt,
+      biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+      trustedDeviceId: trustedDeviceId ?? this.trustedDeviceId,
+      lastBiometricLogin: lastBiometricLogin ?? this.lastBiometricLogin,
     );
   }
 }

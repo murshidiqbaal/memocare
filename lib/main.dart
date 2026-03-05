@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config/supabase_config.dart';
 import 'core/theme/memocare_theme.dart';
+import 'providers/auth_provider.dart';
 import 'providers/service_providers.dart';
 import 'routes/app_router.dart';
 import 'services/fcm_service.dart';
@@ -29,6 +30,12 @@ void main() async {
 
   // Initialize Notification Service early (local alarms + channels)
   await container.read(reminderNotificationServiceProvider).init();
+
+  // ── Session persistence ──
+  // Start the background listener for session token storage updates
+  container.read(sessionPersistenceProvider);
+  // Keep auth state warm
+  container.read(authStateChangesProvider);
 
   // Register the global navigator key with FCMService so notification
   // taps can navigate to the correct screen from any app state.

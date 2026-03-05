@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/auth_provider.dart';
 import '../../providers/biometric_providers.dart';
 
-/// Full-screen biometric login screen shown to patients on subsequent app opens.
+/// Biometric login screen.
 ///
-/// Design principles (dementia-friendly):
-///  - Single large fingerprint icon
-///  - Minimal text, plain language
-///  - Large touch targets (min 56×56dp)
-///  - Calm teal palette
-///  - No technical jargon
+/// Flow:
+///  1. User enters email.
+///  2. Taps "Login with Fingerprint".
+///  3. BiometricService resolves userId → checks enrollment → OS prompt → restores session.
+///  4. GoRouter redirects to the correct home screen on success.
 class BiometricLoginScreen extends ConsumerStatefulWidget {
   const BiometricLoginScreen({super.key});
 
@@ -23,229 +21,315 @@ class BiometricLoginScreen extends ConsumerStatefulWidget {
 
 class _BiometricLoginScreenState extends ConsumerState<BiometricLoginScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnim;
+  final _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  bool _isAuthenticating = false;
-  String? _errorMessage;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.12).animate(
+    _pulseAnimation = Tween<double>(begin: 0.92, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-
-    // Auto-trigger biometric on screen open
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tryBiometricLogin());
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-  Future<void> _tryBiometricLogin() async {
-    if (_isAuthenticating) return;
-    setState(() {
-      _isAuthenticating = true;
-      _errorMessage = null;
-    });
-
-    final error = await ref
-        .read(biometricControllerProvider.notifier)
-        .loginWithBiometric();
-
-    if (!mounted) return;
-
-    if (error == null) {
-      // Success — GoRouter will redirect based on updated auth state
-      return;
-    }
-
-    setState(() {
-      _isAuthenticating = false;
-      _errorMessage = error;
-    });
-  }
-
-  void _goToPasswordLogin() {
-    context.go('/login');
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final email = _emailController.text.trim();
+    await ref.read(biometricLoginProvider.notifier).loginWithBiometric(email);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen for auth state change → navigate away automatically
-    ref.listen(authStateChangesProvider, (_, next) {
-      if (next.valueOrNull?.session != null && mounted) {
-        // GoRouter redirect will handle the right page
+    // Listen for success → GoRouter handles redirect automatically
+    ref.listen<BiometricLoginState>(biometricLoginProvider, (prev, next) {
+      if (next.status == BiometricLoginStatus.success) {
+        // GoRouter redirect will navigate to the correct home screen
+        // because the Supabase session is now active.
+        context.go('/');
       }
     });
 
+    final state = ref.watch(biometricLoginProvider);
+    final isLoading = state.status == BiometricLoginStatus.loading;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FAF9), // calm teal tint
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF004D5C),
+              const Color(0xFF00897B),
+              const Color(0xFF26C6DA),
+            ],
+          ),
+        ),
+        child: SafeArea(
           child: Column(
             children: [
-              const Spacer(flex: 2),
-
-              // ── App Logo ──
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.teal.withOpacity(0.2),
-                      blurRadius: 20,
-                      spreadRadius: 5,
+              // ── Top bar ──────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white70),
+                      onPressed: () => context.canPop()
+                          ? context.pop()
+                          : context.go('/login'),
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.psychology,
-                  size: 44,
-                  color: Colors.teal.shade600,
-                ),
               ),
 
-              const SizedBox(height: 16),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // ── Fingerprint icon ──────────────────
+                        ScaleTransition(
+                          scale: _pulseAnimation,
+                          child: Container(
+                            width: 110,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.35),
+                                width: 2.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.tealAccent.withOpacity(0.35),
+                                  blurRadius: 32,
+                                  spreadRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.fingerprint,
+                              size: 64,
+                              color:
+                                  isLoading ? Colors.tealAccent : Colors.white,
+                            ),
+                          ),
+                        ),
 
-              Text(
-                'MemoCare',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal.shade900,
-                  letterSpacing: 0.5,
-                ),
-              ),
+                        const SizedBox(height: 28),
 
-              const Spacer(),
+                        // ── Title ─────────────────────────────
+                        const Text(
+                          'Fingerprint Login',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Enter your email to identify your account,\nthen scan your fingerprint.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.72),
+                            height: 1.5,
+                          ),
+                        ),
 
-              // ── Fingerprint Button ──
-              AnimatedBuilder(
-                animation: _pulseAnim,
-                builder: (_, child) {
-                  return Transform.scale(
-                    scale: _isAuthenticating ? _pulseAnim.value : 1.0,
-                    child: child,
-                  );
-                },
-                child: GestureDetector(
-                  onTap: _tryBiometricLogin,
-                  child: Container(
-                    width: 160,
-                    height: 160,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(
-                        color: Colors.teal.shade300,
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.teal.withOpacity(0.18),
-                          blurRadius: 24,
-                          spreadRadius: 4,
+                        const SizedBox(height: 36),
+
+                        // ── Glass card ────────────────────────
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.11),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.22),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.18),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Email field
+                                TextFormField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  autocorrect: false,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: InputDecoration(
+                                    labelText: 'Email address',
+                                    labelStyle: TextStyle(
+                                        color: Colors.white.withOpacity(0.75)),
+                                    prefixIcon: Icon(Icons.email_outlined,
+                                        color: Colors.white.withOpacity(0.65)),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide(
+                                          color: Colors.white.withOpacity(0.3)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(
+                                          color: Colors.tealAccent, width: 1.8),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(
+                                          color: Colors.orangeAccent),
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: const BorderSide(
+                                          color: Colors.orangeAccent,
+                                          width: 1.8),
+                                    ),
+                                    errorStyle: const TextStyle(
+                                        color: Colors.orangeAccent),
+                                    filled: true,
+                                    fillColor: Colors.white.withOpacity(0.07),
+                                  ),
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'Email is required';
+                                    }
+                                    if (!v.contains('@')) {
+                                      return 'Enter a valid email';
+                                    }
+                                    return null;
+                                  },
+                                ),
+
+                                const SizedBox(height: 20),
+
+                                // Error message
+                                if (state.errorMessage != null) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent.withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                          color: Colors.redAccent
+                                              .withOpacity(0.4)),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.warning_amber_rounded,
+                                            color: Colors.orangeAccent,
+                                            size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            state.errorMessage!,
+                                            style: const TextStyle(
+                                                color: Colors.orangeAccent,
+                                                fontSize: 13,
+                                                height: 1.45),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+
+                                // Submit button
+                                SizedBox(
+                                  height: 52,
+                                  child: ElevatedButton.icon(
+                                    onPressed: isLoading ? null : _submit,
+                                    icon: isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Icon(Icons.fingerprint,
+                                            size: 22),
+                                    label: Text(
+                                      isLoading
+                                          ? 'Verifying…'
+                                          : 'Login with Fingerprint',
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF00897B),
+                                      foregroundColor: Colors.white,
+                                      disabledBackgroundColor:
+                                          const Color(0xFF00897B)
+                                              .withOpacity(0.5),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14)),
+                                      elevation: 4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Fallback ──────────────────────────
+                        TextButton.icon(
+                          onPressed: () => context.go('/login'),
+                          icon: Icon(Icons.lock_outline,
+                              size: 16, color: Colors.white.withOpacity(0.65)),
+                          label: Text(
+                            'Use email & password instead',
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.65),
+                                fontSize: 13),
+                          ),
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.fingerprint,
-                      size: 96,
-                      color: _isAuthenticating
-                          ? Colors.teal.shade600
-                          : Colors.teal.shade400,
-                    ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 28),
-
-              // ── Instruction Text ──
-              Text(
-                _isAuthenticating
-                    ? 'Checking your fingerprint…'
-                    : 'Touch the fingerprint\nbutton to open MemoCare',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.teal.shade800,
-                  height: 1.4,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // ── Error Message ──
-              if (_errorMessage != null) ...[
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline,
-                          color: Colors.orange.shade700, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.orange.shade900,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-
-              const Spacer(),
-
-              // ── Use Password Instead ──
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton.icon(
-                  onPressed: _goToPasswordLogin,
-                  icon: const Icon(Icons.lock_outline, size: 22),
-                  label: const Text(
-                    'Use Password Instead',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.teal,
-                    side: BorderSide(color: Colors.teal.shade300, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
             ],
           ),
         ),

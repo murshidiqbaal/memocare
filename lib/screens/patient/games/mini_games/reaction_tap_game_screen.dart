@@ -309,7 +309,7 @@ class _ReactionTapGameScreenState extends ConsumerState<ReactionTapGameScreen> {
             child: Column(
               children: [
                 Text(
-                  '${_avgMs} ms',
+                  '$_avgMs ms',
                   style: const TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -348,7 +348,7 @@ class _ReactionTapGameScreenState extends ConsumerState<ReactionTapGameScreen> {
                         TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 Text(
                   '$_finalScore',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: _accentColor,
@@ -509,7 +509,7 @@ class _InstructionCard extends StatelessWidget {
           const Color(0xFFF97316)
         ),
       _Phase.result => (
-          '✅ ${lastReactionMs} ms — tap to continue',
+          '✅ $lastReactionMs ms — tap to continue',
           const Color(0xFFD1FAE5),
           const Color(0xFF059669)
         ),

@@ -4,15 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/biometric_providers.dart';
 import '../../providers/auth_provider.dart';
 
-/// Splash screen that performs biometric auto-login when applicable.
+/// Splash screen shown on every cold start.
 ///
-/// Decision tree:
-///  1. If Supabase already has an active session → GoRouter redirects per role.
-///  2. Else if biometric is locally enabled → navigate to BiometricLoginScreen.
-///  3. Else → navigate to role-selection.
+/// Decision tree after the animation:
+///  1. Active Supabase session → GoRouter redirect handles navigation.
+///  2. No session → navigate to /login.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -59,44 +57,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // Navigate after animation completes
-    Timer(const Duration(seconds: 3), () => _navigate());
-  }
-
-  Future<void> _navigate() async {
-    if (!mounted) return;
-
-    // If there's already an active Supabase session, GoRouter redirect handles it
-    final session = ref.read(authStateChangesProvider).valueOrNull?.session;
-    if (session != null) {
-      // Already authenticated — GoRouter will redirect to the right home screen
-      try {
-        context.go('/role-selection');
-      } catch (_) {}
-      return;
-    }
-
-    // Check whether biometric login is set up on this device
-    final biometricEnabled =
-        await ref.read(secureStorageServiceProvider).isBiometricEnabled();
-
-    if (!mounted) return;
-
-    if (biometricEnabled) {
-      context.go('/biometric-login');
-    } else {
-      try {
-        context.go('/role-selection');
-      } catch (e) {
-        context.go('/');
-      }
-    }
+    Timer(const Duration(seconds: 3), _navigate);
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _navigate() async {
+    if (!mounted) return;
+
+    final session = ref.read(authStateChangesProvider).valueOrNull?.session;
+    if (session != null) {
+      // Already authenticated — GoRouter redirects to the correct home screen.
+      context.go('/role-selection');
+      return;
+    }
+
+    if (!mounted) return;
+    context.go('/login');
   }
 
   @override
@@ -120,7 +101,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           children: [
             const Spacer(),
 
-            // Logo
+            // ── Logo ─────────────────────────────────────────────
             FadeTransition(
               opacity: _fadeAnimation,
               child: ScaleTransition(
@@ -181,6 +162,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
             const SizedBox(height: 32),
 
+            // ── App name ─────────────────────────────────────────
             FadeTransition(
               opacity: _textFadeAnimation,
               child: Column(
@@ -209,6 +191,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             ),
 
             const Spacer(),
+
+            // ── Loading indicator ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(bottom: 48),
+              child: FadeTransition(
+                opacity: _textFadeAnimation,
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.teal.shade400,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

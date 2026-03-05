@@ -9,11 +9,10 @@ import '../../../data/models/patient_profile.dart';
 import '../../../data/models/safe_zone.dart';
 import '../../../features/linking/presentation/controllers/link_controller.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/biometric_providers.dart';
+// import '../../../providers/biometric_providers.dart';
 import '../../../providers/profile_photo_provider.dart';
 import '../../../providers/safe_zone_provider.dart';
 import '../../../widgets/editable_avatar.dart';
-import 'biometric_settings_card.dart';
 import 'edit_patient_profile_screen.dart';
 import 'safe_zone_picker_screen.dart';
 import 'viewmodels/patient_profile_viewmodel.dart';
@@ -74,9 +73,7 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
     );
 
     if (shouldLogout == true) {
-      // Clear biometric session on logout for security
-      await ref.read(biometricControllerProvider.notifier).onSignOut();
-      ref.read(authControllerProvider.notifier).signOut();
+      await ref.read(authControllerProvider.notifier).signOut();
     }
   }
 
@@ -267,7 +264,13 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen> {
                 if (!isCaregiver) ...[
                   // Biometric Settings
                   _buildSectionTitle('Security', scale),
-                  BiometricSettingsCard(patientId: profile.id),
+                  _buildCard(scale, children: [
+                    // EnableBiometricSwitch(
+                    //   initialValue:
+                    //       ref.read(biometricEnabledProvider).valueOrNull ??
+                    //           false,
+                    // ),
+                  ]),
                   SizedBox(height: 24 * scale),
                   _buildSettingsSection(scale),
                 ],

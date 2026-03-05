@@ -166,8 +166,8 @@ class LocationTrackingService {
         double distance = Geolocator.distanceBetween(
           position.latitude,
           position.longitude,
-          zone.centerLatitude!,
-          zone.centerLongitude!,
+          zone.centerLatitude,
+          zone.centerLongitude,
         );
         if (distance <= zone.radiusMeters) {
           isSafe = true;

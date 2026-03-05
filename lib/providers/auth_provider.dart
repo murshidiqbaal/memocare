@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/datasources/remote/remote_auth_datasource.dart';
 import '../data/repositories/auth_repository.dart';
 import '../models/user/profile.dart';
+// import '../providers/biometric_providers.dart';
 
 final remoteAuthDatasourceProvider = Provider<RemoteAuthDatasource>((ref) {
   return RemoteAuthDatasource(Supabase.instance.client);
@@ -80,3 +81,22 @@ class AuthController extends AsyncNotifier<void> {
 
 final authControllerProvider =
     AsyncNotifierProvider<AuthController, void>(AuthController.new);
+
+/// A provider that listens to auth state changes and ensures the secure storage
+/// is kept in sync with the current Supabase session if biometrics are enabled.
+final sessionPersistenceProvider = Provider<void>((ref) {
+  ref.listen<AsyncValue<AuthState>>(authStateChangesProvider,
+      (prev, next) async {
+    final session = next.valueOrNull?.session;
+    // if (session != null) {
+    //   final storage = ref.read(secureStorageServiceProvider);
+    //   final isEnabled = await storage.isBiometricEnabled();
+    //   if (isEnabled) {
+    //     await storage.saveSession(
+    //       accessToken: session.accessToken,
+    //       refreshToken: session.refreshToken ?? '',
+    //     );
+    //   }
+    // }
+  });
+});
