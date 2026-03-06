@@ -17,7 +17,7 @@ class PatientProfile {
 
   final String? gender;
 
-  @JsonKey(name: 'phone') // ✅ FIXED
+  @JsonKey(name: 'phone')
   final String? phoneNumber;
 
   final String? address;
@@ -49,6 +49,65 @@ class PatientProfile {
   @JsonKey(name: 'last_biometric_login')
   final DateTime? lastBiometricLogin;
 
+  // ── Hobbies & Interests ───────────────────────────────────
+  final List<String>? hobbies;
+
+  @JsonKey(name: 'favourite_pastime')
+  final String? favouritePastime;
+
+  @JsonKey(name: 'indoor_outdoor_pref')
+  final String? indoorOutdoorPref;
+
+  // ── Favourite Things ──────────────────────────────────────
+  @JsonKey(name: 'favourite_food')
+  final String? favouriteFood;
+
+  @JsonKey(name: 'favourite_drink')
+  final String? favouriteDrink;
+
+  @JsonKey(name: 'favourite_music')
+  final String? favouriteMusic;
+
+  @JsonKey(name: 'favourite_show')
+  final String? favouriteShow;
+
+  @JsonKey(name: 'favourite_place')
+  final String? favouritePlace;
+
+  // ── Daily Routine ─────────────────────────────────────────
+  @JsonKey(name: 'wake_up_time')
+  final String? wakeUpTime;
+
+  @JsonKey(name: 'bed_time')
+  final String? bedTime;
+
+  @JsonKey(name: 'meal_preferences')
+  final String? mealPreferences;
+
+  @JsonKey(name: 'exercise_routine')
+  final String? exerciseRoutine;
+
+  @JsonKey(name: 'religious_practices')
+  final String? religiousPractices;
+
+  @JsonKey(name: 'nap_time')
+  final String? napTime;
+
+  // ── Language & Communication ──────────────────────────────
+  @JsonKey(name: 'preferred_language')
+  final String? preferredLanguage;
+
+  @JsonKey(name: 'communication_style')
+  final String? communicationStyle;
+
+  final String? triggers;
+
+  @JsonKey(name: 'calming_strategies')
+  final String? calmingStrategies;
+
+  @JsonKey(name: 'important_people')
+  final String? importantPeople;
+
   PatientProfile({
     required this.id,
     this.userId,
@@ -66,6 +125,26 @@ class PatientProfile {
     this.biometricEnabled,
     this.trustedDeviceId,
     this.lastBiometricLogin,
+    // new
+    this.hobbies,
+    this.favouritePastime,
+    this.indoorOutdoorPref,
+    this.favouriteFood,
+    this.favouriteDrink,
+    this.favouriteMusic,
+    this.favouriteShow,
+    this.favouritePlace,
+    this.wakeUpTime,
+    this.bedTime,
+    this.mealPreferences,
+    this.exerciseRoutine,
+    this.religiousPractices,
+    this.napTime,
+    this.preferredLanguage,
+    this.communicationStyle,
+    this.triggers,
+    this.calmingStrategies,
+    this.importantPeople,
   });
 
   factory PatientProfile.fromJson(Map<String, dynamic> json) =>
@@ -86,9 +165,29 @@ class PatientProfile {
     String? medicalNotes,
     String? profileImageUrl,
     DateTime? createdAt,
+    DateTime? updatedAt,
     bool? biometricEnabled,
     String? trustedDeviceId,
     DateTime? lastBiometricLogin,
+    List<String>? hobbies,
+    String? favouritePastime,
+    String? indoorOutdoorPref,
+    String? favouriteFood,
+    String? favouriteDrink,
+    String? favouriteMusic,
+    String? favouriteShow,
+    String? favouritePlace,
+    String? wakeUpTime,
+    String? bedTime,
+    String? mealPreferences,
+    String? exerciseRoutine,
+    String? religiousPractices,
+    String? napTime,
+    String? preferredLanguage,
+    String? communicationStyle,
+    String? triggers,
+    String? calmingStrategies,
+    String? importantPeople,
   }) {
     return PatientProfile(
       id: id ?? this.id,
@@ -104,9 +203,29 @@ class PatientProfile {
       medicalNotes: medicalNotes ?? this.medicalNotes,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       trustedDeviceId: trustedDeviceId ?? this.trustedDeviceId,
       lastBiometricLogin: lastBiometricLogin ?? this.lastBiometricLogin,
+      hobbies: hobbies ?? this.hobbies,
+      favouritePastime: favouritePastime ?? this.favouritePastime,
+      indoorOutdoorPref: indoorOutdoorPref ?? this.indoorOutdoorPref,
+      favouriteFood: favouriteFood ?? this.favouriteFood,
+      favouriteDrink: favouriteDrink ?? this.favouriteDrink,
+      favouriteMusic: favouriteMusic ?? this.favouriteMusic,
+      favouriteShow: favouriteShow ?? this.favouriteShow,
+      favouritePlace: favouritePlace ?? this.favouritePlace,
+      wakeUpTime: wakeUpTime ?? this.wakeUpTime,
+      bedTime: bedTime ?? this.bedTime,
+      mealPreferences: mealPreferences ?? this.mealPreferences,
+      exerciseRoutine: exerciseRoutine ?? this.exerciseRoutine,
+      religiousPractices: religiousPractices ?? this.religiousPractices,
+      napTime: napTime ?? this.napTime,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
+      communicationStyle: communicationStyle ?? this.communicationStyle,
+      triggers: triggers ?? this.triggers,
+      calmingStrategies: calmingStrategies ?? this.calmingStrategies,
+      importantPeople: importantPeople ?? this.importantPeople,
     );
   }
 }

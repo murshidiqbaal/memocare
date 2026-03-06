@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
 import 'core/theme/memocare_theme.dart';
-import 'providers/auth_provider.dart';
+import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
 import 'providers/service_providers.dart';
 import 'routes/app_router.dart';
 import 'services/fcm_service.dart';
@@ -13,35 +16,32 @@ import 'services/fcm_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
   await dotenv.load(fileName: '.env');
 
-  // Initialize Firebase (Safely)
+  // Firebase
   try {
     await Firebase.initializeApp();
   } catch (e) {
     print('Firebase initialization failed: $e');
   }
 
-  // Initialize Supabase
+  // Supabase
   await SupabaseConfig.initialize();
+
+  // ✅ Wait for Supabase to restore session from storage BEFORE
+  // building the app. This is the root cause — without this await,
+  // GoRouter evaluates redirect while session is still null.
+  await _waitForInitialSession();
 
   final container = ProviderContainer();
 
-  // Initialize Notification Service early (local alarms + channels)
   await container.read(reminderNotificationServiceProvider).init();
 
-  // ── Session persistence ──
-  // Start the background listener for session token storage updates
   container.read(sessionPersistenceProvider);
-  // Keep auth state warm
   container.read(authStateChangesProvider);
 
-  // Register the global navigator key with FCMService so notification
-  // taps can navigate to the correct screen from any app state.
   FCMService.setNavigatorKey(rootNavigatorKey);
 
-  // Initialize FCM Service (Safely)
   try {
     final fcmService = container.read(fcmServiceProvider);
     await fcmService.initialize();
@@ -50,6 +50,35 @@ void main() async {
   }
 
   runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
+}
+
+// ✅ Waits for the FIRST auth event from Supabase stream.
+// This guarantees session is either restored or confirmed null
+// before the app renders — so GoRouter redirect has correct state.
+Future<void> _waitForInitialSession() async {
+  final completer = Completer<void>();
+
+  final sub = Supabase.instance.client.auth.onAuthStateChange.listen(
+    (event) {
+      print('🔍 INITIAL AUTH EVENT: ${event.event}');
+      print('🔍 INITIAL SESSION: ${event.session?.user.id ?? 'null'}');
+
+      if (!completer.isCompleted) completer.complete();
+    },
+    onError: (_) {
+      if (!completer.isCompleted) completer.complete();
+    },
+  );
+
+  // Safety timeout — if stream never emits, continue after 3s
+  await completer.future.timeout(
+    const Duration(seconds: 3),
+    onTimeout: () {
+      print('⚠️ Session restore timeout — continuing without session');
+    },
+  );
+
+  await sub.cancel();
 }
 
 class MyApp extends ConsumerWidget {

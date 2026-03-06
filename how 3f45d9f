@@ -1,0 +1,12 @@
+[33m16b1749[m[33m ([m[1;36mHEAD[m[33m, [m[1;32mmain[m[33m)[m biometrics ui setup
+[33m91398ce[m try to setup finger print
+[33m6c1e0ee[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m migrate to flutter maps
+[33md6c7be5[m resolving patient profile
+[33m54e7d06[m take output 6.0
+[33m7ebd4a7[m overall theme changed
+[33m5031e79[m game,reminder,memories sync with supabase
+[33mf634fba[m proper connection and patient selection established
+[33m8a18f6d[m phase 1 completed
+[33m43f6a06[m connection established btw caregiver and patient
+[33md77d6f2[m ui messed up
+[33m90c9662[m inital commit

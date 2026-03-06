@@ -1,10 +1,10 @@
-import 'package:dementia_care_app/features/auth/providers/biometric_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/auth_provider.dart';
+import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
+import 'package:dementia_care_app/features/auth/providers/biometric_providers.dart';
 
 /// Login screen with biometric-enable flow.
 ///
@@ -153,14 +153,14 @@ class _FingerprintHint extends StatelessWidget {
           height: 68,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             border: Border.all(
-              color: Colors.white.withOpacity(0.4),
+              color: Colors.white.withValues(alpha: 0.4),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.teal.withOpacity(0.25),
+                color: Colors.teal.withValues(alpha: 0.25),
                 blurRadius: 18,
                 spreadRadius: 2,
               ),
@@ -169,7 +169,7 @@ class _FingerprintHint extends StatelessWidget {
           child: Icon(
             Icons.fingerprint,
             size: 40,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -177,7 +177,7 @@ class _FingerprintHint extends StatelessWidget {
           'Use fingerprint login',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.65),
+            color: Colors.white.withValues(alpha: 0.65),
             letterSpacing: 0.3,
           ),
         ),

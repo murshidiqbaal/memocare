@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/screens/auth/biometric_login_screen.dart';
-import 'package:dementia_care_app/screens/auth/flutter_login_screen.dart';
+import 'package:dementia_care_app/features/auth/presentation/screens/flutter_login_screen.dart';
+import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
 import 'package:dementia_care_app/screens/patient/games/games_screen.dart';
 import 'package:dementia_care_app/screens/patient/games/mini_games/memory_match_game_screen.dart';
 import 'package:dementia_care_app/screens/patient/games/mini_games/reaction_tap_game_screen.dart';
@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/auth_provider.dart';
+import '../features/auth/presentation/screens/biometric_login_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/role_selection_screen.dart';
@@ -50,13 +50,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
-        path: '/biometric-login',
-        builder: (context, state) => const BiometricLoginScreen(),
-      ),
-
-      GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+
+      // ================= BIOMETRIC =================
+      GoRoute(
+        path: '/biometric-login',
+        builder: (context, state) => const BiometricLoginScreen(),
       ),
 
       // ================= PATIENT =================
@@ -136,18 +137,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final path = state.uri.toString();
 
       final isSplash = path == '/';
+      final isBiometricRoute = path == '/biometric-login';
       final isAuthRoute = path == '/login' ||
           path == '/register' ||
           path == '/role-selection' ||
-          path == '/biometric-login';
+          isBiometricRoute;
 
       // 🔴 NOT AUTHENTICATED
       if (!isAuthenticated) {
-        // Check if patient has biometric enabled on this device
-        // We only navigate to biometric login from splash, not from auth routes
-        if (isSplash) return null; // SplashScreen handles biometric check
-        if (isAuthRoute) return null;
-        return '/login';
+        if (isAuthRoute) return null; // already on an auth page
+        return '/login'; // splash and all other routes → go to login
       }
 
       // 🟢 AUTHENTICATED
@@ -156,8 +155,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // wait until profile loads
       if (profileAsync.isLoading) return null;
 
-      // 🚫 prevent auth pages after login
-      if (isAuthRoute) {
+      // 🚫 prevent auth pages after login + redirect away from splash
+      if (isAuthRoute || isSplash) {
         if (profile?.role == 'caregiver') return '/caregiver-dashboard';
         if (profile?.role == 'admin') return '/admin-panel';
         return '/patient-home';
