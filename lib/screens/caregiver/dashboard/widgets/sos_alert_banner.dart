@@ -17,7 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../data/models/sos_alert.dart';
+import '../../../../features/safety/data/models/sos_alert.dart';
 import '../../../../providers/sos_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,8 +118,8 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
   }
 
   Future<void> _openMap() async {
-    final lat = widget.alert.locationLat;
-    final lng = widget.alert.locationLng;
+    final lat = widget.alert.latitude;
+    final lng = widget.alert.longitude;
     if (lat == null || lng == null) return;
     final uri =
         Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
@@ -135,7 +135,7 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
     if (_dismissed) return const SizedBox.shrink();
 
     final alert = widget.alert;
-    final elapsed = DateTime.now().difference(alert.triggeredAt);
+    final elapsed = DateTime.now().difference(alert.createdAt);
     final elapsedStr =
         elapsed.inMinutes < 1 ? 'Just now' : '${elapsed.inMinutes} min ago';
 
@@ -147,7 +147,7 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.red.withValues(alpha: 0.35),
+              color: Colors.red.withOpacity(0.35),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -206,7 +206,7 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
                     'A patient needs immediate help!',
                     style: TextStyle(color: Colors.white, fontSize: 15),
                   ),
-                  if (alert.locationLat != null && alert.locationLng != null)
+                  if (alert.latitude != null && alert.longitude != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: InkWell(
@@ -217,8 +217,8 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
                                 color: Colors.white70, size: 16),
                             const SizedBox(width: 4),
                             Text(
-                              '${alert.locationLat!.toStringAsFixed(4)}, '
-                              '${alert.locationLng!.toStringAsFixed(4)}  (tap to open map)',
+                              '${alert.latitude!.toStringAsFixed(4)}, '
+                              '${alert.longitude!.toStringAsFixed(4)}  (tap to open map)',
                               style: const TextStyle(
                                   color: Colors.white70, fontSize: 12),
                             ),
@@ -263,7 +263,7 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
                   ),
                   const SizedBox(width: 10),
                   // Open map (if location available)
-                  if (alert.locationLat != null)
+                  if (alert.latitude != null)
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _openMap,

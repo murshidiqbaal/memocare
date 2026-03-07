@@ -159,7 +159,7 @@ class _VoiceInteractionItem extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  interaction.queryText,
+                  interaction.query,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -180,7 +180,7 @@ class _VoiceInteractionItem extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  interaction.responseText,
+                  interaction.response ?? 'No response yet',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade700,

@@ -35,14 +35,13 @@ class CaregiverProfileNotifier extends StateNotifier<AsyncValue<Caregiver?>> {
 
   Future<void> upsertProfile(Caregiver caregiver) async {
     try {
-      // Optimistic upate if profile already exists
-      if (state.hasValue && state.value != null) {
-        state = AsyncValue.data(
-            caregiver.copyWith(fullName: state.value!.fullName));
+      final current = state.valueOrNull;
+      if (current != null) {
+        state = AsyncValue.data(caregiver.copyWith(fullName: current.fullName));
       }
 
       await _repository.upsertCaregiverProfile(caregiver);
-      await loadProfile(); // Refresh from server to get joined full_name etc.
+      await loadProfile(); // Refresh from server
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

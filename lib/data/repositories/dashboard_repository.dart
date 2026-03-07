@@ -51,6 +51,7 @@ class DashboardRepository {
 
           // I must match the NEW model constructor.
           linkedAt: DateTime.parse(item['linked_at']),
+          createdAt: DateTime.now(),
         );
 
         links.add(link);

@@ -1,18 +1,17 @@
 import 'dart:io';
 
+import 'package:dementia_care_app/models/user/patient_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/patient_profile.dart';
 
 class PatientProfileRepository {
   final SupabaseClient _supabase;
 
-  // Optional in-memory cache
   PatientProfile? _cachedProfile;
 
   PatientProfileRepository(this._supabase);
 
-  /// Get profile directly from Supabase
+  // ── READ ──────────────────────────────────────────────────────────────────
+
   Future<PatientProfile?> getProfile(String userId,
       {bool forceRefresh = false}) async {
     if (!forceRefresh &&
@@ -22,128 +21,133 @@ class PatientProfileRepository {
     }
 
     try {
-      // A. Get base profile (full_name, phone_number)
+      // Base auth profile
       final profileResponse = await _supabase
           .from('profiles')
           .select('full_name, phone_number, avatar_url, profile_photo_url')
           .eq('id', userId)
           .maybeSingle();
 
-      if (profileResponse == null) {
-        return null; // User doesn't exist
-      }
+      if (profileResponse == null) return null;
 
-      // B. Get patient-specific data
+      // Patient-specific data (all columns)
       final patientResponse = await _supabase
           .from('patients')
           .select('*')
           .eq('id', userId)
           .maybeSingle();
 
-      // Prioritize patient table URL, then profiles table URL, then fallback to bucket
-      String? photoUrl = patientResponse?['profile_photo_url'];
-
-      // 3. Merge the data
-      final Map<String, dynamic> mergedData = {
+      // Merge: patient table wins over profiles table
+      final Map<String, dynamic> merged = {
         'id': userId,
-        'full_name': profileResponse['full_name'] ?? 'Patient',
-        'phone_number': profileResponse['phone_number'],
+        'full_name': patientResponse?['full_name'] ??
+            profileResponse['full_name'] ??
+            'Patient',
+        'phone_number':
+            patientResponse?['phone'] ?? profileResponse['phone_number'],
+        'profile_photo_url': patientResponse?['profile_photo_url'] ??
+            profileResponse['profile_photo_url'] ??
+            profileResponse['avatar_url'],
       };
 
-      // Helper to try keys in order
-      String? findPhotoUrl(Map<String, dynamic>? data) {
-        if (data == null) return null;
-        return data['profile_photo_url'] ?? data['avatar_url'];
-      }
-
-      // Resolve final photo URL
-      String? resolvedPhotoUrl = patientResponse?['profile_photo_url'] ??
-          findPhotoUrl(profileResponse);
-
-      // Add patient-specific fields if they exist
       if (patientResponse != null) {
-        mergedData.addAll(patientResponse);
-        // Ensure id is preserved
-        mergedData['id'] = userId;
+        merged.addAll(patientResponse);
+        merged['id'] = userId; // never overwrite
       }
 
-      // Override with resolved URL
-      mergedData['profile_photo_url'] = resolvedPhotoUrl;
-
-      final remoteProfile = PatientProfile.fromJson(mergedData);
-
-      // Cache merely in-memory
-      _cachedProfile = remoteProfile;
-      return remoteProfile;
+      final profile = PatientProfile.fromJson(merged);
+      _cachedProfile = profile;
+      return profile;
     } catch (e) {
-      print('Profile fetch error: $e');
-      if (!forceRefresh &&
-          _cachedProfile != null &&
-          _cachedProfile!.id == userId) {
-        return _cachedProfile;
-      }
+      print('PatientProfileRepository.getProfile error: $e');
+      if (_cachedProfile?.id == userId) return _cachedProfile;
       return null;
     }
   }
 
-  /// Update profile with sync logic
+  // ── WRITE ─────────────────────────────────────────────────────────────────
+
   Future<void> updateProfile(PatientProfile profile) async {
     try {
       final now = DateTime.now().toIso8601String();
 
-      // 1. Upsert 'patients' table — all patient-owned fields including
-      //    full_name, phone, and created_at so a new patient row is fully
-      //    populated without requiring a second round-trip.
+      // ── patients table ────────────────────────────────────────────────────
       final patientData = <String, dynamic>{
         'id': profile.id,
+
+        // Personal
         'full_name': profile.fullName,
         'phone': profile.phoneNumber,
         'date_of_birth': profile.dateOfBirth?.toIso8601String(),
         'gender': profile.gender,
         'address': profile.address,
-        'medical_notes': profile.medicalNotes,
+        'profile_photo_url': profile.profileImageUrl,
+
+        // Emergency & Medical
         'emergency_contact_name': profile.emergencyContactName,
         'emergency_contact_phone': profile.emergencyContactPhone,
-        'profile_photo_url': profile.profileImageUrl,
-        // Set created_at only when this is a brand-new record; upsert will
-        // ignore it if the row already exists (depends on DB default / trigger).
+        'medical_notes': profile.medicalNotes,
+
+        // Hobbies & Interests
+        'hobbies': profile.hobbies, // stored as jsonb / text[]
+        'favourite_pastime': profile.favouritePastime,
+        'indoor_outdoor_pref': profile.indoorOutdoorPref,
+
+        // Favourite Things
+        'favourite_food': profile.favouriteFood,
+        'favourite_drink': profile.favouriteDrink,
+        'favourite_music': profile.favouriteMusic,
+        'favourite_show': profile.favouriteShow,
+        'favourite_place': profile.favouritePlace,
+
+        // Daily Routine
+        'wake_up_time': profile.wakeUpTime,
+        'bed_time': profile.bedTime,
+        'nap_time': profile.napTime,
+        'meal_preferences': profile.mealPreferences,
+        'exercise_routine': profile.exerciseRoutine,
+        'religious_practices': profile.religiousPractices,
+
+        // Language & Communication
+        'preferred_language': profile.preferredLanguage,
+        'communication_style': profile.communicationStyle,
+        'triggers': profile.triggers,
+        'calming_strategies': profile.calmingStrategies,
+        'important_people': profile.importantPeople,
+
+        // Meta
         'created_at': profile.createdAt?.toIso8601String() ?? now,
         'updated_at': now,
       };
 
-      // Remove null values to avoid overwriting existing data with nulls
-      patientData.removeWhere((key, value) => value == null);
+      // Remove nulls so we don't accidentally wipe existing columns
+      patientData.removeWhere((_, v) => v == null);
 
-      // Upsert on patients table (insert or update on conflict of 'id')
-      final patientFuture = _supabase.from('patients').upsert(patientData);
-
-      // 2. Also update 'profiles' (base auth table) for full_name / phone
+      // ── profiles table (base auth row) ────────────────────────────────────
       final profileData = <String, dynamic>{
         'id': profile.id,
         'full_name': profile.fullName,
         'phone_number': profile.phoneNumber,
       };
-      profileData.removeWhere((key, value) => value == null);
-
-      final profileFuture =
-          _supabase.from('profiles').update(profileData).eq('id', profile.id);
+      profileData.removeWhere((_, v) => v == null);
 
       // Run both in parallel
-      await Future.wait([patientFuture, profileFuture]);
+      await Future.wait([
+        _supabase.from('patients').upsert(patientData),
+        _supabase.from('profiles').update(profileData).eq('id', profile.id),
+      ]);
 
-      // 3. Update in-memory cache
       _cachedProfile = profile;
     } catch (e) {
-      print('Profile update error: $e');
-      rethrow; // Re-throw to let UI handle error
+      print('PatientProfileRepository.updateProfile error: $e');
+      rethrow;
     }
   }
 
-  /// Upload profile image
-  Future<String?> uploadProfileImage(String userId, File file) async {
-    final fileName = 'profile.jpg';
-    final path = 'patients/$userId/$fileName';
+  // ── IMAGE ─────────────────────────────────────────────────────────────────
 
+  Future<String?> uploadProfileImage(String userId, File file) async {
+    final path = 'patients/$userId/profile.jpg';
     try {
       await _supabase.storage.from('profile-photos').upload(
             path,
@@ -151,14 +155,14 @@ class PatientProfileRepository {
             fileOptions: const FileOptions(upsert: true),
           );
 
-      final imageUrl =
-          _supabase.storage.from('profile-photos').getPublicUrl(path);
-
-      // Cache bust
-      return '$imageUrl?t=${DateTime.now().millisecondsSinceEpoch}';
+      final url = _supabase.storage.from('profile-photos').getPublicUrl(path);
+      // Cache-bust so the UI picks up the new image immediately
+      return '$url?t=${DateTime.now().millisecondsSinceEpoch}';
     } catch (e) {
-      print('Image upload error: $e');
+      print('PatientProfileRepository.uploadProfileImage error: $e');
       return null;
     }
   }
+
+  void clearCache() => _cachedProfile = null;
 }

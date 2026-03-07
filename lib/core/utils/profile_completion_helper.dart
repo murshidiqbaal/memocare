@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/data/models/patient_profile.dart';
+import 'package:dementia_care_app/models/user/patient_profile.dart';
 
 /// Healthcare-grade weighted profile completion
 /// Designed for dementia safety prioritization

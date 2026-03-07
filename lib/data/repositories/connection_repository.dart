@@ -1,6 +1,5 @@
+import 'package:dementia_care_app/features/linking/data/models/caregiver_patient_link.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../models/caregiver_patient_link.dart';
 
 class ConnectionRepository {
   final SupabaseClient _supabase;

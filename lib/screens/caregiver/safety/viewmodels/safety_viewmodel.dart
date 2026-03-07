@@ -35,7 +35,7 @@ class MockSafetyService {
         label: 'Home',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        centerLatitude: 37.422,
-        centerLongitude: -122.084);
+        latitude: 37.422,
+        longitude: -122.084);
   }
 }

@@ -1,44 +1,22 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'emergency_alert.g.dart';
-
 /// Emergency alert status enum
 enum EmergencyAlertStatus {
-  @JsonValue('sent')
   sent,
-  @JsonValue('cancelled')
   cancelled,
-  @JsonValue('resolved')
   resolved,
 }
 
 /// Emergency Alert Model
 /// Represents an SOS emergency alert sent by a patient
-@JsonSerializable(explicitToJson: true)
 class EmergencyAlert {
   final String id;
-
-  @JsonKey(name: 'patient_id')
   final String patientId;
-
-  @JsonKey(name: 'caregiver_id')
   final String? caregiverId;
-
   final EmergencyAlertStatus status;
-
-  @JsonKey(name: 'created_at')
   final DateTime createdAt;
-
-  @JsonKey(name: 'resolved_at')
   final DateTime? resolvedAt;
-
   final double? latitude;
   final double? longitude;
-
-  @JsonKey(name: 'patient_name')
   final String? patientName;
-
-  @JsonKey(name: 'patient_phone')
   final String? patientPhone;
 
   EmergencyAlert({
@@ -54,10 +32,61 @@ class EmergencyAlert {
     this.patientPhone,
   });
 
-  factory EmergencyAlert.fromJson(Map<String, dynamic> json) =>
-      _$EmergencyAlertFromJson(json);
+  factory EmergencyAlert.fromJson(Map<String, dynamic> json) {
+    return EmergencyAlert(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      caregiverId: json['caregiver_id'] as String?,
+      status: _statusFromString(json['status'] as String? ?? 'sent'),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      resolvedAt: json['resolved_at'] != null
+          ? DateTime.tryParse(json['resolved_at'] as String)
+          : null,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      patientName: json['patient_name'] as String?,
+      patientPhone: json['patient_phone'] as String?,
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$EmergencyAlertToJson(this);
+  static EmergencyAlertStatus _statusFromString(String s) {
+    switch (s) {
+      case 'cancelled':
+        return EmergencyAlertStatus.cancelled;
+      case 'resolved':
+        return EmergencyAlertStatus.resolved;
+      default:
+        return EmergencyAlertStatus.sent;
+    }
+  }
+
+  static String _statusToString(EmergencyAlertStatus s) {
+    switch (s) {
+      case EmergencyAlertStatus.cancelled:
+        return 'cancelled';
+      case EmergencyAlertStatus.resolved:
+        return 'resolved';
+      case EmergencyAlertStatus.sent:
+        return 'sent';
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'caregiver_id': caregiverId,
+      'status': _statusToString(status),
+      'created_at': createdAt.toIso8601String(),
+      'resolved_at': resolvedAt?.toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'patient_name': patientName,
+      'patient_phone': patientPhone,
+    };
+  }
 
   EmergencyAlert copyWith({
     String? id,

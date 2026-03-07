@@ -15,9 +15,6 @@ class CaregiverRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) return null;
 
-      // Cannot join auth.users directly.
-      // Removed 'profiles:user_id(full_name)' as it causes PGRST200
-      // Update table name to 'caregiver_profiles'
       final data = await _supabase
           .from('caregiver_profiles')
           .select()
@@ -26,17 +23,52 @@ class CaregiverRepository {
 
       if (data == null) return null;
 
-      // Optionally fetch name from user metadata if needed
       final fullName = user.userMetadata?['full_name'] as String?;
 
       final Map<String, dynamic> mergedData = {
         ...data,
-        'fullName': fullName, // Inject manual name fetch
+        'fullName': fullName,
       };
 
       return Caregiver.fromJson(mergedData);
     } catch (e) {
       throw Exception('Failed to fetch caregiver profile: $e');
+    }
+  }
+
+  /// Ensures a caregiver profile row exists for the current user.
+  /// This is crucial for avoiding FK errors when linking patients.
+  Future<String> ensureProfileExists() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    try {
+      // 1. Check for existing profile by user_id
+      final existing = await _supabase
+          .from('caregiver_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (existing != null) {
+        return existing['id'] as String;
+      }
+
+      // 2. Automatically create a profile row if missing
+      final fullName =
+          user.userMetadata?['full_name'] as String? ?? 'Caregiver';
+      final response = await _supabase
+          .from('caregiver_profiles')
+          .insert({
+            'user_id': user.id,
+            'full_name': fullName,
+          })
+          .select('id')
+          .single();
+
+      return response['id'] as String;
+    } catch (e) {
+      throw Exception('Failed to ensure caregiver profile: $e');
     }
   }
 
@@ -46,7 +78,11 @@ class CaregiverRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
+      // 1. Get existing id or create one
+      final profileId = await ensureProfileExists();
+
       final data = {
+        'id': profileId,
         'user_id': user.id,
         'phone': caregiver.phone,
         'relationship': caregiver.relationship,
@@ -54,10 +90,9 @@ class CaregiverRepository {
         'profile_photo_url': caregiver.profilePhotoUrl,
       };
 
-      // Perform upsert on caregiver_profiles table based on user_id
       await _supabase.from('caregiver_profiles').upsert(
             data,
-            onConflict: 'user_id',
+            onConflict: 'id',
           );
     } catch (e) {
       throw Exception('Failed to save profile: $e');

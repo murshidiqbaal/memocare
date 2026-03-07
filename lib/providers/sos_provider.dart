@@ -17,8 +17,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/models/sos_alert.dart';
-import '../data/repositories/sos_repository.dart';
+import '../features/safety/data/models/sos_alert.dart';
+import '../features/safety/data/repositories/sos_repository.dart';
 import '../services/call_service.dart';
 import 'connection_providers.dart';
 

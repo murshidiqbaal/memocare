@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../models/user/profile.dart';
@@ -18,63 +21,15 @@ class RemoteAuthDatasource {
     required String role,
     required String fullName,
   }) async {
-    // 1. Sign up user
+    // Sign up user with email and password. Profile creation is handled in AuthRepository.
     final response = await _supabase.auth.signUp(
       email: email,
       password: password,
       data: {
-        'full_name': fullName,
+        'fullName': fullName,
         'role': role,
       },
     );
-
-    // Note: Profiles table population often handled by Supabase Postgres Triggers,
-    // but we can also insert manually if no trigger exists.
-    // The user's schema didn't specify a trigger, just the table creation.
-    // So we should probably insert into 'profiles' manually here if the trigger isn't set up.
-    // However, usually it's best to use a trigger.
-    // For this implementation, I will assume a trigger OR manual insertion.
-    // Let's do manual insertion to be safe since I can't create triggers from here easily
-    // (though I could advise it). Or just allow the client to insert.
-
-    if (response.user != null) {
-      final now = DateTime.now().toIso8601String();
-      final userId = response.user!.id;
-
-      try {
-        // Attempt manual profile insertion
-        await _supabase.from('profiles').insert({
-          'id': userId,
-          'email': email,
-          'role': role,
-          'full_name': fullName,
-          'created_at': now,
-        });
-      } catch (e) {
-        // If manual insertion fails, it might be because:
-        // 1. A Postgres trigger already created the profile (duplicate key error).
-        // 2. Network issue.
-        // 3. Permission issue.
-        throw Exception('Failed to create user profile: $e');
-      }
-
-      // For patients, also seed a row in the `patients` table so downstream
-      // queries (e.g. PatientProfileRepository, linkedPatientsProvider) have a
-      // record to hydrate immediately after sign-up.
-      if (role == 'patient') {
-        try {
-          await _supabase.from('patients').insert({
-            'id': userId,
-            'created_at': now,
-          });
-        } catch (e) {
-          // A trigger or prior upsert may have already created the row.
-          // Log but don't abort — the auth + profiles row is the critical path.
-          // ignore: avoid_print
-          print('[Auth] patients row insert skipped (may already exist): $e');
-        }
-      }
-    }
 
     return response;
   }
@@ -94,12 +49,73 @@ class RemoteAuthDatasource {
   }
 
   Future<Profile?> getProfile(String userId) async {
+    debugPrint('[Auth] fetching profile for userId=$userId');
+
     try {
-      final data =
-          await _supabase.from('profiles').select().eq('id', userId).single();
-      return Profile.fromJson(data);
+      final data = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (data != null) {
+        debugPrint('[Auth] profile found in profiles table: $data');
+        return Profile.fromJson(data);
+      }
     } catch (e) {
-      return null;
+      debugPrint(
+          '[Auth] error fetching from profiles table (may not exist): $e');
     }
+
+    // Fallback: Check user metadata (vital for immediate signup redirection)
+    final user = _supabase.auth.currentUser;
+    if (user != null && user.id == userId) {
+      final role = user.userMetadata?['role'] ?? user.appMetadata['role'];
+      final fullName =
+          user.userMetadata?['fullName'] ?? user.userMetadata?['full_name'];
+
+      if (role != null) {
+        debugPrint('[Auth] falling back to metadata for role: $role');
+        return Profile(
+          id: userId,
+          email: user.email ?? '',
+          role: role.toString(),
+          fullName: fullName?.toString() ?? 'User',
+          createdAt: DateTime.tryParse(user.createdAt) ?? DateTime.now(),
+        );
+      }
+    }
+
+    debugPrint('[Auth] no profile found in table or metadata');
+    return null;
+  }
+
+  Future<void> createProfile({
+    required String userId,
+    required String fullName,
+    required String role,
+    required String email,
+  }) async {
+    debugPrint(
+        '[Auth] creating/updating profile in profiles for userId=$userId with role=$role');
+    await _supabase.from('profiles').upsert({
+      'id': userId,
+      'full_name': fullName,
+      'role': role,
+      'email': email,
+    });
+  }
+
+  Future<void> createProfileLegacy({
+    required String userId,
+    required String fullName,
+    required String table,
+  }) async {
+    debugPrint(
+        '[Auth] creating/updating legacy extension in $table for userId=$userId');
+    await _supabase.from(table).upsert({
+      'id': userId,
+      'full_name': fullName,
+    });
   }
 }

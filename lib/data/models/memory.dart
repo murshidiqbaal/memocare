@@ -1,34 +1,13 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'memory.g.dart';
-
-@JsonSerializable(explicitToJson: true)
 class Memory {
   final String id;
-
-  @JsonKey(name: 'patient_id')
   final String patientId;
-
   final String title;
-
   final String? description;
-
-  @JsonKey(name: 'image_url')
-  final String? imageUrl;
-
-  @JsonKey(name: 'voice_audio_url')
-  final String? voiceAudioUrl;
-
-  @JsonKey(name: 'event_date')
   final DateTime? eventDate;
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  final String? imageUrl;
+  final String? voiceAudioUrl;
   final String? localPhotoPath;
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localAudioPath;
-
-  @JsonKey(name: 'created_at')
   final DateTime createdAt;
 
   Memory({
@@ -36,26 +15,52 @@ class Memory {
     required this.patientId,
     required this.title,
     this.description,
+    this.eventDate,
     this.imageUrl,
     this.voiceAudioUrl,
-    this.eventDate,
     this.localPhotoPath,
     this.localAudioPath,
     required this.createdAt,
   });
 
-  factory Memory.fromJson(Map<String, dynamic> json) => _$MemoryFromJson(json);
+  factory Memory.fromJson(Map<String, dynamic> json) {
+    return Memory(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      eventDate: json['event_date'] != null
+          ? DateTime.tryParse(json['event_date'] as String)
+          : null,
+      imageUrl: json['image_url'] as String?,
+      voiceAudioUrl: json['voice_audio_url'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$MemoryToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'title': title,
+      'description': description,
+      'event_date': eventDate?.toIso8601String(),
+      'image_url': imageUrl,
+      'voice_audio_url': voiceAudioUrl,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 
   Memory copyWith({
     String? id,
     String? patientId,
     String? title,
     String? description,
+    DateTime? eventDate,
     String? imageUrl,
     String? voiceAudioUrl,
-    DateTime? eventDate,
     String? localPhotoPath,
     String? localAudioPath,
     DateTime? createdAt,
@@ -65,9 +70,9 @@ class Memory {
       patientId: patientId ?? this.patientId,
       title: title ?? this.title,
       description: description ?? this.description,
+      eventDate: eventDate ?? this.eventDate,
       imageUrl: imageUrl ?? this.imageUrl,
       voiceAudioUrl: voiceAudioUrl ?? this.voiceAudioUrl,
-      eventDate: eventDate ?? this.eventDate,
       localPhotoPath: localPhotoPath ?? this.localPhotoPath,
       localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,

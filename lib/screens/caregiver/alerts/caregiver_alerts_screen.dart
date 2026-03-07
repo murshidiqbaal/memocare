@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../data/models/emergency_alert.dart';
+import '../../../features/safety/data/models/sos_alert.dart';
 import '../../../providers/emergency_alert_provider.dart';
 
 /// Caregiver emergency alerts screen
@@ -111,7 +111,7 @@ class CaregiverAlertsScreen extends ConsumerWidget {
 
 /// Emergency alert card for caregiver view
 class _EmergencyAlertCard extends StatelessWidget {
-  final EmergencyAlert alert;
+  final SosAlert alert;
   final VoidCallback onResolve;
 
   const _EmergencyAlertCard({

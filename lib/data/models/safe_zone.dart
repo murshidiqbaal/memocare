@@ -1,45 +1,59 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'safe_zone.g.dart';
-
-@JsonSerializable(explicitToJson: true)
 class SafeZone {
   final String id;
-  @JsonKey(name: 'patient_id')
   final String patientId;
-  @JsonKey(name: 'centerLatitude')
-  final double centerLatitude;
-  @JsonKey(name: 'centerLongitude')
-  final double centerLongitude;
-  @JsonKey(name: 'radius_meters')
+  final double latitude;
+  final double longitude;
   final int radiusMeters;
   final String label;
-  @JsonKey(name: 'created_at')
   final DateTime createdAt;
-  @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
 
   SafeZone({
     required this.id,
     required this.patientId,
-    required this.centerLatitude,
-    required this.centerLongitude,
+    required this.latitude,
+    required this.longitude,
     required this.radiusMeters,
     required this.label,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  factory SafeZone.fromJson(Map<String, dynamic> json) =>
-      _$SafeZoneFromJson(json);
+  factory SafeZone.fromJson(Map<String, dynamic> json) {
+    return SafeZone(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      radiusMeters: (json['radius_meters'] as num).toInt(),
+      label: json['label'] as String? ?? 'Home',
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : DateTime.now(),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$SafeZoneToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius_meters': radiusMeters,
+      'label': label,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
 
   SafeZone copyWith({
     String? id,
     String? patientId,
-    double? centerLatitude,
-    double? centerLongitude,
+    double? latitude,
+    double? longitude,
     int? radiusMeters,
     String? label,
     DateTime? createdAt,
@@ -48,8 +62,8 @@ class SafeZone {
     return SafeZone(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
-      centerLatitude: centerLatitude ?? this.centerLatitude,
-      centerLongitude: centerLongitude ?? this.centerLongitude,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       radiusMeters: radiusMeters ?? this.radiusMeters,
       label: label ?? this.label,
       createdAt: createdAt ?? this.createdAt,

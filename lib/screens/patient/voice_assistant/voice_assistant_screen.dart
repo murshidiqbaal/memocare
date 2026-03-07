@@ -431,7 +431,7 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Q: ${query.queryText}',
+                              'Q: ${query.query}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -439,7 +439,7 @@ class _VoiceAssistantScreenState extends ConsumerState<VoiceAssistantScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'A: ${query.responseText}',
+                              'A: ${query.response ?? ''}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade700,

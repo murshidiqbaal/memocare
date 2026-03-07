@@ -1,44 +1,109 @@
+// caregiver_patient_connection.dart
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/patient.dart';
+import 'auth_provider.dart';
 import 'service_providers.dart';
 
-/// Stream of Connected Patients (Real-time)
-final connectedPatientsStreamProvider = StreamProvider<List<Patient>>((ref) {
+/// ---------------------------------------------------------------------------
+/// STREAM: Real-time connected patients for caregiver
+/// ---------------------------------------------------------------------------
+
+final connectedPatientsStreamProvider =
+    StreamProvider.autoDispose<List<Patient>>((ref) {
   final repo = ref.watch(patientConnectionRepositoryProvider);
   return repo.getConnectedPatientsStream();
 });
 
-/// Controller for Connection Actions (Connect/Remove)
+/// ---------------------------------------------------------------------------
+/// CONTROLLER: Handles connection actions
+/// ---------------------------------------------------------------------------
+
 final caregiverConnectionControllerProvider =
-    AsyncNotifierProvider<CaregiverConnectionController, void>(() {
-  return CaregiverConnectionController();
-});
+    AsyncNotifierProvider<CaregiverConnectionController, void>(
+        CaregiverConnectionController.new);
 
 class CaregiverConnectionController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {
-    // No initial state to build
+    // Nothing to initialize
+    return null;
   }
 
+  /// Connect caregiver using patient invite code
   Future<void> connectUsingInviteCode(String code) async {
-    state = const AsyncValue.loading();
+    state = const AsyncLoading();
+
     state = await AsyncValue.guard(() async {
       await ref
           .read(patientConnectionRepositoryProvider)
           .connectUsingInviteCode(code);
-      // Stream automatically updates, no need to refresh manually
     });
   }
 
+  /// Remove connection between caregiver and patient
   Future<void> removeConnection(String patientId) async {
-    state = const AsyncValue.loading();
+    state = const AsyncLoading();
+
     state = await AsyncValue.guard(() async {
       await ref
           .read(patientConnectionRepositoryProvider)
           .removeConnection(patientId);
     });
   }
+
+  /// Create a patient and link to caregiver
+  Future<void> createAndLinkPatient({
+    required String name,
+    int? age,
+    String? condition,
+  }) async {
+    state = const AsyncLoading();
+
+    state = await AsyncValue.guard(() async {
+      final user = ref.read(currentUserProvider);
+
+      if (user == null) {
+        throw Exception("User not logged in");
+      }
+
+      final repo = ref.read(patientRepositoryProvider);
+
+      /// Create patient
+      final patientId = await repo.createPatient(
+        name: name,
+        age: age,
+        condition: condition,
+      );
+
+      /// Link caregiver to patient
+      await repo.linkPatientToCaregiver(
+        patientId: patientId,
+        caregiverUserId: user.id,
+      );
+
+      /// Refresh caregiver patients list
+      ref.invalidate(caregiverPatientsProvider);
+    });
+  }
 }
+
+/// ---------------------------------------------------------------------------
+/// FUTURE: Fetch caregiver patients (one-time fetch)
+/// ---------------------------------------------------------------------------
+
+final caregiverPatientsProvider =
+    FutureProvider.autoDispose<List<Patient>>((ref) async {
+  final user = ref.watch(currentUserProvider);
+
+  if (user == null) {
+    return [];
+  }
+
+  final repo = ref.watch(patientRepositoryProvider);
+
+  return repo.getPatientsForCaregiver(user.id);
+});

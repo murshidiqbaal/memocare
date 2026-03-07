@@ -14,9 +14,9 @@ class Patient {
   });
 
   /// Parse from Supabase joined query
-  /// .from('caregiver_patient_links').select('patient_id, patient_profiles(*)')
+  /// .from('caregiver_patient_links').select('patient_id, patients(*)')
   factory Patient.fromSupabase(Map<String, dynamic> json) {
-    final dynamic profile = json['patient_profiles'] ?? json['profiles'];
+    final dynamic profile = json['patients'] ?? json['profiles'];
     Map<String, dynamic> profileData = {};
 
     if (profile is Map<String, dynamic>) {

@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../data/models/safe_zone.dart';
 import '../../data/repositories/safe_zone_repository.dart';
-import '../../providers/service_providers.dart';
+import '../../providers/supabase_provider.dart';
 
 final safeZoneRepositoryProvider = Provider<SafeZoneRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
@@ -47,19 +46,16 @@ class SafeZoneController extends StateNotifier<SafeZoneState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final now = DateTime.now();
-      final zone = SafeZone(
-        id: existingId ?? const Uuid().v4(),
+// Create the zone object purely for validation or local use if needed
+      // but repository now takes named parameters directly.
+
+      await _repository.upsertSafeZone(
         patientId: patientId,
+        latitude: latitude,
+        longitude: longitude,
         radiusMeters: radiusMeters,
         label: label,
-        createdAt: now,
-        updatedAt: now,
-        centerLatitude: latitude,
-        centerLongitude: longitude,
       );
-
-      await _repository.upsertSafeZone(zone);
 
       // Invalidate the cache so listeners naturally refetch the new zone
       _ref.invalidate(patientSafeZoneProvider(patientId));

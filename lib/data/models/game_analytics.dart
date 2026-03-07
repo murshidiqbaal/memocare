@@ -1,81 +1,72 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'game_analytics.g.dart';
-
-@JsonSerializable(explicitToJson: true)
-class GameSession {
-  final String? id;
-  @JsonKey(name: 'patient_id')
+class GameAnalytics {
+  final String id;
   final String patientId;
-  @JsonKey(name: 'game_type')
   final String gameType;
-  final int score;
-  @JsonKey(name: 'duration_seconds')
-  final int durationSeconds;
-  final double? accuracy;
-  @JsonKey(name: 'played_at')
-  final DateTime playedAt;
+  final int sessionCount;
+  final double avgScore;
+  final int bestScore;
+  final int totalDurationSeconds;
+  final DateTime analyticsDate;
 
-  GameSession({
-    this.id,
+  GameAnalytics({
+    required this.id,
     required this.patientId,
     required this.gameType,
-    required this.score,
-    required this.durationSeconds,
-    this.accuracy,
-    required this.playedAt,
-  });
-
-  factory GameSession.fromJson(Map<String, dynamic> json) =>
-      _$GameSessionFromJson(json);
-
-  Map<String, dynamic> toJson() => _$GameSessionToJson(this);
-}
-
-@JsonSerializable(explicitToJson: true)
-class GameDailyAnalytics {
-  final String? id;
-  @JsonKey(name: 'patient_id')
-  final String patientId;
-  final DateTime date;
-  @JsonKey(name: 'total_games')
-  final int totalGames;
-  @JsonKey(name: 'total_duration')
-  final int totalDuration;
-  @JsonKey(name: 'avg_score')
-  final double avgScore;
-  @JsonKey(name: 'avg_accuracy')
-  final double? avgAccuracy;
-
-  GameDailyAnalytics({
-    this.id,
-    required this.patientId,
-    required this.date,
-    required this.totalGames,
-    required this.totalDuration,
+    required this.sessionCount,
     required this.avgScore,
-    this.avgAccuracy,
+    required this.bestScore,
+    required this.totalDurationSeconds,
+    required this.analyticsDate,
   });
 
-  factory GameDailyAnalytics.fromJson(Map<String, dynamic> json) =>
-      _$GameDailyAnalyticsFromJson(json);
+  factory GameAnalytics.fromJson(Map<String, dynamic> json) {
+    return GameAnalytics(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      gameType: json['game_type'] as String,
+      sessionCount: (json['session_count'] as num?)?.toInt() ?? 0,
+      avgScore: (json['avg_score'] as num?)?.toDouble() ?? 0.0,
+      bestScore: (json['best_score'] as num?)?.toInt() ?? 0,
+      totalDurationSeconds:
+          (json['total_duration_seconds'] as num?)?.toInt() ?? 0,
+      analyticsDate: json['analytics_date'] != null
+          ? DateTime.parse(json['analytics_date'] as String)
+          : DateTime.now(),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$GameDailyAnalyticsToJson(this);
-}
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'game_type': gameType,
+      'session_count': sessionCount,
+      'avg_score': avgScore,
+      'best_score': bestScore,
+      'total_duration_seconds': totalDurationSeconds,
+      'analytics_date': analyticsDate.toIso8601String().split('T').first,
+    };
+  }
 
-/// Helper model for aggregated weekly stats on the dashboard
-class WeeklyGameStats {
-  final int gamesPlayedThisWeek;
-  final double avgScoreThisWeek;
-  final int totalPlayTimeSeconds;
-  final double? avgAccuracyThisWeek;
-  final String engagementTrend; // 'up', 'down', 'flat'
-
-  const WeeklyGameStats({
-    this.gamesPlayedThisWeek = 0,
-    this.avgScoreThisWeek = 0.0,
-    this.totalPlayTimeSeconds = 0,
-    this.avgAccuracyThisWeek,
-    this.engagementTrend = 'flat',
-  });
+  GameAnalytics copyWith({
+    String? id,
+    String? patientId,
+    String? gameType,
+    int? sessionCount,
+    double? avgScore,
+    int? bestScore,
+    int? totalDurationSeconds,
+    DateTime? analyticsDate,
+  }) {
+    return GameAnalytics(
+      id: id ?? this.id,
+      patientId: patientId ?? this.patientId,
+      gameType: gameType ?? this.gameType,
+      sessionCount: sessionCount ?? this.sessionCount,
+      avgScore: avgScore ?? this.avgScore,
+      bestScore: bestScore ?? this.bestScore,
+      totalDurationSeconds: totalDurationSeconds ?? this.totalDurationSeconds,
+      analyticsDate: analyticsDate ?? this.analyticsDate,
+    );
+  }
 }

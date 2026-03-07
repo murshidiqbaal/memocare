@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:dementia_care_app/features/safety/data/models/live_location.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../providers/auth_provider.dart';
-import '../../data/models/live_location.dart';
 import '../../data/models/sos_alert.dart';
 import '../../data/repositories/sos_repository.dart';
 

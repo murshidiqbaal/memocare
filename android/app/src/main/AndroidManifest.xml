@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Wake lock to ensure notification delivery -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Request ignoring battery optimization to prevent delays -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <!-- Biometric Authentication -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -22,7 +24,8 @@
     <application
         android:label="memocare"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".MainActivity"

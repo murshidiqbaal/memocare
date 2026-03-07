@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../data/models/patient.dart';
 import '../../../../data/models/reminder.dart';
+import '../../../../features/location/providers/safezone_providers.dart';
 import '../../../../providers/active_patient_provider.dart';
+import '../../../../providers/caregiver_patients_provider.dart';
 import '../../../../providers/game_analytics_provider.dart';
 import '../../patient/reminders/add_edit_reminder_screen.dart';
 import '../analytics/analytics_dashboard_screen.dart';
@@ -186,8 +189,8 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
         onNotificationTap: () => context.push('/notification-test'),
         onProfileTap: () => context.push('/caregiver-profile'),
       ),
-      floatingActionButton:
-          hasPatient ? _PremiumFab(onPressed: _navigateToAddReminder) : null,
+      // floatingActionButton:
+      //     hasPatient ? _PremiumFab(onPressed: _navigateToAddReminder) : null,
       body: FadeTransition(
         opacity: _fadeAnim,
         child: SlideTransition(
@@ -206,6 +209,40 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
                     delegate: SliverChildListDelegate([
                       // SOS banner
                       const CaregiverSosAlertBanner(),
+
+                      // Pending Location Requests Banner
+                      Consumer(builder: (context, ref, child) {
+                        final caregiverId =
+                            Supabase.instance.client.auth.currentUser?.id;
+                        if (caregiverId == null) return const SizedBox.shrink();
+
+                        final requestsAsync = ref.watch(
+                            pendingLocationRequestsProvider(caregiverId));
+                        return requestsAsync.maybeWhen(
+                          data: (requests) {
+                            if (requests.isEmpty)
+                              return const SizedBox.shrink();
+                            return _StatusBanner(
+                              icon: Icons.home_work_rounded,
+                              message:
+                                  '${requests.length} pending home location change request(s)',
+                              color: const Color(0xFFE3F2FD),
+                              borderColor: Colors.blue.withOpacity(0.4),
+                              iconColor: Colors.blue,
+                              textColor: Colors.blue.shade900,
+                              trailing: TextButton(
+                                onPressed: () => context
+                                    .push('/caregiver-location-requests'),
+                                child: const Text('VIEW',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12)),
+                              ),
+                            );
+                          },
+                          orElse: () => const SizedBox.shrink(),
+                        );
+                      }),
 
                       // Offline
                       if (isOffline)
@@ -237,10 +274,59 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
                         ),
 
                       // No patient
-                      if (!hasPatient && !isLoading)
-                        const _NoPatientEmptyState()
-                      else if (isLoading && !hasPatient)
-                        const _SkeletonLoader()
+                      if (!hasPatient)
+                        Consumer(builder: (context, ref, child) {
+                          final patientsAsync =
+                              ref.watch(caregiverPatientsProvider);
+                          return patientsAsync.when(
+                            data: (patients) {
+                              if (patients.isEmpty) {
+                                return const _NoPatientEmptyState();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 24),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Your Patients',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: _DS.ink900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ListView.separated(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: patients.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(height: 16),
+                                      itemBuilder: (context, index) {
+                                        final patient = patients[index];
+                                        return _PatientCard(
+                                          patient: patient,
+                                          onTap: () {
+                                            ref
+                                                .read(activePatientIdProvider
+                                                    .notifier)
+                                                .setActivePatient(patient.id);
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            loading: () => const _SkeletonLoader(),
+                            error: (err, _) =>
+                                Center(child: Text('Error: $err')),
+                          );
+                        })
                       else ...[
                         // ── Patient Status ────────────────────────────────
                         _Section(
@@ -442,6 +528,77 @@ class _NoPatientSelectedMap extends StatelessWidget {
             style: TextStyle(color: Colors.grey),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Patient Card
+// ─────────────────────────────────────────────────────────────────────────────
+class _PatientCard extends StatelessWidget {
+  final Patient patient;
+  final VoidCallback onTap;
+
+  const _PatientCard({required this.patient, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: _DS.cardDecoration,
+        child: Row(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: _DS.teal50,
+                image: (patient.profilePhotoUrl != null &&
+                        patient.profilePhotoUrl!.isNotEmpty)
+                    ? DecorationImage(
+                        image: NetworkImage(patient.profilePhotoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: (patient.profilePhotoUrl == null ||
+                      patient.profilePhotoUrl!.isEmpty)
+                  ? const Icon(Icons.person_rounded,
+                      color: _DS.teal500, size: 32)
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    patient.fullName ?? 'Unknown Patient',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: _DS.ink900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (patient.age != null || patient.condition != null)
+                    Text(
+                      '${patient.age != null ? "${patient.age} years old" : ""} ${patient.condition != null ? "· ${patient.condition}" : ""}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: _DS.ink600,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: _DS.ink400),
+          ],
+        ),
       ),
     );
   }

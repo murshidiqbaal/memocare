@@ -1,23 +1,12 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'sos_alert.g.dart';
-
-@JsonSerializable(explicitToJson: true)
 class SosAlert {
   final String id;
-  @JsonKey(name: 'patient_id')
   final String patientId;
-  @JsonKey(name: 'caregiver_id')
   final String? caregiverId;
-  final String? message; // Added per prompt
-  final String status; // active | acknowledged | resolved
-  @JsonKey(name: 'created_at') // Renamed from triggered_at per prompt
+  final String? message;
+  final String status; // pending | acknowledged | resolved
   final DateTime triggeredAt;
-  @JsonKey(name: 'acknowledged_at')
   final DateTime? acknowledgedAt;
-  @JsonKey(name: 'location_lat')
   final double? locationLat;
-  @JsonKey(name: 'location_lng')
   final double? locationLng;
   final String? note;
 
@@ -34,7 +23,66 @@ class SosAlert {
     this.note,
   });
 
-  factory SosAlert.fromJson(Map<String, dynamic> json) =>
-      _$SosAlertFromJson(json);
-  Map<String, dynamic> toJson() => _$SosAlertToJson(this);
+  factory SosAlert.fromJson(Map<String, dynamic> json) {
+    return SosAlert(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      caregiverId: json['caregiver_id'] as String?,
+      message: json['message'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      // Support both 'created_at' and 'triggered_at' column names
+      triggeredAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : (json['triggered_at'] != null
+              ? DateTime.parse(json['triggered_at'] as String)
+              : DateTime.now()),
+      acknowledgedAt: json['acknowledged_at'] != null
+          ? DateTime.tryParse(json['acknowledged_at'] as String)
+          : null,
+      locationLat: (json['location_lat'] as num?)?.toDouble(),
+      locationLng: (json['location_lng'] as num?)?.toDouble(),
+      note: json['note'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'caregiver_id': caregiverId,
+      'message': message,
+      'status': status,
+      'created_at': triggeredAt.toIso8601String(),
+      'acknowledged_at': acknowledgedAt?.toIso8601String(),
+      'location_lat': locationLat,
+      'location_lng': locationLng,
+      'note': note,
+    };
+  }
+
+  SosAlert copyWith({
+    String? id,
+    String? patientId,
+    String? caregiverId,
+    String? message,
+    String? status,
+    DateTime? triggeredAt,
+    DateTime? acknowledgedAt,
+    double? locationLat,
+    double? locationLng,
+    String? note,
+  }) {
+    return SosAlert(
+      id: id ?? this.id,
+      patientId: patientId ?? this.patientId,
+      caregiverId: caregiverId ?? this.caregiverId,
+      message: message ?? this.message,
+      status: status ?? this.status,
+      triggeredAt: triggeredAt ?? this.triggeredAt,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
+      locationLat: locationLat ?? this.locationLat,
+      locationLng: locationLng ?? this.locationLng,
+      note: note ?? this.note,
+    );
+  }
 }

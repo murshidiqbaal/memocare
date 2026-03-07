@@ -86,7 +86,10 @@ AndroidNotificationChannel _channelForType(dynamic type) {
   switch (type?.toString()) {
     case 'sos_alert':
     case 'location_alert':
+    case 'safezone_alert':
       return _emergencyChannel;
+    case 'location_change_request':
+      return _reminderChannel;
     default:
       return _reminderChannel;
   }
@@ -416,6 +419,18 @@ class FCMService {
       case 'sos_alert':
         debugPrint('[FCM] SOS tap — route to emergency screen.');
         break;
+      case 'safezone_alert':
+        final patientId = data['patient_id']?.toString();
+        final patientName = data['patient_name']?.toString() ?? 'Patient';
+        if (patientId != null) {
+          _navKey?.currentState?.pushNamed(
+            '/caregiver-patient-map/$patientId?name=${Uri.encodeComponent(patientName)}',
+          );
+        }
+        break;
+      case 'location_change_request':
+        _navKey?.currentState?.pushNamed('/caregiver-location-requests');
+        break;
       default:
         debugPrint('[FCM] No route for type: $type');
     }
@@ -435,6 +450,11 @@ class FCMService {
 
     if (type == 'reminder' && id.isNotEmpty) {
       _navKey?.currentState?.pushNamed('/alert/$id');
+    } else if (type == 'safezone_alert' && id.isNotEmpty) {
+      // For local notifications, the 'id' in the payload part[1] is the patientId
+      _navKey?.currentState?.pushNamed('/caregiver-patient-map/$id');
+    } else if (type == 'location_change_request') {
+      _navKey?.currentState?.pushNamed('/caregiver-location-requests');
     }
   }
 }

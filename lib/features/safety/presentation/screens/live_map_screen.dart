@@ -30,7 +30,8 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
   @override
   void initState() {
     super.initState();
-    _currentPosition = LatLng(widget.alert.latitude, widget.alert.longitude);
+    _currentPosition =
+        LatLng(widget.alert.latitude ?? 0.0, widget.alert.longitude ?? 0.0);
     _calculateDistance();
   }
 
@@ -96,7 +97,7 @@ class _LiveMapScreenState extends ConsumerState<LiveMapScreen> {
     });
 
     final pos = _currentPosition ??
-        LatLng(widget.alert.latitude, widget.alert.longitude);
+        LatLng(widget.alert.latitude ?? 0.0, widget.alert.longitude ?? 0.0);
 
     return Scaffold(
       appBar: AppBar(

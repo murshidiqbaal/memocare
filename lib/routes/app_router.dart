@@ -8,9 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/presentation/screens/biometric_login_screen.dart';
+import '../features/location/presentation/screens/caregiver_location_requests_screen.dart';
+import '../features/location/presentation/screens/caregiver_patient_map_screen.dart';
+import '../features/location/presentation/screens/patient_home_location_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../screens/auth/register_screen.dart';
-import '../screens/auth/role_selection_screen.dart';
 import '../screens/caregiver/connections/caregiver_connections_screen.dart';
 import '../screens/caregiver/dashboard/caregiver_dashboard_screen.dart';
 import '../screens/patient/connections/patient_connections_screen.dart';
@@ -29,149 +31,189 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   final profileAsync = ref.watch(userProfileProvider);
 
   return GoRouter(
-    navigatorKey: rootNavigatorKey,
-    initialLocation: '/',
+      navigatorKey: rootNavigatorKey,
+      initialLocation: '/',
 
-    // ================= ROUTES =================
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const SplashScreen(),
-      ),
+      // ================= ROUTES =================
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const SplashScreen(),
+        ),
 
-      GoRoute(
-        path: '/role-selection',
-        builder: (context, state) => const RoleSelectionScreen(),
-      ),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const FlutterLoginScreen(),
+        ),
 
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const FlutterLoginScreen(),
-      ),
+        GoRoute(
+          path: '/register',
+          builder: (context, state) => const RegisterScreen(),
+        ),
 
-      GoRoute(
-        path: '/register',
-        builder: (context, state) => const RegisterScreen(),
-      ),
+        // ================= BIOMETRIC =================
+        GoRoute(
+          path: '/biometric-login',
+          builder: (context, state) => const BiometricLoginScreen(),
+        ),
 
-      // ================= BIOMETRIC =================
-      GoRoute(
-        path: '/biometric-login',
-        builder: (context, state) => const BiometricLoginScreen(),
-      ),
+        // ================= PATIENT =================
+        GoRoute(
+          path: '/patientDashboard',
+          builder: (context, state) =>
+              const RealtimeInitializer(child: PatientHomeScreen()),
+        ),
 
-      // ================= PATIENT =================
-      GoRoute(
-        path: '/patient-home',
-        builder: (context, state) =>
-            const RealtimeInitializer(child: PatientHomeScreen()),
-      ),
+        // ✅ ================= GAMES =================
+        GoRoute(
+          path: '/games',
+          builder: (context, state) =>
+              const RealtimeInitializer(child: GamesScreen()),
+        ),
 
-      // ✅ ================= GAMES =================
-      GoRoute(
-        path: '/games',
-        builder: (context, state) =>
-            const RealtimeInitializer(child: GamesScreen()),
-      ),
+        // 🃏 Memory Match
+        GoRoute(
+          path: '/games/memory-match',
+          builder: (context, state) =>
+              const RealtimeInitializer(child: MemoryMatchGameScreen()),
+        ),
 
-      // 🃏 Memory Match
-      GoRoute(
-        path: '/games/memory-match',
-        builder: (context, state) =>
-            const RealtimeInitializer(child: MemoryMatchGameScreen()),
-      ),
+        // ⚡ Reaction Tap
+        GoRoute(
+          path: '/games/reaction-tap',
+          builder: (context, state) =>
+              const RealtimeInitializer(child: ReactionTapGameScreen()),
+        ),
 
-      // ⚡ Reaction Tap
-      GoRoute(
-        path: '/games/reaction-tap',
-        builder: (context, state) =>
-            const RealtimeInitializer(child: ReactionTapGameScreen()),
-      ),
+        // ================= CAREGIVER =================
+        GoRoute(
+          path: '/caregiverDashboard',
+          builder: (context, state) =>
+              const RealtimeInitializer(child: CaregiverDashboardScreen()),
+        ),
 
-      // ================= CAREGIVER =================
-      GoRoute(
-        path: '/caregiver-dashboard',
-        builder: (context, state) =>
-            const RealtimeInitializer(child: CaregiverDashboardScreen()),
-      ),
+        GoRoute(
+          path: '/patient-connections',
+          builder: (context, state) => const PatientConnectionsScreen(),
+        ),
 
-      GoRoute(
-        path: '/patient-connections',
-        builder: (context, state) => const PatientConnectionsScreen(),
-      ),
+        GoRoute(
+          path: '/caregiver-connections',
+          builder: (context, state) => const CaregiverConnectionsScreen(),
+        ),
 
-      GoRoute(
-        path: '/caregiver-connections',
-        builder: (context, state) => const CaregiverConnectionsScreen(),
-      ),
+        // ================= ADMIN =================
+        GoRoute(
+          path: '/adminDashboard',
+          builder: (context, state) => const AdminDashboardScreen(),
+        ),
 
-      // ================= ADMIN =================
-      GoRoute(
-        path: '/admin-panel',
-        builder: (context, state) => const AdminDashboardScreen(),
-      ),
+        // ================= ALERT =================
+        GoRoute(
+          path: '/alert/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'] ?? '';
+            return ReminderAlertScreen(reminderId: id);
+          },
+        ),
 
-      // ================= ALERT =================
-      GoRoute(
-        path: '/alert/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          return ReminderAlertScreen(reminderId: id);
-        },
-      ),
+        // ================= DEV =================
+        GoRoute(
+          path: '/notification-test',
+          builder: (context, state) => const NotificationTestScreen(),
+        ),
+        // ================= LOCATION / SAFE ZONE =================
+        GoRoute(
+          path: '/patient-home-location/:patientId',
+          builder: (context, state) {
+            final patientId = state.pathParameters['patientId'] ?? '';
+            return PatientHomeLocationScreen(patientId: patientId);
+          },
+        ),
 
-      // ================= DEV =================
-      GoRoute(
-        path: '/notification-test',
-        builder: (context, state) => const NotificationTestScreen(),
-      ),
-    ],
+        GoRoute(
+          path: '/caregiver-location-requests',
+          builder: (context, state) => const CaregiverLocationRequestsScreen(),
+        ),
 
-    // ================= REDIRECT LOGIC =================
-    redirect: (context, state) {
-      if (authState.isLoading) return null;
+        GoRoute(
+          path: '/caregiver-patient-map/:patientId',
+          builder: (context, state) {
+            final patientId = state.pathParameters['patientId'] ?? '';
+            final patientName = state.uri.queryParameters['name'] ?? 'Patient';
+            return CaregiverPatientMapScreen(
+              patientId: patientId,
+              patientName: patientName,
+            );
+          },
+        ),
+      ],
 
-      final session = authState.valueOrNull?.session;
-      final isAuthenticated = session != null;
+      // ================= REDIRECT LOGIC =================
+      redirect: (context, state) {
+        final path = state.uri.toString();
+        final isSplash = path == '/';
 
-      final path = state.uri.toString();
+        // 1. Wait for Auth State
+        if (authState.isLoading) {
+          return isSplash ? null : '/';
+        }
 
-      final isSplash = path == '/';
-      final isBiometricRoute = path == '/biometric-login';
-      final isAuthRoute = path == '/login' ||
-          path == '/register' ||
-          path == '/role-selection' ||
-          isBiometricRoute;
+        final session = authState.valueOrNull?.session;
+        final isAuthenticated = session != null;
 
-      // 🔴 NOT AUTHENTICATED
-      if (!isAuthenticated) {
-        if (isAuthRoute) return null; // already on an auth page
-        return '/login'; // splash and all other routes → go to login
-      }
+        final isBiometricRoute = path == '/biometric-login';
+        final isAuthRoute =
+            path == '/login' || path == '/register' || isBiometricRoute;
 
-      // 🟢 AUTHENTICATED
-      final profile = profileAsync.valueOrNull;
+        // � NOT AUTHENTICATED
+        if (!isAuthenticated) {
+          if (isAuthRoute) return null;
+          return '/login';
+        }
 
-      // wait until profile loads
-      if (profileAsync.isLoading) return null;
+        // 2. Wait for Profile Data
+        // If we are authenticated but the profile is still loading, stay on Splash
+        if (profileAsync.isLoading) {
+          return isSplash ? null : '/';
+        }
 
-      // 🚫 prevent auth pages after login + redirect away from splash
-      if (isAuthRoute || isSplash) {
-        if (profile?.role == 'caregiver') return '/caregiver-dashboard';
-        if (profile?.role == 'admin') return '/admin-panel';
-        return '/patient-home';
-      }
+        final profile = profileAsync.valueOrNull;
 
-      // 🎮 ROLE GUARD — only patients can access any game route
-      if (path == '/games' ||
-          path == '/games/memory-match' ||
-          path == '/games/reaction-tap') {
-        final role = profile?.role;
-        if (role == 'admin') return '/admin-panel';
-        if (role != 'patient') return '/caregiver-dashboard';
-      }
+        // 3. Handle Authenticated but No Profile found
+        if (profile == null) {
+          // If no profile found in any table AFTER loading, we might be in a (temporary) weird state.
+          // Don't loop back to login if we just signed up and provider is still fetching.
+          if (profileAsync.isLoading || profileAsync.isRefreshing) {
+            return isSplash ? null : '/';
+          }
 
-      return null;
-    },
-  );
+          // If it's truly null after a clean fetch, redirect to login to try again.
+          if (!isAuthRoute) return '/login';
+          return null;
+        }
+
+        // 4. Role-based Redirection
+        if (isSplash || isAuthRoute) {
+          debugPrint(
+              '[Router] Redirecting authenticated user with role: ${profile.role}');
+          if (profile.role == 'caregiver') return '/caregiverDashboard';
+          if (profile.role == 'admin') return '/adminDashboard';
+          if (profile.role == 'patient') return '/patientDashboard';
+
+          // Fallback if role is somehow missing or different
+          return '/login';
+        }
+
+        // 5. Protected Route Guard (example: Games only for patients)
+        if (path.startsWith('/games')) {
+          if (profile.role != 'patient') {
+            return profile.role == 'caregiver'
+                ? '/caregiverDashboard'
+                : '/adminDashboard';
+          }
+        }
+
+        return null;
+      });
 });

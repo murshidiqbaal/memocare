@@ -1,8 +1,7 @@
+import 'package:dementia_care_app/models/user/patient_profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../data/models/patient_profile.dart';
 
 final activePatientIdProvider =
     StateNotifierProvider<ActivePatientNotifier, String?>((ref) {
@@ -57,11 +56,11 @@ final linkedPatientsProvider =
 
   final links = await supabase
       .from('caregiver_patient_links')
-      .select('patient_id, patient_profiles(*)')
+      .select('patient_id, patients!caregiver_patient_links_patient_fk(*)')
       .eq('caregiver_id', caregiverRes['id']);
 
   final patients = (links as List)
-      .map((l) => PatientProfile.fromJson(l['patient_profiles']))
+      .map((l) => PatientProfile.fromJson(l['patients']))
       .toList();
 
   final activeId = ref.read(activePatientIdProvider);

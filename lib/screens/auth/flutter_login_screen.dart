@@ -15,7 +15,7 @@ import '../../providers/auth_provider.dart';
 class FlutterLoginScreen extends ConsumerWidget {
   const FlutterLoginScreen({super.key});
 
-  /// Email + password login — also saves credentials for biometric reuse.
+  /// Email + password login.
   Future<String?> _authUser(WidgetRef ref, LoginData data) async {
     final result = await ref.read(authRepositoryProvider).signIn(
           email: data.name,
@@ -25,37 +25,36 @@ class FlutterLoginScreen extends ConsumerWidget {
     return result.fold(
       (failure) => failure.message,
       (_) async {
-        // ✅ Persist credentials securely for future biometric logins
         final storage = ref.read(secureStorageProvider);
         await saveCredentials(
           storage,
           email: data.name,
           password: data.password,
         );
-        return null; // null = success
+        return null;
       },
     );
   }
 
   /// Signup
   Future<String?> _signupUser(WidgetRef ref, SignupData data) async {
-    final role = data.additionalSignupData?['role']?.toLowerCase() ?? 'patient';
-    const validRoles = ['patient', 'caregiver'];
+    final role =
+        (data.additionalSignupData?['role'] ?? 'patient').toLowerCase().trim();
 
-    if (!validRoles.contains(role)) {
-      return 'Role must be either "patient" or "caregiver"';
-    }
+    final email = data.name ?? '';
+    final password = data.password ?? '';
+    final fullName = data.additionalSignupData?['fullName'] ?? '';
 
     final result = await ref.read(authRepositoryProvider).signUp(
-          email: data.name ?? '',
-          password: data.password ?? '',
+          email: email,
+          password: password,
           role: role,
-          fullName: data.additionalSignupData?['fullName'] ?? '',
+          fullName: fullName,
         );
 
     return result.fold(
       (failure) => failure.message,
-      (_) => null,
+      (_) => null, // GoRouter redirect will handle navigation
     );
   }
 
@@ -106,7 +105,7 @@ class FlutterLoginScreen extends ConsumerWidget {
           ],
           messages: LoginMessages(
             additionalSignUpFormDescription:
-                'Enter your details. For Role, type "patient" or "caregiver".',
+                'Please enter your full name and select your role: "patient" or "caregiver".',
           ),
           userValidator: (value) {
             if (value == null || value.isEmpty) return 'Email is required';
@@ -129,7 +128,10 @@ class FlutterLoginScreen extends ConsumerWidget {
             right: 0,
             child: Center(
               child: GestureDetector(
-                onTap: () => context.go('/biometric-login'),
+                onTap: () {
+                  print("Fingerprint tapped");
+                  context.go('/biometric-login');
+                },
                 child: const _FingerprintHint(),
               ),
             ),

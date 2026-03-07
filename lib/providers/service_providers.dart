@@ -8,23 +8,31 @@ import '../data/repositories/location_repository.dart';
 import '../data/repositories/memory_repository.dart';
 import '../data/repositories/patient_connection_repository.dart';
 import '../data/repositories/patient_profile_repository.dart'; // Added
+import '../data/repositories/patient_repository.dart';
 import '../data/repositories/people_repository.dart';
 import '../data/repositories/reminder_repository.dart';
-import '../data/repositories/safety_repository.dart';
 import '../data/repositories/voice_assistant_repository.dart';
+import '../features/safety/data/repositories/sos_repository.dart';
 import '../services/audio/voice_playback_service.dart'; // Added
+import '../services/battery_optimization_service.dart';
 import '../services/fcm_service.dart';
 import '../services/llm_memory_query_engine.dart';
 import '../services/memory_query_engine.dart';
 import '../services/notification/reminder_notification_service.dart';
 import '../services/notification_trigger_service.dart';
+import '../services/reminder_reliability_service.dart';
 import '../services/tts_service.dart';
+import '../services/voice/voice_storage_service.dart';
 import '../services/voice_service.dart';
+import 'supabase_provider.dart';
 
-// Supabase Client Provider
-final supabaseClientProvider = Provider<SupabaseClient>((ref) {
-  return Supabase.instance.client;
+export 'supabase_provider.dart';
+
+final voiceStorageServiceProvider = Provider<VoiceStorageService>((ref) {
+  return VoiceStorageService(Supabase.instance.client);
 });
+
+// Supabase Client is now imported from providers/supabase_provider.dart
 
 // FCM Service Provider
 final fcmServiceProvider = Provider<FCMService>((ref) {
@@ -85,10 +93,9 @@ final voiceAssistantRepositoryProvider =
   return VoiceAssistantRepository(supabase);
 });
 
-// Safety Repository Provider
-final safetyRepositoryProvider = Provider<SafetyRepository>((ref) {
-  final supabase = ref.watch(supabaseClientProvider);
-  return SafetyRepository(supabase);
+// Safety Repository Provider (Aliased for compatibility)
+final safetyRepositoryProvider = Provider<SosRepository>((ref) {
+  return ref.watch(sosRepositoryProvider);
 });
 
 // Dashboard Repository Provider
@@ -111,7 +118,11 @@ final patientProfileRepositoryProvider =
   return PatientProfileRepository(supabase);
 });
 
-// Location Repository Provider
+// Patient Repository Provider
+final patientRepositoryProvider = Provider<PatientRepository>((ref) {
+  final supabase = ref.watch(supabaseClientProvider);
+  return PatientRepository(supabase);
+});
 final locationRepositoryProvider = Provider<LocationRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   return LocationRepository(supabase);
@@ -171,4 +182,15 @@ final activeMemoryQueryEngineProvider = Provider<dynamic>((ref) {
       dotenv.env['GOOGLE_GEMINI_API_KEY']!.isNotEmpty;
 
   return hasApiKey ? llmEngine : legacyEngine;
+});
+// Battery Optimization Service Provider
+final batteryOptimizationServiceProvider =
+    Provider<BatteryOptimizationService>((ref) {
+  return BatteryOptimizationService();
+});
+
+// Reminder Reliability Service Provider
+final reminderReliabilityServiceProvider =
+    Provider<ReminderReliabilityService>((ref) {
+  return ReminderReliabilityService();
 });

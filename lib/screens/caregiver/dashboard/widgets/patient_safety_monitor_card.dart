@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../services/location_tracking_service.dart';
 
@@ -107,10 +108,8 @@ class PatientSafetyMonitorCard extends ConsumerWidget {
                         width: double.infinity,
                         child: FilledButton.icon(
                           onPressed: () {
-                            // In a real app, open a live tracking map screen here
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Opening live map...')),
+                            context.push(
+                              '/caregiver-patient-map/$patientId?name=${Uri.encodeComponent(patientName)}',
                             );
                           },
                           icon: const Icon(Icons.map),

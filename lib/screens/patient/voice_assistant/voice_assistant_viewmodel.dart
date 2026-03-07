@@ -191,8 +191,8 @@ class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
       final voiceQuery = VoiceQuery(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         patientId: patientId,
-        queryText: query,
-        responseText: response,
+        query: query,
+        response: response,
         createdAt: DateTime.now(),
       );
 

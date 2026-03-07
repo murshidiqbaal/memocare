@@ -29,8 +29,20 @@ final currentUserProvider = Provider<User?>((ref) {
 final userProfileProvider = FutureProvider<Profile?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
-  final result = await ref.watch(authRepositoryProvider).getProfile(user.id);
-  return result.fold((l) => null, (r) => r);
+
+  try {
+    final result = await ref.watch(authRepositoryProvider).getProfile(user.id);
+    return result.fold(
+      (failure) {
+        // If it's a genuine network error etc., propagate as AsyncError
+        throw Exception('Profile load failed: ${failure.message}');
+      },
+      (profile) => profile, // may be null if record hasn't been created yet
+    );
+  } catch (e) {
+    // Re-throw so state becomes AsyncError for debugging
+    rethrow;
+  }
 });
 
 class AuthController extends AsyncNotifier<void> {

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../data/repositories/reminder_repository.dart';
-import '../../../../data/repositories/safety_repository.dart';
+import '../../../../features/safety/data/repositories/sos_repository.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/service_providers.dart';
 import '../../../../services/realtime_service.dart';
@@ -106,7 +106,7 @@ class HomeState {
 
 class HomeViewModel extends StateNotifier<HomeState> {
   final ReminderRepository _repository;
-  final SafetyRepository _safetyRepository;
+  final SosRepository _safetyRepository;
 
   HomeViewModel(this._repository, this._safetyRepository) : super(HomeState());
 
@@ -245,7 +245,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
 final homeViewModelProvider =
     StateNotifierProvider<HomeViewModel, HomeState>((ref) {
   final reminderRepo = ref.watch(reminderRepositoryProvider);
-  final safetyRepo = ref.watch(safetyRepositoryProvider);
+  final safetyRepo = ref.watch(sosRepositoryProvider);
 
   final viewModel = HomeViewModel(reminderRepo, safetyRepo);
 

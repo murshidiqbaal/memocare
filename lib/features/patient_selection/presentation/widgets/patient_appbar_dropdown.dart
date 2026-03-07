@@ -1,7 +1,7 @@
+import 'package:dementia_care_app/data/models/patient.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/patient_model.dart';
 import '../../providers/patient_selection_provider.dart';
 
 class PatientAppBarDropdown extends ConsumerWidget {

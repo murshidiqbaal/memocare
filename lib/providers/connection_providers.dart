@@ -4,45 +4,54 @@ import '../data/models/caregiver.dart';
 import '../data/models/patient.dart';
 import '../providers/service_providers.dart';
 
-// REPOSITORIES (Assuming these are provided in service_providers.dart or similar.
-// If not, I'll access them via ref.watch on the repository provider)
+// =============================================================================
+// PATIENT SIDE — CAREGIVERS LINKED TO A PATIENT
+// =============================================================================
 
-// -----------------------------------------------------------------------------
-// PATIENT SIDE: Linked Caregivers
-// -----------------------------------------------------------------------------
-
+/// Fetch caregivers connected to the current patient (one-time request)
 final linkedCaregiversProvider =
     FutureProvider.autoDispose<List<Caregiver>>((ref) async {
   final repository = ref.watch(patientConnectionRepositoryProvider);
-  return repository.getLinkedCaregivers();
+
+  final caregivers = await repository.getLinkedCaregivers();
+  return caregivers;
 });
 
+/// Real-time stream of caregivers linked to the patient
 final linkedCaregiversStreamProvider =
-    StreamProvider.autoDispose<List<Caregiver>>((ref) async* {
+    StreamProvider.autoDispose<List<Caregiver>>((ref) {
   final repository = ref.watch(patientConnectionRepositoryProvider);
-  yield* repository.getLinkedCaregiversStream();
+
+  return repository.getLinkedCaregiversStream();
 });
 
-// -----------------------------------------------------------------------------
-// CAREGIVER SIDE: Connected Patients
-// -----------------------------------------------------------------------------
+// =============================================================================
+// CAREGIVER SIDE — PATIENTS CONNECTED TO A CAREGIVER
+// =============================================================================
 
+/// Fetch patients connected to the current caregiver (one-time request)
 final linkedPatientsProvider =
     FutureProvider.autoDispose<List<Patient>>((ref) async {
   final repository = ref.watch(patientConnectionRepositoryProvider);
-  return repository.getConnectedPatients();
+
+  final patients = await repository.getConnectedPatients();
+  return patients;
 });
 
+/// Real-time stream of patients connected to the caregiver
 final linkedPatientsStreamProvider =
     StreamProvider.autoDispose<List<Patient>>((ref) {
   final repository = ref.watch(patientConnectionRepositoryProvider);
+
   return repository.getConnectedPatientsStream();
 });
 
-// Note: Profile photo upload is now handled by ProfilePhotoUploadNotifier
-// in lib/providers/profile_photo_provider.dart
+// =============================================================================
+// NOTES
+// =============================================================================
 
+// Profile photo upload handled in:
+// lib/providers/profile_photo_provider.dart
 
-// Note: patientProfileProvider is now defined in 
+// Patient profile provider defined in:
 // lib/screens/patient/profile/viewmodels/patient_profile_viewmodel.dart
-

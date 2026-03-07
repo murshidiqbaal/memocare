@@ -37,7 +37,7 @@ class PeopleCardListItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(person.relationship,
+            Text(person.relationship ?? '',
                 style: TextStyle(color: Colors.teal.shade700)),
             if (person.voiceAudioUrl != null)
               Padding(

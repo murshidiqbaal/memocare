@@ -92,7 +92,7 @@ class Reminder {
           : null,
       localAudioPath: json['localAudioPath'] as String?,
       notificationId: json['notificationId'] as int?,
-      voiceAudioUrl: json['voiceAudioUrl'] as String?,
+      voiceAudioUrl: json['voice_audio_url'] as String?,
     );
   }
 
@@ -113,7 +113,7 @@ class Reminder {
       'is_snoozed': isSnoozed,
       'snooze_duration_minutes': snoozeDurationMinutes,
       'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
-      // localAudioPath, notificationId, voiceAudioUrl strictly local
+      'voice_audio_url': voiceAudioUrl, // ← ADD THIS
     };
   }
 

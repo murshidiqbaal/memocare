@@ -5,7 +5,7 @@
 ///   patient_id  - UUID (FK → patient_profiles.id)
 ///   latitude    - double precision
 ///   longitude   - double precision
-///   updated_at  - timestamptz
+
 class PatientLocation {
   final String id;
   final String patientId;

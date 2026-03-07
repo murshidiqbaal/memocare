@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../data/patient_model.dart';
+import '../../../data/models/patient.dart';
 
 /// State class holds the UI values and fetched list
 class PatientState {
@@ -122,7 +122,7 @@ class PatientSelectionController extends StateNotifier<PatientState> {
       // 2. Fetch linked patients via caregiver_patient_links joining with patient_profiles
       final response = await _supabase
           .from('caregiver_patient_links')
-          .select('patient_id, patient_profiles(*)')
+          .select('patient_id, patients!caregiver_patient_links_patient_fk(*)')
           .eq('caregiver_id', caregiverId);
 
       final List<dynamic> records = response as List<dynamic>;

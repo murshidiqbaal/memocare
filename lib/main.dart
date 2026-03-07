@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,10 +9,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/supabase_config.dart';
 import 'core/theme/memocare_theme.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
 import 'providers/service_providers.dart';
 import 'routes/app_router.dart';
 import 'services/fcm_service.dart';
+import 'widgets/reliability_wrapper.dart';
+import 'widgets/safety_monitoring_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,28 +30,31 @@ void main() async {
   // Supabase
   await SupabaseConfig.initialize();
 
-  // ✅ Wait for Supabase to restore session from storage BEFORE
-  // building the app. This is the root cause — without this await,
-  // GoRouter evaluates redirect while session is still null.
+  // Wait for session restoration
   await _waitForInitialSession();
 
   final container = ProviderContainer();
 
-  await container.read(reminderNotificationServiceProvider).init();
+  // Initialize essential services that need early setup
+  try {
+    await container.read(reminderNotificationServiceProvider).init();
+    await container.read(fcmServiceProvider).initialize();
+  } catch (e) {
+    debugPrint('Service initialization failed: $e');
+  }
 
+  // Pre-read persistent state providers
   container.read(sessionPersistenceProvider);
   container.read(authStateChangesProvider);
 
   FCMService.setNavigatorKey(rootNavigatorKey);
 
-  try {
-    final fcmService = container.read(fcmServiceProvider);
-    await fcmService.initialize();
-  } catch (e) {
-    print('FCM initialization failed: $e');
-  }
-
-  runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MyApp(),
+    ),
+  );
 }
 
 // ✅ Waits for the FIRST auth event from Supabase stream.
@@ -95,6 +100,13 @@ class MyApp extends ConsumerWidget {
       themeMode: ThemeMode.system,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return SafetyMonitoringWrapper(
+          child: ReliabilityWrapper(
+            child: child!,
+          ),
+        );
+      },
     );
   }
 }

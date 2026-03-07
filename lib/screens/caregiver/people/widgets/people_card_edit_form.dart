@@ -63,6 +63,7 @@ class _PeopleCardEditFormState extends State<PeopleCardEditForm> {
             _imageFile?.path ?? widget.existingPerson?.localPhotoPath,
         localAudioPath: _audioPath ?? widget.existingPerson?.localAudioPath,
         createdAt: widget.existingPerson?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
       );
       widget.onSave(newPerson);
       Navigator.pop(context);

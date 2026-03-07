@@ -1,51 +1,61 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'person.g.dart';
-
-@JsonSerializable(explicitToJson: true)
 class Person {
   final String id;
-
-  @JsonKey(name: 'patient_id')
   final String patientId;
-
   final String name;
-
-  final String relationship;
-
+  final String? relationship;
   final String? description;
-
-  @JsonKey(name: 'photo_url')
   final String? photoUrl;
-
-  @JsonKey(name: 'voice_audio_url')
   final String? voiceAudioUrl;
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localPhotoPath;
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
   final String? localAudioPath;
-
-  @JsonKey(name: 'created_at')
   final DateTime createdAt;
+  final DateTime? updatedAt;
 
   Person({
     required this.id,
     required this.patientId,
     required this.name,
-    required this.relationship,
+    this.relationship,
     this.description,
     this.photoUrl,
     this.voiceAudioUrl,
     this.localPhotoPath,
     this.localAudioPath,
     required this.createdAt,
+    this.updatedAt,
   });
 
-  factory Person.fromJson(Map<String, dynamic> json) => _$PersonFromJson(json);
+  factory Person.fromJson(Map<String, dynamic> json) {
+    return Person(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      name: json['name'] as String,
+      relationship: json['relationship'] as String?,
+      description: json['description'] as String?,
+      photoUrl: json['photo_url'] as String?,
+      voiceAudioUrl: json['voice_audio_url'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$PersonToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'name': name,
+      'relationship': relationship,
+      'description': description,
+      'photo_url': photoUrl,
+      'voice_audio_url': voiceAudioUrl,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
 
   Person copyWith({
     String? id,
@@ -58,6 +68,7 @@ class Person {
     String? localPhotoPath,
     String? localAudioPath,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return Person(
       id: id ?? this.id,
@@ -70,6 +81,7 @@ class Person {
       localPhotoPath: localPhotoPath ?? this.localPhotoPath,
       localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

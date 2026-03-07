@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../data/models/reminder.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../providers/service_providers.dart';
 import '../../../../services/notification/notification_permission_service.dart';
 import '../home/viewmodels/home_viewmodel.dart';
 import 'widgets/voice_recorder_widget.dart';
@@ -69,11 +70,24 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+// PATCH: replace _saveReminder() in add_edit_reminder_screen.dart
+// Uploads the local voice note to Supabase before saving the Reminder.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// 1. Add to your service_providers.dart:
+//
+//   final voiceStorageServiceProvider = Provider<VoiceStorageService>((ref) {
+//     return VoiceStorageService(Supabase.instance.client);
+//   });
+//
+// 2. Replace _saveReminder() in _AddEditReminderScreenState with the one below.
+// ─────────────────────────────────────────────────────────────────────────────
+
   Future<void> _saveReminder() async {
     if (_formKey.currentState!.validate()) {
-      FocusScope.of(context).unfocus(); // Close keyboard
+      FocusScope.of(context).unfocus();
 
-      // Ensure permissions before saving
       final permService = NotificationPermissionService();
       final isReady = await permService.ensureNotificationsReady();
       if (!isReady && mounted) {
@@ -85,9 +99,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
                 const Text('Please allow notifications to save reminders.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(c),
-                child: const Text('OK'),
-              ),
+                  onPressed: () => Navigator.pop(c), child: const Text('OK')),
             ],
           ),
         );
@@ -102,21 +114,56 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         _selectedTime.minute,
       );
 
-      // We might need to handle User object properly.
-      // Assuming currentUserProvider returns a Supabase User object which has an 'id'.
       final currentUser = ref.read(currentUserProvider);
       final currentUserId = currentUser?.id ?? 'offline_user';
-
       final effectivePatientId = widget.targetPatientId ??
           widget.existingReminder?.patientId ??
           currentUserId;
 
-      // Generate stable notification ID
       final int stableNotificationId =
           widget.existingReminder?.notificationId ??
-              DateTime.now()
-                  .millisecondsSinceEpoch
-                  .remainder(2147483647); // Ensure positive int32 for safety
+              DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
+
+      // ── Upload voice note if a new local recording exists ─────────────────
+      String? remoteVoiceUrl = widget.existingReminder?.voiceAudioUrl;
+
+      final newLocalPath = _audioPath; // may be null
+      final oldLocalPath = widget.existingReminder?.localAudioPath;
+      final hasNewRecording =
+          newLocalPath != null && newLocalPath != oldLocalPath;
+
+      if (hasNewRecording && currentUser != null) {
+        // Show a brief loading indicator while uploading
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white)),
+                  SizedBox(width: 12),
+                  Text('Uploading voice note…'),
+                ],
+              ),
+              duration: Duration(seconds: 10),
+            ),
+          );
+        }
+
+        final voiceService = ref.read(voiceStorageServiceProvider);
+        remoteVoiceUrl = await voiceService.uploadVoiceNote(
+          localPath: newLocalPath,
+          reminderId:
+              widget.existingReminder?.id ?? DateTime.now().toIso8601String(),
+          userId: currentUserId,
+        );
+
+        if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
+      }
+      // ──────────────────────────────────────────────────────────────────────
 
       final newReminder = Reminder(
         id: widget.existingReminder?.id ?? const Uuid().v4(),
@@ -125,14 +172,12 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         reminderTime: finalDateTime,
         repeatRule: _frequency,
         type: _type,
-        localAudioPath: _audioPath,
+        localAudioPath: _audioPath, // keep local path for offline playback
+        voiceAudioUrl: remoteVoiceUrl, // synced remote URL
         patientId: effectivePatientId,
         caregiverId: currentUserId,
         createdAt: widget.existingReminder?.createdAt ?? DateTime.now(),
-        // If editing, preserve status, else pending
         status: widget.existingReminder?.status ?? ReminderStatus.pending,
-        voiceAudioUrl: widget
-            .existingReminder?.voiceAudioUrl, // preserve remote URL if exists
         notificationId: stableNotificationId,
       );
 

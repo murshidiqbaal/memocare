@@ -1,50 +1,52 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'voice_query.g.dart';
-
-/// Voice query model for storing patient voice interactions
-/// Stores both the question asked and the AI-generated response
-@JsonSerializable(explicitToJson: true)
 class VoiceQuery {
   final String id;
-
-  @JsonKey(name: 'patient_id')
   final String patientId;
-
-  @JsonKey(name: 'query_text')
-  final String queryText;
-
-  @JsonKey(name: 'response_text')
-  final String responseText;
-
-  @JsonKey(name: 'created_at')
+  final String query;
+  final String? response;
   final DateTime createdAt;
 
   VoiceQuery({
     required this.id,
     required this.patientId,
-    required this.queryText,
-    required this.responseText,
+    required this.query,
+    this.response,
     required this.createdAt,
   });
 
-  factory VoiceQuery.fromJson(Map<String, dynamic> json) =>
-      _$VoiceQueryFromJson(json);
+  factory VoiceQuery.fromJson(Map<String, dynamic> json) {
+    return VoiceQuery(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      query: json['query'] as String,
+      response: json['response'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$VoiceQueryToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'query': query,
+      'response': response,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
 
   VoiceQuery copyWith({
     String? id,
     String? patientId,
-    String? queryText,
-    String? responseText,
+    String? query,
+    String? response,
     DateTime? createdAt,
   }) {
     return VoiceQuery(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
-      queryText: queryText ?? this.queryText,
-      responseText: responseText ?? this.responseText,
+      query: query ?? this.query,
+      response: response ?? this.response,
       createdAt: createdAt ?? this.createdAt,
     );
   }

@@ -1,19 +1,9 @@
-import 'package:json_annotation/json_annotation.dart';
-
-part 'sos_event.g.dart';
-
-@JsonSerializable(explicitToJson: true)
 class SosEvent {
   final String id;
-  @JsonKey(name: 'patient_id')
   final String patientId;
-  @JsonKey(name: 'triggered_at')
   final DateTime triggeredAt;
-  @JsonKey(name: 'is_active')
   final bool isActive;
-  @JsonKey(name: 'resolved_at')
   final DateTime? resolvedAt;
-  @JsonKey(name: 'resolved_by')
   final String? resolvedBy;
   final double? latitude;
   final double? longitude;
@@ -29,10 +19,35 @@ class SosEvent {
     this.longitude,
   });
 
-  factory SosEvent.fromJson(Map<String, dynamic> json) =>
-      _$SosEventFromJson(json);
+  factory SosEvent.fromJson(Map<String, dynamic> json) {
+    return SosEvent(
+      id: json['id'] as String,
+      patientId: json['patient_id'] as String,
+      triggeredAt: json['triggered_at'] != null
+          ? DateTime.parse(json['triggered_at'] as String)
+          : DateTime.now(),
+      isActive: json['is_active'] as bool? ?? true,
+      resolvedAt: json['resolved_at'] != null
+          ? DateTime.tryParse(json['resolved_at'] as String)
+          : null,
+      resolvedBy: json['resolved_by'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+    );
+  }
 
-  Map<String, dynamic> toJson() => _$SosEventToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patient_id': patientId,
+      'triggered_at': triggeredAt.toIso8601String(),
+      'is_active': isActive,
+      'resolved_at': resolvedAt?.toIso8601String(),
+      'resolved_by': resolvedBy,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+  }
 
   SosEvent copyWith({
     String? id,

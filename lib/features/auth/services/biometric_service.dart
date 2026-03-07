@@ -35,27 +35,24 @@ class BiometricService {
     try {
       final didAuthenticate = await _auth.authenticate(
         localizedReason: 'Scan your fingerprint to log into MemoCare.',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false, // allow PIN fallback
-        ),
+        persistAcrossBackgrounding: true,
+        biometricOnly: false, // allow PIN fallback
       );
       return didAuthenticate
           ? BiometricAuthResult.success
           : BiometricAuthResult.cancelled;
-    } on PlatformException catch (e) {
-      switch (e.code) {
-        case 'NotAvailable':
-          return BiometricAuthResult.notAvailable;
-        case 'NotEnrolled':
-          return BiometricAuthResult.notEnrolled;
-        case 'LockedOut':
-          return BiometricAuthResult.lockedOut;
-        case 'PermanentlyLockedOut':
-          return BiometricAuthResult.permanentlyLockedOut;
-        default:
-          return BiometricAuthResult.failure;
-      }
+    } on LocalAuthException catch (e) {
+      final code = e.code.toString();
+      if (code.contains('notAvailable'))
+        return BiometricAuthResult.notAvailable;
+      if (code.contains('notEnrolled')) return BiometricAuthResult.notEnrolled;
+      if (code.contains('lockedOut')) return BiometricAuthResult.lockedOut;
+      if (code.contains('permanentlyLockedOut'))
+        return BiometricAuthResult.permanentlyLockedOut;
+      if (code.contains('userCancelled')) return BiometricAuthResult.cancelled;
+      return BiometricAuthResult.failure;
+    } on PlatformException catch (_) {
+      return BiometricAuthResult.failure;
     } catch (_) {
       return BiometricAuthResult.failure;
     }

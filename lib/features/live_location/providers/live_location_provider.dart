@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../providers/service_providers.dart';
 import '../../../providers/active_patient_provider.dart';
+import '../../../providers/service_providers.dart';
 import '../data/patient_location_model.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
