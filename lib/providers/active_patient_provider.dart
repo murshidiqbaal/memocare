@@ -56,11 +56,11 @@ final linkedPatientsProvider = FutureProvider<List<Patient>>((ref) async {
 
   final List<dynamic> links = await supabase
       .from('caregiver_patient_links')
-      .select('linked_at, patients!caregiver_patient_links_patient_fk(*)')
+      .select('linked_at, patient:patients(*)')
       .eq('caregiver_id', caregiverRes['id']);
 
-  final patients = links.map((l) {
-    final patientData = l['patients'] as Map<String, dynamic>;
+  final patients = links.where((l) => l['patient'] != null).map((l) {
+    final patientData = l['patient'] as Map<String, dynamic>;
     return Patient.fromJson({
       ...patientData,
       'linked_at': l['linked_at'],

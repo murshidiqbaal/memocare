@@ -177,6 +177,21 @@ class _MemoryUploadScreenState extends ConsumerState<MemoryUploadScreen> {
                                     child: Image.network(
                                       widget.existingMemory!.imageUrl!,
                                       fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.broken_image,
+                                                size: 48,
+                                                color: emotionalTheme.primary
+                                                    ?.withOpacity(0.3)),
+                                            const SizedBox(height: 8),
+                                            const Text('Image unavailable'),
+                                          ],
+                                        );
+                                      },
                                     ),
                                   )
                                 : Column(

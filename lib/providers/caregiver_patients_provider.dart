@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/patient.dart';
+import 'active_patient_provider.dart';
 import 'auth_provider.dart';
 import 'service_providers.dart';
 
@@ -97,13 +98,5 @@ class CaregiverConnectionController extends AsyncNotifier<void> {
 
 final caregiverPatientsProvider =
     FutureProvider.autoDispose<List<Patient>>((ref) async {
-  final user = ref.watch(currentUserProvider);
-
-  if (user == null) {
-    return [];
-  }
-
-  final repo = ref.watch(patientRepositoryProvider);
-
-  return repo.getPatientsForCaregiver(user.id);
+  return ref.watch(linkedPatientsProvider.future);
 });

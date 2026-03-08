@@ -8,7 +8,6 @@ import '../../../../data/models/patient.dart';
 import '../../../../data/models/reminder.dart';
 import '../../../../features/location/providers/safezone_providers.dart';
 import '../../../../providers/active_patient_provider.dart';
-import '../../../../providers/caregiver_patients_provider.dart';
 import '../../../../providers/game_analytics_provider.dart';
 import '../../patient/reminders/add_edit_reminder_screen.dart';
 import '../analytics/analytics_dashboard_screen.dart';
@@ -277,7 +276,7 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
                       if (!hasPatient)
                         Consumer(builder: (context, ref, child) {
                           final patientsAsync =
-                              ref.watch(caregiverPatientsProvider);
+                              ref.watch(linkedPatientsProvider);
                           return patientsAsync.when(
                             data: (patients) {
                               if (patients.isEmpty) {
@@ -782,12 +781,19 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                         leadingIcon: CircleAvatar(
                           radius: 12,
                           backgroundColor: _DS.teal100,
-                          backgroundImage: patient.profileImageUrl != null &&
-                                  patient.profileImageUrl!.isNotEmpty
+                          backgroundImage: (patient.profileImageUrl != null &&
+                                  patient.profileImageUrl!.isNotEmpty)
                               ? NetworkImage(patient.profileImageUrl!)
                               : null,
-                          child: patient.profileImageUrl == null ||
-                                  patient.profileImageUrl!.isEmpty
+                          onBackgroundImageError:
+                              (patient.profileImageUrl != null &&
+                                      patient.profileImageUrl!.isNotEmpty)
+                                  ? (exception, stackTrace) {
+                                      // Handled by child fallback
+                                    }
+                                  : null,
+                          child: (patient.profileImageUrl == null ||
+                                  patient.profileImageUrl!.isEmpty)
                               ? Text(
                                   patient.fullName.isNotEmpty == true
                                       ? patient.fullName[0].toUpperCase()

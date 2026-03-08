@@ -93,7 +93,7 @@ class _EditCaregiverProfileScreenState
       }
 
       final caregiver = Caregiver(
-        id: widget.existingProfile?.id ?? '', // Upsert ignores ID for new
+        id: widget.existingProfile?.id,
         userId: user.id,
         phone: _phoneController.text.trim(),
         relationship: _selectedRelationship,
@@ -160,14 +160,23 @@ class _EditCaregiverProfileScreenState
                           backgroundColor: Colors.teal.shade50,
                           backgroundImage: _selectedImage != null
                               ? FileImage(_selectedImage!)
-                              : (_profilePhotoUrl != null
+                              : (_profilePhotoUrl != null &&
+                                      _profilePhotoUrl!.isNotEmpty
                                   ? NetworkImage(_profilePhotoUrl!)
                                   : null) as ImageProvider?,
-                          child:
-                              _selectedImage == null && _profilePhotoUrl == null
-                                  ? Icon(Icons.add_a_photo,
-                                      size: 40 * scale, color: Colors.teal)
-                                  : null,
+                          onBackgroundImageError: (_selectedImage == null &&
+                                  _profilePhotoUrl != null &&
+                                  _profilePhotoUrl!.isNotEmpty)
+                              ? (exception, stackTrace) {
+                                  // Handled by child fallback
+                                }
+                              : null,
+                          child: _selectedImage == null &&
+                                  (_profilePhotoUrl == null ||
+                                      _profilePhotoUrl!.isEmpty)
+                              ? Icon(Icons.add_a_photo,
+                                  size: 40 * scale, color: Colors.teal)
+                              : null,
                         ),
                       ),
                       Positioned(

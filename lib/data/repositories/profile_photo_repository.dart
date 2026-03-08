@@ -24,9 +24,7 @@ class ProfilePhotoRepository {
 
       final folder = role == 'patient' ? 'patients' : 'caregivers';
 
-      // Using a fixed name 'profile.jpg' to simplify overwrite updates
-      // Alternatively, use timestamp but requires deleting old one.
-      // Based on prompt: "patients/{userId}/profile.jpg"
+      // Standardize path to profile.jpg within the ID folder
       final path = '$folder/$userId/profile.jpg';
 
       // 2. Upload to Storage
@@ -39,36 +37,29 @@ class ProfilePhotoRepository {
             ),
           );
 
-      // 3. Get Public URL
+      // 3. Get Public URL using SDK
       final publicUrl =
           _supabase.storage.from('profile-photos').getPublicUrl(path);
-
-      // Add timestamp tobust cache immediately for UI
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final uniqueUrl = '$publicUrl?t=$timestamp';
 
       // 4. Update Database based on role
       if (role == 'patient') {
         // Update patients table
         await _supabase.from('patients').upsert({
           'id': userId,
-          'profile_photo_url': uniqueUrl,
+          'profile_photo_url': publicUrl,
         });
       } else if (role == 'caregiver') {
         // Update caregiver_profiles table (using role-based check)
         // Ensure table name is correct. In `caregiver_repository`, it was 'caregiver_profiles'.
         // Assuming unique constraint on user_id.
         await _supabase.from('caregiver_profiles').upsert({
-          'user_id': userId, // Depending on schema, might be ID or user_id
-          'profile_photo_url': uniqueUrl,
-        }, onConflict: 'user_id'); // If using user_id as unique key
-
-        // Wait, normally `id` is PK? caregiver_profiles likely has `user_id`.
-        // Let's verify schema from `caregiver_repository` access:
-        // .eq('user_id', user.id) -> yes.
+          'user_id': userId,
+          'profile_photo_url': publicUrl,
+        }, onConflict: 'user_id');
       }
 
-      return uniqueUrl;
+      // Return with timestamp to bust cache in UI immediately
+      return '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
     } catch (e) {
       throw Exception('Failed to upload profile photo: $e');
     }

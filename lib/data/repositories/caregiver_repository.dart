@@ -72,17 +72,13 @@ class CaregiverRepository {
     }
   }
 
-  /// Update or Insert Caregiver Profile
+  /// Update or Insert Caregiver Profile using user_id as the unique key
   Future<void> upsertCaregiverProfile(Caregiver caregiver) async {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
-      // 1. Get existing id or create one
-      final profileId = await ensureProfileExists();
-
       final data = {
-        'id': profileId,
         'user_id': user.id,
         'phone': caregiver.phone,
         'relationship': caregiver.relationship,
@@ -90,9 +86,14 @@ class CaregiverRepository {
         'profile_photo_url': caregiver.profilePhotoUrl,
       };
 
+      // Add ID if it exists (for explicit updates)
+      if (caregiver.id != null && caregiver.id!.isNotEmpty) {
+        data['id'] = caregiver.id!;
+      }
+
       await _supabase.from('caregiver_profiles').upsert(
             data,
-            onConflict: 'id',
+            onConflict: 'user_id',
           );
     } catch (e) {
       throw Exception('Failed to save profile: $e');
@@ -105,19 +106,16 @@ class CaregiverRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
-      final fileExt = file.path.split('.').last;
-      final fileName =
-          '${user.id}-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'caregiver-avatars/$fileName';
+      final filePath = 'caregivers/${user.id}/profile.jpg';
 
-      await _supabase.storage.from('caregiver-avatars').upload(
+      await _supabase.storage.from('profile-photos').upload(
             filePath,
             file,
             fileOptions: const FileOptions(upsert: true),
           );
 
       final imageUrl =
-          _supabase.storage.from('caregiver-avatars').getPublicUrl(filePath);
+          _supabase.storage.from('profile-photos').getPublicUrl(filePath);
       return imageUrl;
     } catch (e) {
       throw Exception('Failed to upload photo: $e');

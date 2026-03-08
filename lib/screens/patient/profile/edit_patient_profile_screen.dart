@@ -410,7 +410,9 @@ class _EditPatientProfileScreenState
       if (userId == null) throw Exception('User ID not found');
 
       final updatedProfile = PatientProfile(
-        id: userId,
+        id: widget.existingProfile?.id ??
+            userId, // Keep existing ID or fallback
+        userId: userId, // Ensure userId is always set for RLS
         // Personal
         fullName: _nameCtrl.text.trim(),
         phoneNumber: _n(_phoneCtrl),

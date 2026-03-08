@@ -31,7 +31,7 @@ final patientProfileProvider =
     return supabase
         .from('patients')
         .stream(primaryKey: ['id'])
-        .eq('id', userId) // Fixed: use 'id' column instead of 'user_id'
+        .eq('user_id', userId)
         .map(_mapSinglePatientSafely);
   },
 );

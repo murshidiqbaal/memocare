@@ -300,10 +300,18 @@ class CaregiverProfileScreen extends ConsumerWidget {
         children: [
           CircleAvatar(
             radius: 24 * scale,
-            backgroundImage: patient.profilePhotoUrl != null
+            backgroundImage: (patient.profilePhotoUrl != null &&
+                    patient.profilePhotoUrl!.isNotEmpty)
                 ? NetworkImage(patient.profilePhotoUrl!)
                 : null,
-            child: patient.profilePhotoUrl == null
+            onBackgroundImageError: (patient.profilePhotoUrl != null &&
+                    patient.profilePhotoUrl!.isNotEmpty)
+                ? (exception, stackTrace) {
+                    // Handled by child fallback
+                  }
+                : null,
+            child: (patient.profilePhotoUrl == null ||
+                    patient.profilePhotoUrl!.isEmpty)
                 ? const Icon(Icons.person)
                 : null,
           ),

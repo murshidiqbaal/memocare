@@ -19,9 +19,13 @@ class PatientRepository {
       // Note: In some versions of this schema, patients.id references profiles.id.
       // However, for simplified "patient-only" creation as requested, we insert into patients.
 
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
       final response = await _supabase
           .from('patients')
           .insert({
+            'user_id': userId,
             'full_name': name,
             'age': age,
             'condition': condition,

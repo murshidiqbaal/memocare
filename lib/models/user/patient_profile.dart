@@ -1,5 +1,6 @@
 class PatientProfile {
   final String id;
+  final String? userId; // Adding userId to track the owner
 
   // Personal
   final String? fullName;
@@ -47,6 +48,7 @@ class PatientProfile {
 
   const PatientProfile({
     required this.id,
+    this.userId,
     this.fullName,
     this.phoneNumber,
     this.address,
@@ -84,6 +86,7 @@ class PatientProfile {
   factory PatientProfile.fromJson(Map<String, dynamic> json) {
     return PatientProfile(
       id: json['id'] as String,
+      userId: json['user_id'] as String?,
 
       // Personal
       fullName: json['full_name'] as String?,
@@ -143,6 +146,7 @@ class PatientProfile {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'user_id': userId,
         'full_name': fullName,
         'phone': phoneNumber,
         'address': address,
@@ -179,6 +183,7 @@ class PatientProfile {
 
   PatientProfile copyWith({
     String? id,
+    String? userId,
     String? fullName,
     String? phoneNumber,
     String? address,
@@ -212,6 +217,7 @@ class PatientProfile {
   }) {
     return PatientProfile(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       fullName: fullName ?? this.fullName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       address: address ?? this.address,

@@ -24,9 +24,18 @@ class PeopleCardListItem extends StatelessWidget {
         leading: CircleAvatar(
           radius: 30,
           backgroundImage:
-              person.photoUrl != null ? NetworkImage(person.photoUrl!) : null,
-          child: person.photoUrl == null
-              ? Text(person.name[0].toUpperCase(),
+              (person.photoUrl != null && person.photoUrl!.isNotEmpty)
+                  ? NetworkImage(person.photoUrl!)
+                  : null,
+          onBackgroundImageError:
+              (person.photoUrl != null && person.photoUrl!.isNotEmpty)
+                  ? (exception, stackTrace) {
+                      // Handled by child fallback
+                    }
+                  : null,
+          child: (person.photoUrl == null || person.photoUrl!.isEmpty)
+              ? Text(
+                  person.name.isNotEmpty ? person.name[0].toUpperCase() : '?',
                   style: const TextStyle(fontSize: 24))
               : null,
         ),

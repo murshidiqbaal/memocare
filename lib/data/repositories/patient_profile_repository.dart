@@ -34,12 +34,13 @@ class PatientProfileRepository {
       final patientResponse = await _supabase
           .from('patients')
           .select('*')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .maybeSingle();
 
       // Merge: patient table wins over profiles table
       final Map<String, dynamic> merged = {
-        'id': userId,
+        'id': userId, // Temporary placeholder if patient record doesn't exist
+        'user_id': userId,
         'full_name': patientResponse?['full_name'] ??
             profileResponse['full_name'] ??
             'Patient',
@@ -52,7 +53,7 @@ class PatientProfileRepository {
 
       if (patientResponse != null) {
         merged.addAll(patientResponse);
-        merged['id'] = userId; // never overwrite
+        // Keep the database PK as 'id' and authenticated ID as 'user_id'
       }
 
       final profile = PatientProfile.fromJson(merged);
@@ -125,17 +126,37 @@ class PatientProfileRepository {
 
       // ── profiles table (base auth row) ────────────────────────────────────
       final profileData = <String, dynamic>{
-        'id': profile.id,
+        'id': profile.userId ?? profile.id, // Auth id
         'full_name': profile.fullName,
         'phone_number': profile.phoneNumber,
       };
       profileData.removeWhere((_, v) => v == null);
 
-      // Run both in parallel
-      await Future.wait([
-        _supabase.from('patients').upsert(patientData),
-        _supabase.from('profiles').update(profileData).eq('id', profile.id),
-      ]);
+      // ── patients table logic ──────────────────────────────────────────────
+      final existingPatient = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', profile.userId ?? profile.id)
+          .maybeSingle();
+
+      if (existingPatient != null) {
+        // UPDATE existing
+        await _supabase
+            .from('patients')
+            .update(patientData)
+            .eq('user_id', profile.userId ?? profile.id);
+      } else {
+        // INSERT new
+        // Ensure user_id is set and remove manual id to let DB generate it
+        patientData['user_id'] = profile.userId ?? profile.id;
+        patientData.remove('id');
+        await _supabase.from('patients').insert(patientData);
+      }
+
+      await _supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', profile.userId ?? profile.id);
 
       _cachedProfile = profile;
     } catch (e) {

@@ -72,14 +72,10 @@ class CaregiverProfileRepository {
   Future<Either<Failure, String>> uploadProfileImage(
       File imageFile, String userId) async {
     try {
-      final fileExt = imageFile.path.split('.').last;
-      final fileName =
-          '$userId.${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'profile-photos/$fileName';
+      final filePath = 'caregivers/$userId/profile.jpg';
 
-      await _supabase.storage
-          .from('profile-photos')
-          .upload(filePath, imageFile);
+      await _supabase.storage.from('profile-photos').upload(filePath, imageFile,
+          fileOptions: const FileOptions(upsert: true));
 
       final imageUrl =
           _supabase.storage.from('profile-photos').getPublicUrl(filePath);
