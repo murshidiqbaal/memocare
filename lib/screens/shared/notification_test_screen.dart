@@ -409,6 +409,7 @@ class _NotificationTestScreenState
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'notificationTestFab',
         onPressed: () => setState(() => _results.clear()),
         label: const Text('Clear Log'),
         icon: const Icon(Icons.delete_sweep_outlined),

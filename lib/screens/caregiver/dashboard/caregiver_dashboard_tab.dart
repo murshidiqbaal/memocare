@@ -210,22 +210,22 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
                       // SOS banner
                       const CaregiverSosAlertBanner(),
 
-                      // Pending Location Requests Banner
+                      // Pending Location Requests Banner (Requested status only)
                       Consumer(builder: (context, ref, child) {
-                        final caregiverId =
-                            Supabase.instance.client.auth.currentUser?.id;
-                        if (caregiverId == null) return const SizedBox.shrink();
+                        final activePatientId =
+                            ref.watch(activePatientIdProvider);
+                        if (activePatientId == null)
+                          return const SizedBox.shrink();
 
                         final requestsAsync = ref.watch(
-                            pendingLocationRequestsProvider(caregiverId));
+                            patientPendingRequestsProvider(activePatientId));
                         return requestsAsync.maybeWhen(
                           data: (requests) {
                             if (requests.isEmpty)
                               return const SizedBox.shrink();
                             return _StatusBanner(
-                              icon: Icons.home_work_rounded,
-                              message:
-                                  '${requests.length} pending home location change request(s)',
+                              icon: Icons.priority_high_rounded,
+                              message: 'New change request for home safe zone',
                               color: const Color(0xFFE3F2FD),
                               borderColor: Colors.blue.withOpacity(0.4),
                               iconColor: Colors.blue,
@@ -577,7 +577,7 @@ class _PatientCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    patient.fullName ?? 'Unknown Patient',
+                    patient.fullName,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -733,29 +733,40 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                               ),
                             ),
                             const SizedBox(height: 1),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: const BoxDecoration(
-                                    color: _DS.teal500,
-                                    shape: BoxShape.circle,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _DS.teal50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: _DS.teal200.withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: _DS.teal500,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  patientName,
-                                  style: const TextStyle(
-                                    color: _DS.teal700,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    patientName,
+                                    style: const TextStyle(
+                                      color: _DS.teal900,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                const Icon(Icons.expand_more_rounded,
-                                    color: _DS.teal700, size: 14),
-                              ],
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.keyboard_arrow_down_rounded,
+                                      color: _DS.teal700, size: 16),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -778,8 +789,8 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                           child: patient.profileImageUrl == null ||
                                   patient.profileImageUrl!.isEmpty
                               ? Text(
-                                  patient.fullName?.isNotEmpty == true
-                                      ? patient.fullName![0].toUpperCase()
+                                  patient.fullName.isNotEmpty == true
+                                      ? patient.fullName[0].toUpperCase()
                                       : 'P',
                                   style: const TextStyle(
                                       fontSize: 10, color: _DS.teal900))

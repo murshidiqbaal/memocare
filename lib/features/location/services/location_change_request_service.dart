@@ -93,7 +93,28 @@ class LocationChangeRequestService {
   // Caregiver side
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// Gets all PENDING requests for patients linked to [caregiverId].
+  /// Gets all REQUESTED (pending) requests for a specific patient.
+  Future<List<LocationChangeRequest>> getPatientPendingRequests(
+      String patientId) async {
+    try {
+      final data = await _supabase
+          .from('location_change_requests')
+          .select()
+          .eq('patient_id', patientId)
+          .eq('status', 'requested')
+          .order('created_at', ascending: false);
+
+      return (data as List)
+          .map((e) => LocationChangeRequest.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint(
+          '[LocationChangeRequestService] Patient pending requests error: $e');
+      return [];
+    }
+  }
+
+  /// Gets all REQUESTED (pending) requests for all patients linked to [caregiverId].
   Future<List<LocationChangeRequest>> getPendingRequestsForCaregiver(
       String caregiverId) async {
     try {
@@ -111,7 +132,7 @@ class LocationChangeRequestService {
           .from('location_change_requests')
           .select()
           .inFilter('patient_id', patientIds)
-          .eq('status', 'pending')
+          .eq('status', 'requested')
           .order('created_at', ascending: false);
 
       return (data as List)

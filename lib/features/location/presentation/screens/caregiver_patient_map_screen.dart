@@ -189,7 +189,7 @@ class _CaregiverPatientMapScreenState
             top: 16,
             right: 16,
             child: FloatingActionButton.small(
-              heroTag: 'follow',
+              heroTag: 'caregiverMapFollowFab',
               backgroundColor: _followPatient ? Colors.teal : Colors.white,
               child: Icon(
                 _followPatient ? Icons.my_location : Icons.location_searching,

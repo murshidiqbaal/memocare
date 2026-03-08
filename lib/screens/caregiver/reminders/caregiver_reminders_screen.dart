@@ -17,10 +17,18 @@ class CaregiverRemindersScreen extends ConsumerWidget {
     final state = ref.watch(caregiverReminderProvider);
     final viewModel = ref.read(caregiverReminderProvider.notifier);
     final activePatientId = ref.watch(activePatientIdProvider);
-    final linkedPatients = ref.watch(linkedPatientsProvider).value ?? [];
+    final linkedPatientsAsync = ref.watch(linkedPatientsProvider);
+    final linkedPatients = linkedPatientsAsync.value ?? [];
     final selectedPatient = linkedPatients.any((p) => p.id == activePatientId)
         ? linkedPatients.firstWhere((p) => p.id == activePatientId)
         : null;
+
+    if (linkedPatientsAsync.isLoading && activePatientId != null) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     if (selectedPatient == null || state.selectedPatientId.isEmpty) {
       return Scaffold(
@@ -50,6 +58,7 @@ class CaregiverRemindersScreen extends ConsumerWidget {
           ),
         ),
         floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'noPatientReminderFab',
           onPressed: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -135,6 +144,7 @@ class CaregiverRemindersScreen extends ConsumerWidget {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'addReminderFab',
         onPressed: () {
           Navigator.push(
             context,
@@ -187,8 +197,8 @@ class CaregiverRemindersScreen extends ConsumerWidget {
                 child: (selectedPatient?.profileImageUrl == null ||
                         selectedPatient!.profileImageUrl!.isEmpty)
                     ? Text(
-                        selectedPatient?.fullName?.isNotEmpty == true
-                            ? selectedPatient!.fullName![0].toUpperCase()
+                        (selectedPatient?.fullName.isNotEmpty ?? false)
+                            ? selectedPatient!.fullName[0].toUpperCase()
                             : '?',
                         style: const TextStyle(
                           color: Colors.white,

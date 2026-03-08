@@ -20,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/caregiver_patient_link.dart';
 import '../../../../data/models/dashboard_stats.dart';
+import '../../../../data/models/patient.dart';
 import '../../../../data/models/reminder.dart';
 import '../../../../data/models/voice_query.dart';
 import '../../../../data/repositories/dashboard_repository.dart';
@@ -268,7 +269,7 @@ final caregiverDashboardProvider = StateNotifierProvider.family<
           );
           vm.onPatientChanged(
             patient.id,
-            patient.fullName ?? 'Linked Patient',
+            patient.fullName,
             patient.profileImageUrl,
           );
         } else {
@@ -276,6 +277,30 @@ final caregiverDashboardProvider = StateNotifierProvider.family<
         }
       },
       fireImmediately: true,
+    );
+
+    // ── React to linkedPatientsProvider changes ───────────────────────────
+    // Ensures that if the ID is known (from cache) but the list loads later,
+    // the name and photo are updated promptly.
+    ref.listen<AsyncValue<List<Patient>>>(
+      linkedPatientsProvider,
+      (previous, next) {
+        final activeId = ref.read(activePatientIdProvider);
+        if (activeId == null) return;
+
+        next.whenData((patients) {
+          try {
+            final patient = patients.firstWhere((p) => p.id == activeId);
+            vm.onPatientChanged(
+              patient.id,
+              patient.fullName,
+              patient.profileImageUrl,
+            );
+          } catch (_) {
+            // Patient might have been unlinked
+          }
+        });
+      },
     );
 
     return vm;

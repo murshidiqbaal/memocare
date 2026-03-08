@@ -2,19 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/person.dart';
+import '../../../providers/active_patient_provider.dart';
+import '../../../widgets/patient_selector_dropdown.dart';
 import 'people_viewmodel.dart';
 import 'widgets/people_card_edit_form.dart';
 import 'widgets/people_card_list_item.dart';
 
 class CaregiverPeopleScreen extends ConsumerWidget {
-  final String patientId;
-
-  const CaregiverPeopleScreen({super.key, required this.patientId});
+  const CaregiverPeopleScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(peopleViewModelProvider(patientId));
-    final viewModel = ref.read(peopleViewModelProvider(patientId).notifier);
+    final activePatientId = ref.watch(activePatientIdProvider);
+    final linkedPatientsAsync = ref.watch(linkedPatientsProvider);
+    final linkedPatients = linkedPatientsAsync.value ?? [];
+    final selectedPatient = linkedPatients.any((p) => p.id == activePatientId)
+        ? linkedPatients.firstWhere((p) => p.id == activePatientId)
+        : null;
+
+    if (linkedPatientsAsync.isLoading && activePatientId != null) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (activePatientId == null || selectedPatient == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const PatientSelectorDropdown(),
+          backgroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_off, size: 80, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'No patient selected',
+                style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please use the dropdown above to select a patient.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade400),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final state = ref.watch(peopleViewModelProvider(activePatientId));
+    final viewModel =
+        ref.read(peopleViewModelProvider(activePatientId).notifier);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -44,14 +89,17 @@ class CaregiverPeopleScreen extends ConsumerWidget {
                     final person = state.people[index];
                     return PeopleCardListItem(
                       person: person,
-                      onEdit: () => _showEditForm(context, person, viewModel),
+                      onEdit: () => _showEditForm(
+                          context, person, viewModel, activePatientId!),
                       onDelete: () =>
                           _confirmDelete(context, person, viewModel),
                     );
                   },
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showEditForm(context, null, viewModel),
+        heroTag: 'addPersonFab',
+        onPressed: () =>
+            _showEditForm(context, null, viewModel, activePatientId!),
         label: const Text('Add Person'),
         icon: const Icon(Icons.person_add),
         backgroundColor: Colors.teal,
@@ -81,8 +129,8 @@ class CaregiverPeopleScreen extends ConsumerWidget {
     );
   }
 
-  void _showEditForm(
-      BuildContext context, Person? person, PeopleViewModel viewModel) {
+  void _showEditForm(BuildContext context, Person? person,
+      PeopleViewModel viewModel, String patientId) {
     Navigator.push(
       context,
       MaterialPageRoute(

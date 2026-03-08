@@ -19,6 +19,7 @@ class CaregiverConnectionsScreen extends ConsumerWidget {
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'caregiverInviteFab',
         onPressed: () => _showInviteDialog(context, ref),
         label: const Text('Add Patient'),
         icon: const Icon(Icons.person_add),

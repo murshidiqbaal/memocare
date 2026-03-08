@@ -81,8 +81,8 @@ class PatientSelectorDropdown extends ConsumerWidget {
                     child: (patient.profileImageUrl == null ||
                             patient.profileImageUrl!.isEmpty)
                         ? Text(
-                            patient.fullName?.isNotEmpty == true
-                                ? patient.fullName![0].toUpperCase()
+                            patient.fullName.isNotEmpty == true
+                                ? patient.fullName[0].toUpperCase()
                                 : '?',
                             style: const TextStyle(
                               fontSize: 10,
@@ -93,7 +93,7 @@ class PatientSelectorDropdown extends ConsumerWidget {
                         : null,
                   ),
                   const SizedBox(width: 8),
-                  Text(patient.fullName ?? 'Linked Patient'),
+                  Text(patient.fullName),
                 ],
               ),
             );

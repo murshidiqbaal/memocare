@@ -81,3 +81,12 @@ final patientLocationRequestsProvider =
     return svc.getPatientRequests(patientId);
   },
 );
+
+/// Pending REQUESTED requests for a given patient ID.
+final patientPendingRequestsProvider =
+    FutureProvider.autoDispose.family<List<LocationChangeRequest>, String>(
+  (ref, patientId) async {
+    final svc = ref.watch(locationChangeRequestServiceProvider);
+    return svc.getPatientPendingRequests(patientId);
+  },
+);

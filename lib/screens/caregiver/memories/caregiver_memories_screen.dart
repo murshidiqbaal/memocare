@@ -15,13 +15,25 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final patientId = ref.watch(activePatientIdProvider) ?? '';
+    final activePatientId = ref.watch(activePatientIdProvider);
+    final linkedPatientsAsync = ref.watch(linkedPatientsProvider);
+    final linkedPatients = linkedPatientsAsync.value ?? [];
+    final selectedPatient = linkedPatients.any((p) => p.id == activePatientId)
+        ? linkedPatients.firstWhere((p) => p.id == activePatientId)
+        : null;
 
     final emotionalTheme =
         Theme.of(context).extension<EmotionalThemeExtension>()!;
 
-    // No patient selected
-    if (patientId.isEmpty) {
+    if (linkedPatientsAsync.isLoading && activePatientId != null) {
+      return Scaffold(
+        backgroundColor: emotionalTheme.background,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // No patient selected or patient not in linked list
+    if (activePatientId == null || selectedPatient == null) {
       return Scaffold(
         backgroundColor: emotionalTheme.background,
         appBar: AppBar(
@@ -65,8 +77,9 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
       );
     }
 
-    final state = ref.watch(memoryViewModelProvider(patientId));
-    final viewModel = ref.read(memoryViewModelProvider(patientId).notifier);
+    final state = ref.watch(memoryViewModelProvider(activePatientId!));
+    final viewModel =
+        ref.read(memoryViewModelProvider(activePatientId).notifier);
 
     return Scaffold(
       backgroundColor: emotionalTheme.background,
@@ -129,8 +142,8 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
                           itemCount: state.memories.length,
                           itemBuilder: (context, index) {
                             final memory = state.memories[index];
-                            return _buildMemoryCard(
-                                context, ref, memory, viewModel, patientId);
+                            return _buildMemoryCard(context, ref, memory,
+                                viewModel, activePatientId!);
                           },
                         ),
                       ),
@@ -138,7 +151,9 @@ class CaregiverMemoriesScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToUpload(context, ref, null, patientId),
+        heroTag: 'addMemoryFab',
+        onPressed: () =>
+            _navigateToUpload(context, ref, null, activePatientId!),
         label: const Text('Add Memory'),
         icon: const Icon(Icons.add_photo_alternate),
         backgroundColor: emotionalTheme.primary,

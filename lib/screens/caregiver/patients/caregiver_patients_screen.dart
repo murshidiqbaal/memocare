@@ -69,6 +69,7 @@ class CaregiverPatientsScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'addPatientFab',
         onPressed: () {
           Navigator.push(
             context,
