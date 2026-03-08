@@ -1,35 +1,48 @@
+import 'package:dementia_care_app/core/services/audio/voice_playback_service.dart';
+import 'package:dementia_care_app/core/services/battery_optimization_service.dart';
+import 'package:dementia_care_app/core/services/fcm_service.dart';
+import 'package:dementia_care_app/core/services/hive_service.dart';
+import 'package:dementia_care_app/core/services/llm_memory_query_engine.dart';
+import 'package:dementia_care_app/core/services/memory_query_engine.dart';
+import 'package:dementia_care_app/core/services/notification/reminder_notification_service.dart';
+import 'package:dementia_care_app/core/services/notification_trigger_service.dart';
+import 'package:dementia_care_app/core/services/reminder_reliability_service.dart';
+import 'package:dementia_care_app/core/services/tts_service.dart';
+import 'package:dementia_care_app/core/services/voice/voice_storage_service.dart';
+import 'package:dementia_care_app/core/services/voice_service.dart';
+import 'package:dementia_care_app/data/models/reminder.dart';
+import 'package:dementia_care_app/data/repositories/caregiver_repository.dart';
+import 'package:dementia_care_app/data/repositories/dashboard_repository.dart';
+import 'package:dementia_care_app/data/repositories/location_repository.dart';
+import 'package:dementia_care_app/data/repositories/memory_repository.dart';
+import 'package:dementia_care_app/data/repositories/patient_connection_repository.dart';
+import 'package:dementia_care_app/data/repositories/patient_profile_repository.dart';
+import 'package:dementia_care_app/data/repositories/patient_repository.dart';
+import 'package:dementia_care_app/data/repositories/people_repository.dart';
+import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
+import 'package:dementia_care_app/data/repositories/sos_repository.dart';
+import 'package:dementia_care_app/data/repositories/voice_assistant_repository.dart';
+import 'package:dementia_care_app/providers/supabase_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../data/repositories/caregiver_repository.dart';
-import '../data/repositories/dashboard_repository.dart';
-import '../data/repositories/location_repository.dart';
-import '../data/repositories/memory_repository.dart';
-import '../data/repositories/patient_connection_repository.dart';
-import '../data/repositories/patient_profile_repository.dart'; // Added
-import '../data/repositories/patient_repository.dart';
-import '../data/repositories/people_repository.dart';
-import '../data/repositories/reminder_repository.dart';
-import '../data/repositories/voice_assistant_repository.dart';
-import '../features/safety/data/repositories/sos_repository.dart';
-import '../services/audio/voice_playback_service.dart'; // Added
-import '../services/battery_optimization_service.dart';
-import '../services/fcm_service.dart';
-import '../services/llm_memory_query_engine.dart';
-import '../services/memory_query_engine.dart';
-import '../services/notification/reminder_notification_service.dart';
-import '../services/notification_trigger_service.dart';
-import '../services/reminder_reliability_service.dart';
-import '../services/tts_service.dart';
-import '../services/voice/voice_storage_service.dart';
-import '../services/voice_service.dart';
-import 'supabase_provider.dart';
+import '../data/datasources/local/local_reminder_datasource.dart';
 
 export 'supabase_provider.dart';
 
+final reminderBoxProvider = FutureProvider<Box<Reminder>>((ref) async {
+  return await HiveService.openReminderBox();
+});
+
 final voiceStorageServiceProvider = Provider<VoiceStorageService>((ref) {
   return VoiceStorageService(Supabase.instance.client);
+});
+
+final localReminderDatasourceProvider =
+    Provider<LocalReminderDatasource>((ref) {
+  return LocalReminderDatasource();
 });
 
 // Supabase Client is now imported from providers/supabase_provider.dart
@@ -57,7 +70,13 @@ final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   final voiceService = ref.watch(voiceServiceProvider);
   final notificationService = ref.watch(reminderNotificationServiceProvider);
-  return ReminderRepository(supabase, voiceService, notificationService);
+  final localDatasource = ref.watch(localReminderDatasourceProvider);
+  return ReminderRepository(
+    supabase,
+    voiceService,
+    notificationService,
+    localDatasource,
+  );
 });
 
 // People Repository Provider

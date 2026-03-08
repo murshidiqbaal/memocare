@@ -1,0 +1,812 @@
+ Volume in drive D is murshi
+ Volume Serial Number is 4219-1972
+
+ Directory of d:\vscode\memocare\memocare\lib
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:27    <DIR>          ..
+05-03-2026  11:03    <DIR>          auth
+08-03-2026  13:15    <DIR>          core
+07-03-2026  16:46    <DIR>          data
+02-03-2026  15:40    <DIR>          examples
+08-03-2026  13:15    <DIR>          features
+08-03-2026  00:54             3,238 main.dart
+05-03-2026  10:24    <DIR>          models
+07-03-2026  19:48    <DIR>          providers
+08-03-2026  13:15    <DIR>          router
+08-03-2026  13:15    <DIR>          routes
+08-03-2026  13:15    <DIR>          screens
+08-03-2026  13:15    <DIR>          services
+08-03-2026  11:36    <DIR>          supabase
+06-03-2026  12:03    <DIR>          widgets
+               1 File(s)          3,238 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\auth
+
+05-03-2026  11:03    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  23:14             1,156 biometric_service.dart
+05-03-2026  11:03               641 device_service.dart
+05-03-2026  11:03               677 secure_session_storage.dart
+               3 File(s)          2,474 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          config
+02-03-2026  15:40    <DIR>          errors
+07-03-2026  15:09    <DIR>          providers
+08-03-2026  13:15    <DIR>          services
+02-03-2026  17:09    <DIR>          theme
+02-03-2026  15:40    <DIR>          utils
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core\config
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40               327 env_config.dart
+02-03-2026  15:40               281 supabase_config.dart
+               2 File(s)            608 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core\errors
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40               448 failures.dart
+               1 File(s)            448 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core\providers
+
+07-03-2026  15:09    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+07-03-2026  15:09               435 supabase_provider.dart
+               1 File(s)            435 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core\services
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  09:34             2,043 battery_optimization_service.dart
+02-03-2026  17:29             2,696 call_service.dart
+06-03-2026  12:02            17,741 fcm_service.dart
+02-03-2026  16:08             5,378 game_analytics_service.dart
+02-03-2026  15:40               585 image_picker_service.dart
+02-03-2026  15:40            11,108 llm_memory_query_engine.dart
+02-03-2026  15:40             5,856 location_tracking_service.dart
+02-03-2026  15:40             8,975 memory_query_engine.dart
+02-03-2026  15:40             3,316 notification_service.dart
+02-03-2026  15:40             6,673 notification_trigger_service.dart
+02-03-2026  16:46             9,776 realtime_service.dart
+06-03-2026  09:33             2,107 reminder_reliability_service.dart
+02-03-2026  16:46             4,744 sos_service.dart
+02-03-2026  15:40             2,294 tts_service.dart
+02-03-2026  15:40             2,125 voice_service.dart
+              15 File(s)         85,417 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core\theme
+
+02-03-2026  17:09    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40             2,207 app_theme.dart
+02-03-2026  17:09               764 emotional_colors.dart
+02-03-2026  17:09             2,747 emotional_theme_extension.dart
+02-03-2026  17:08             1,149 memocare_colors.dart
+02-03-2026  17:22             3,929 memocare_theme.dart
+               5 File(s)         10,796 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\core\utils
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  23:59             3,538 profile_completion_helper.dart
+               1 File(s)          3,538 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\data
+
+07-03-2026  16:46    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          datasources
+07-03-2026  19:46    <DIR>          models
+07-03-2026  19:47    <DIR>          repositories
+07-03-2026  16:57    <DIR>          services
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\data\datasources
+
+02-03-2026  15:40    <DIR>          .
+07-03-2026  16:46    <DIR>          ..
+02-03-2026  15:40    <DIR>          remote
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\data\datasources\remote
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+08-03-2026  00:57             3,402 remote_auth_datasource.dart
+               1 File(s)          3,402 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\data\models
+
+07-03-2026  19:46    <DIR>          .
+07-03-2026  16:46    <DIR>          ..
+07-03-2026  19:58             2,296 caregiver.dart
+07-03-2026  12:03             3,179 caregiver_patient_link.dart
+02-03-2026  15:40             3,751 dashboard_stats.dart
+07-03-2026  11:53             4,251 emergency_alert.dart
+07-03-2026  11:52             2,236 game_analytics.dart
+02-03-2026  15:40             1,516 game_analytics_summary.dart
+07-03-2026  11:52             3,152 game_session.dart
+02-03-2026  15:40             1,610 location_alert.dart
+02-03-2026  15:40             1,392 location_log.dart
+07-03-2026  11:52             2,336 memory.dart
+08-03-2026  01:22             4,070 patient.dart
+02-03-2026  15:40             1,326 patient_home_location.dart
+02-03-2026  17:42               899 patient_live_location.dart
+07-03-2026  12:22               100 patient_profile.dart
+07-03-2026  12:14             2,552 person.dart
+06-03-2026  11:39             5,603 reminder.dart
+07-03-2026  14:10             2,081 safe_zone.dart
+07-03-2026  11:53             2,723 sos_alert.dart
+07-03-2026  11:53             2,082 sos_event.dart
+07-03-2026  19:46             2,259 sos_messages.dart
+07-03-2026  11:52             1,296 voice_query.dart
+              21 File(s)         50,710 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\data\repositories
+
+07-03-2026  19:47    <DIR>          .
+07-03-2026  16:46    <DIR>          ..
+08-03-2026  00:47             4,213 auth_repository.dart
+08-03-2026  11:47             2,820 caregiver_profile_repository.dart
+08-03-2026  11:47             3,672 caregiver_repository.dart
+06-03-2026  23:59             3,780 connection_repository.dart
+07-03-2026  12:03             6,954 dashboard_repository.dart
+02-03-2026  15:40             7,991 emergency_alert_repository.dart
+07-03-2026  19:53             3,233 game_analytics_repository.dart
+02-03-2026  15:57             6,600 game_repository.dart
+02-03-2026  17:42             2,989 location_repository.dart
+02-03-2026  15:40             4,916 memory_repository.dart
+08-03-2026  11:27             7,547 patient_connection_repository.dart
+08-03-2026  12:36             7,310 patient_profile_repository.dart
+08-03-2026  12:36             5,895 patient_repository.dart
+02-03-2026  15:40             3,202 people_repository.dart
+08-03-2026  11:47             2,224 profile_photo_repository.dart
+02-03-2026  15:40             5,989 reminder_repository.dart
+02-03-2026  15:40             1,549 safety_repository.dart
+07-03-2026  15:12             2,768 safe_zone_repository.dart
+07-03-2026  19:55             1,915 sos_messages_repository.dart
+07-03-2026  19:53            15,202 sos_repository.dart
+02-03-2026  15:40             1,416 voice_assistant_repository.dart
+              21 File(s)        102,185 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\data\services
+
+07-03-2026  16:57    <DIR>          .
+07-03-2026  16:46    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\examples
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40             6,212 profile_photo_upload_examples.dart
+02-03-2026  15:40            17,904 reminder_system_examples.dart
+               2 File(s)         24,116 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+07-03-2026  14:52    <DIR>          admin
+07-03-2026  14:50    <DIR>          auth
+08-03-2026  13:15    <DIR>          caregiver
+02-03-2026  16:03    <DIR>          games
+02-03-2026  15:40    <DIR>          linking
+02-03-2026  15:40    <DIR>          live_location
+07-03-2026  14:10    <DIR>          location
+05-03-2026  11:04    <DIR>          login
+08-03-2026  13:15    <DIR>          patient
+02-03-2026  15:40    <DIR>          patient_selection
+05-03-2026  11:04    <DIR>          profile
+02-03-2026  15:40    <DIR>          safety
+08-03-2026  13:15    <DIR>          shared
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\admin
+
+07-03-2026  14:52    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+05-03-2026  10:24    <DIR>          models
+07-03-2026  14:52    <DIR>          presentation
+07-03-2026  14:52    <DIR>          providers
+07-03-2026  14:51    <DIR>          repositories
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\admin\models
+
+05-03-2026  10:24    <DIR>          .
+07-03-2026  14:52    <DIR>          ..
+05-03-2026  12:16            11,355 admin_user..dart
+               1 File(s)         11,355 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\admin\presentation
+
+07-03-2026  14:52    <DIR>          .
+07-03-2026  14:52    <DIR>          ..
+08-03-2026  13:24    <DIR>          screens
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\admin\presentation\screens
+
+08-03-2026  13:24    <DIR>          .
+07-03-2026  14:52    <DIR>          ..
+07-03-2026  14:53             6,550 admin_caregiver_requests_screen.dart
+07-03-2026  14:52             5,025 admin_dashboard_screen.dart
+               2 File(s)         11,575 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\admin\providers
+
+07-03-2026  14:52    <DIR>          .
+07-03-2026  14:52    <DIR>          ..
+07-03-2026  14:52               566 admin_providers.dart
+               1 File(s)            566 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\admin\repositories
+
+07-03-2026  14:51    <DIR>          .
+07-03-2026  14:52    <DIR>          ..
+07-03-2026  14:51               881 admin_repository.dart
+               1 File(s)            881 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\auth
+
+07-03-2026  14:50    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+07-03-2026  14:50    <DIR>          models
+06-03-2026  08:23    <DIR>          presentation
+06-03-2026  08:50    <DIR>          providers
+06-03-2026  08:19    <DIR>          services
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\auth\models
+
+07-03-2026  14:50    <DIR>          .
+07-03-2026  14:50    <DIR>          ..
+07-03-2026  14:50             1,595 caregiver_request.dart
+               1 File(s)          1,595 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\auth\presentation
+
+06-03-2026  08:23    <DIR>          .
+07-03-2026  14:50    <DIR>          ..
+07-03-2026  14:51    <DIR>          screens
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\auth\presentation\screens
+
+07-03-2026  14:51    <DIR>          .
+06-03-2026  08:23    <DIR>          ..
+06-03-2026  08:54             7,532 biometric_login_screen.dart
+07-03-2026  14:51             2,999 caregiver_pending_approval_screen.dart
+06-03-2026  08:51             5,913 flutter_login_screen.dart
+               3 File(s)         16,444 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\auth\providers
+
+06-03-2026  08:50    <DIR>          .
+07-03-2026  14:50    <DIR>          ..
+08-03-2026  00:35             3,008 auth_provider.dart
+06-03-2026  08:54             6,709 biometric_providers.dart
+               2 File(s)          9,717 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\auth\services
+
+06-03-2026  08:19    <DIR>          .
+07-03-2026  14:50    <DIR>          ..
+06-03-2026  23:06             2,057 biometric_service.dart
+               1 File(s)          2,057 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\caregiver
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  13:15    <DIR>          presentation
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\caregiver\presentation
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  13:24    <DIR>          screens
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\caregiver\presentation\screens
+
+08-03-2026  13:24    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\games
+
+02-03-2026  16:03    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  16:03    <DIR>          data
+02-03-2026  16:03    <DIR>          providers
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\games\data
+
+02-03-2026  16:03    <DIR>          .
+02-03-2026  16:03    <DIR>          ..
+26-02-2026  23:09             5,180 game_analytics_repository.dart
+               1 File(s)          5,180 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\games\providers
+
+02-03-2026  16:03    <DIR>          .
+02-03-2026  16:03    <DIR>          ..
+07-03-2026  19:53             1,674 game_analytics_provider.dart
+               1 File(s)          1,674 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\linking
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          data
+02-03-2026  15:40    <DIR>          presentation
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\linking\data
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40    <DIR>          models
+02-03-2026  15:40    <DIR>          repositories
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\linking\data\models
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+07-03-2026  11:54             2,871 caregiver_patient_link.dart
+02-03-2026  15:40               756 invite_code.dart
+               2 File(s)          3,627 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\linking\data\repositories
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40             4,442 link_repository.dart
+               1 File(s)          4,442 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\linking\presentation
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40    <DIR>          controllers
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\linking\presentation\controllers
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40             2,648 link_controller.dart
+               1 File(s)          2,648 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\live_location
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          data
+02-03-2026  15:40    <DIR>          presentation
+02-03-2026  15:40    <DIR>          providers
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\live_location\data
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+07-03-2026  19:25             2,720 patient_location_model.dart
+               1 File(s)          2,720 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\live_location\presentation
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40    <DIR>          widgets
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\live_location\presentation\widgets
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+03-03-2026  09:00            12,122 live_location_map_widget.dart
+               1 File(s)         12,122 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\live_location\providers
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+07-03-2026  19:22             8,683 live_location_provider.dart
+               1 File(s)          8,683 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location
+
+07-03-2026  14:10    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+07-03-2026  14:10    <DIR>          data
+07-03-2026  14:10    <DIR>          models
+06-03-2026  11:20    <DIR>          presentation
+07-03-2026  14:10    <DIR>          providers
+06-03-2026  11:17    <DIR>          services
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\data
+
+07-03-2026  14:10    <DIR>          .
+07-03-2026  14:10    <DIR>          ..
+07-03-2026  14:10    <DIR>          repositories
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\data\repositories
+
+07-03-2026  14:10    <DIR>          .
+07-03-2026  14:10    <DIR>          ..
+07-03-2026  14:10             2,134 location_request_repository.dart
+               1 File(s)          2,134 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\models
+
+07-03-2026  14:10    <DIR>          .
+07-03-2026  14:10    <DIR>          ..
+06-03-2026  11:16             1,980 location_change_request.dart
+07-03-2026  14:10             1,909 location_request.dart
+06-03-2026  11:16             1,440 safezone_alert.dart
+               3 File(s)          5,329 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\presentation
+
+06-03-2026  11:20    <DIR>          .
+07-03-2026  14:10    <DIR>          ..
+07-03-2026  14:12    <DIR>          screens
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\presentation\screens
+
+07-03-2026  14:12    <DIR>          .
+06-03-2026  11:20    <DIR>          ..
+06-03-2026  11:20            11,364 caregiver_approval_screen.dart
+07-03-2026  14:15             9,484 caregiver_location_requests_screen.dart
+08-03-2026  10:12            12,261 caregiver_patient_map_screen.dart
+07-03-2026  14:58            13,669 patient_home_location_screen.dart
+               4 File(s)         46,778 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\providers
+
+07-03-2026  14:10    <DIR>          .
+07-03-2026  14:10    <DIR>          ..
+07-03-2026  14:13             1,821 location_request_providers.dart
+08-03-2026  01:46             3,489 safezone_providers.dart
+               2 File(s)          5,310 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\location\services
+
+06-03-2026  11:17    <DIR>          .
+07-03-2026  14:10    <DIR>          ..
+08-03-2026  01:49             7,677 location_change_request_service.dart
+07-03-2026  14:11             6,998 safezone_service.dart
+               2 File(s)         14,675 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\login
+
+05-03-2026  11:04    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+05-03-2026  20:41             3,797 biometric_login_button.dart
+               1 File(s)          3,797 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  13:15    <DIR>          presentation
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient\presentation
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  13:24    <DIR>          screens
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient\presentation\screens
+
+08-03-2026  13:24    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40             1,326 patient_main_screen.dart
+               1 File(s)          1,326 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient_selection
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          data
+02-03-2026  15:40             1,583 integration_guide.txt
+02-03-2026  15:40    <DIR>          presentation
+02-03-2026  15:40    <DIR>          providers
+02-03-2026  15:40    <DIR>          utils
+               1 File(s)          1,583 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient_selection\data
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+08-03-2026  01:23             2,211 patient_model.dart
+               1 File(s)          2,211 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient_selection\presentation
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40    <DIR>          widgets
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient_selection\presentation\widgets
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+07-03-2026  19:53             3,429 patient_appbar_dropdown.dart
+07-03-2026  19:32            10,343 patient_bottom_sheet_picker.dart
+02-03-2026  15:40             4,588 patient_list_card_call_button.dart
+               3 File(s)         18,360 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient_selection\providers
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+08-03-2026  01:31             5,356 patient_selection_provider.dart
+               1 File(s)          5,356 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\patient_selection\utils
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40             1,911 patient_safety_guard.dart
+               1 File(s)          1,911 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\profile
+
+05-03-2026  11:04    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+05-03-2026  20:41             2,825 enable_biometric.dart
+               1 File(s)          2,825 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          data
+02-03-2026  15:40    <DIR>          presentation
+02-03-2026  15:40            10,827 README.md
+               1 File(s)         10,827 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\data
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+06-03-2026  13:07    <DIR>          models
+02-03-2026  15:40    <DIR>          repositories
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\data\models
+
+06-03-2026  13:07    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+07-03-2026  12:05             1,463 live_location.dart
+06-03-2026  22:55             4,477 sos_alert.dart
+               2 File(s)          5,940 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\data\repositories
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+06-03-2026  22:11             5,933 sos_repository.dart
+               1 File(s)          5,933 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\presentation
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40    <DIR>          controllers
+02-03-2026  15:40    <DIR>          screens
+02-03-2026  15:40    <DIR>          widgets
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\presentation\controllers
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+07-03-2026  12:04             4,109 sos_controller.dart
+               1 File(s)          4,109 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\presentation\screens
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40             5,550 caregiver_alert_screen.dart
+06-03-2026  22:10             8,504 live_map_screen.dart
+               2 File(s)         14,054 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\safety\presentation\widgets
+
+02-03-2026  15:40    <DIR>          .
+02-03-2026  15:40    <DIR>          ..
+02-03-2026  15:40             2,978 safety_monitor.dart
+02-03-2026  15:40             4,574 sos_button.dart
+               2 File(s)          7,552 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\shared
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  13:15    <DIR>          presentation
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\shared\presentation
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  13:24    <DIR>          screens
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\features\shared\presentation\screens
+
+08-03-2026  13:24    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  01:49            23,712 notification_test_screen.dart
+02-03-2026  15:40             4,505 profile_screen.dart
+06-03-2026  09:46             1,415 splash_screen.dart
+               3 File(s)         29,632 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\models
+
+05-03-2026  10:24    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  22:36    <DIR>          user
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\models\user
+
+06-03-2026  22:36    <DIR>          .
+05-03-2026  10:24    <DIR>          ..
+02-03-2026  15:40             2,297 caregiver_profile.dart
+08-03-2026  12:35            10,200 patient_profile.dart
+08-03-2026  00:25             1,617 profile.dart
+               3 File(s)         14,114 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\providers
+
+07-03-2026  19:48    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  11:31             2,542 active_patient_provider.dart
+07-03-2026  17:45             3,772 auth_provider.dart
+08-03-2026  11:31             3,129 caregiver_patients_provider.dart
+07-03-2026  17:45             1,949 caregiver_profile_provider.dart
+07-03-2026  19:59             2,235 connection_providers.dart
+06-03-2026  22:12             4,627 emergency_alert_provider.dart
+02-03-2026  16:01             1,635 game_analytics_provider.dart
+02-03-2026  16:01             2,833 game_providers.dart
+04-03-2026  21:34             1,038 location_providers.dart
+02-03-2026  15:40             4,455 memory_providers.dart
+02-03-2026  15:40             2,511 profile_photo_provider.dart
+06-03-2026  08:52               591 providers.dart
+02-03-2026  15:40             8,423 reminder_providers_enhanced.dart
+07-03-2026  15:12             2,346 safe_zone_provider.dart
+07-03-2026  19:18             7,373 service_providers.dart
+07-03-2026  19:59             2,441 sos_messages_provider.dart
+06-03-2026  22:09             7,704 sos_provider.dart
+07-03-2026  15:09               436 supabase_provider.dart
+              18 File(s)         60,040 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\router
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  00:47             8,060 app_router.dart
+               1 File(s)          8,060 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\routes
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\screens
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  00:01    <DIR>          auth
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\screens\auth
+
+06-03-2026  00:01    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  23:14             1,324 biometric_service.dart
+05-03-2026  12:34               641 device_service.dart
+08-03-2026  00:30             5,992 flutter_login_screen.dart
+06-03-2026  00:01             3,781 login_screen.dart
+03-03-2026  08:02             9,791 register_screen.dart
+07-03-2026  23:57             2,405 role_selection_screen.dart
+06-03-2026  00:01               677 secure_session_storage.dart
+               7 File(s)         24,611 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\services
+
+08-03-2026  13:15    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40    <DIR>          audio
+02-03-2026  15:40    <DIR>          location
+02-03-2026  15:40    <DIR>          notification
+06-03-2026  11:25    <DIR>          voice
+               0 File(s)              0 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\services\audio
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+06-03-2026  11:24             1,623 voice_playback_service.dart
+               1 File(s)          1,623 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\services\location
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+07-03-2026  14:11             8,776 location_service.dart
+               1 File(s)          8,776 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\services\notification
+
+02-03-2026  15:40    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40             3,873 notification_permission_service.dart
+02-03-2026  15:40            11,948 reminder_notification_service.dart
+               2 File(s)         15,821 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\services\voice
+
+06-03-2026  11:25    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  09:08             2,163 voice_storage_service.dart
+               1 File(s)          2,163 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\supabase
+
+08-03-2026  11:36    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+08-03-2026  11:36               481 caregiver_profiles_unique.sql
+02-03-2026  15:40             1,649 caregiver_schema.sql
+08-03-2026  11:27             4,126 rls_policies.sql
+02-03-2026  15:40             2,937 sos_schema.sql
+               4 File(s)          9,193 bytes
+
+ Directory of d:\vscode\memocare\memocare\lib\widgets
+
+06-03-2026  12:03    <DIR>          .
+08-03-2026  13:15    <DIR>          ..
+02-03-2026  15:40             6,715 curved_bottom_nav_bar.dart
+06-03-2026  09:33             3,637 disable_battery_optimization_dialog.dart
+02-03-2026  15:40             2,818 editable_avatar.dart
+08-03-2026  09:16             4,068 patient_selector_dropdown.dart
+02-03-2026  15:40             1,297 realtime_initializer.dart
+06-03-2026  09:34             1,994 reliability_wrapper.dart
+02-03-2026  15:40             3,118 reminder_card_state_wrapper.dart
+06-03-2026  12:03             1,567 safety_monitoring_wrapper.dart
+02-03-2026  15:40             8,771 sos_countdown_content.dart
+02-03-2026  15:40             9,002 sos_countdown_dialog.dart
+              10 File(s)         42,987 bytes
+
+     Total Files Listed:
+             177 File(s)        759,683 bytes
+             269 Dir(s)  26,280,095,744 bytes free

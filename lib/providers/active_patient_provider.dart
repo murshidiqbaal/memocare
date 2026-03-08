@@ -47,9 +47,10 @@ final linkedPatientsProvider = FutureProvider<List<Patient>>((ref) async {
   if (userId == null) return [];
 
   final caregiverRes = await supabase
-      .from('caregiver_profiles')
+      .from('profiles')
       .select('id')
       .eq('user_id', userId)
+      .eq('role', 'caregiver')
       .maybeSingle();
 
   if (caregiverRes == null) return [];

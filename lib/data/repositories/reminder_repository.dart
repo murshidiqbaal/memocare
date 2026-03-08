@@ -1,8 +1,9 @@
+import 'package:dementia_care_app/core/services/notification/reminder_notification_service.dart';
+import 'package:dementia_care_app/core/services/voice_service.dart';
+import 'package:dementia_care_app/data/datasources/local/local_reminder_datasource.dart';
+import 'package:dementia_care_app/data/models/reminder.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../../services/notification/reminder_notification_service.dart';
-import '../../services/voice_service.dart';
-import '../models/reminder.dart';
 
 /// Enhanced ReminderRepository with:
 /// - Realtime streams for patient and caregiver
@@ -12,9 +13,14 @@ class ReminderRepository {
   final SupabaseClient _supabase;
   final VoiceService _voiceService;
   final ReminderNotificationService _notificationService;
+  final LocalReminderDatasource _localDatasource;
 
   ReminderRepository(
-      this._supabase, this._voiceService, this._notificationService);
+    this._supabase,
+    this._voiceService,
+    this._notificationService,
+    this._localDatasource,
+  );
 
   Future<void> init() async {}
 
@@ -27,12 +33,23 @@ class ReminderRepository {
           .eq('patient_id', patientId)
           .order('reminder_time');
 
-      return (data as List<dynamic>)
+      final reminders = (data as List<dynamic>)
           .map((json) => Reminder.fromJson(json as Map<String, dynamic>))
           .toList();
+
+      // Save to Hive for offline access
+      await _localDatasource.saveAllReminders(reminders);
+
+      debugPrint(
+          'ReminderRepository: Synced ${reminders.length} reminders from Supabase');
+      return reminders;
     } catch (e) {
-      print('ReminderRepository: Error fetching reminders: $e');
-      throw Exception('Failed to fetch reminders: $e');
+      debugPrint(
+          'ReminderRepository: Error fetching from remote, trying local: $e');
+      final localReminders = await _localDatasource.getAllReminders();
+      debugPrint(
+          'ReminderRepository: Loaded ${localReminders.length} reminders from Hive');
+      return localReminders;
     }
   }
 
@@ -78,8 +95,13 @@ class ReminderRepository {
     // 2. Sync to Supabase
     try {
       await _supabase.from('reminders').insert(updatedReminder.toJson());
+      // Save local copy
+      await _localDatasource.saveReminder(updatedReminder);
     } catch (e) {
       print('Sync error adding reminder: $e');
+      // Still save locally even if remote fails
+      await _localDatasource.saveReminder(updatedReminder);
+      // We don't throw yet, or maybe we do, but at least user has it locally
       throw Exception('Failed to create reminder: $e');
     }
   }

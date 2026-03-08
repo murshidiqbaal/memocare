@@ -1,10 +1,11 @@
 import 'package:dartz/dartz.dart';
+import 'package:dementia_care_app/data/models/user/profile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/failures.dart';
 // import '../../core/security/secure_storage_service.dart';
-import '../../models/user/profile.dart';
+// import '../../models/user/profile.dart';
 import '../datasources/remote/remote_auth_datasource.dart';
 
 class AuthRepository {
@@ -90,14 +91,8 @@ class AuthRepository {
           email: email,
         );
 
-        // 4. Role-specific extension (Legacy compatibility)
-        final table =
-            normalizedRole == 'caregiver' ? 'caregiver_profiles' : 'patients';
-        await _remoteDatasource.createProfileLegacy(
-          userId: user.id,
-          fullName: fullName,
-          table: table,
-        );
+        // 4. Role-specific extension (NOT needed if no separate tables exist)
+        // await _remoteDatasource.createProfileLegacy(...);
       } catch (e) {
         debugPrint('[Auth] Profile creation failed: $e');
         return Left(

@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:dartz/dartz.dart';
+import 'package:dementia_care_app/data/models/user/caregiver_profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors/failures.dart';
-import '../../models/user/caregiver_profile.dart';
+// import '../../models/user/caregiver_profile.dart';
 
 final caregiverProfileRepositoryProvider =
     Provider<CaregiverProfileRepository>((ref) {
@@ -20,9 +21,10 @@ class CaregiverProfileRepository {
   Future<Either<Failure, CaregiverProfile>> getProfile(String userId) async {
     try {
       final response = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select()
           .eq('user_id', userId)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (response == null) {
@@ -40,12 +42,12 @@ class CaregiverProfileRepository {
   Future<Either<Failure, CaregiverProfile>> createProfile(
       CaregiverProfile profile) async {
     try {
-      final data = profile.toJson();
-      final response = await _supabase
-          .from('caregiver_profiles')
-          .insert(data)
-          .select()
-          .single();
+      final data = {
+        ...profile.toJson(),
+        'role': 'caregiver',
+      };
+      final response =
+          await _supabase.from('profiles').insert(data).select().single();
 
       return Right(CaregiverProfile.fromJson(response));
     } catch (e) {
@@ -57,9 +59,10 @@ class CaregiverProfileRepository {
       CaregiverProfile profile) async {
     try {
       final response = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .update(profile.toJson())
           .eq('id', profile.id)
+          .eq('role', 'caregiver')
           .select()
           .single();
 
@@ -72,7 +75,7 @@ class CaregiverProfileRepository {
   Future<Either<Failure, String>> uploadProfileImage(
       File imageFile, String userId) async {
     try {
-      final filePath = 'caregivers/$userId/profile.jpg';
+      final filePath = 'profiles/$userId/profile.jpg';
 
       await _supabase.storage.from('profile-photos').upload(filePath, imageFile,
           fileOptions: const FileOptions(upsert: true));
@@ -88,9 +91,10 @@ class CaregiverProfileRepository {
   Future<bool> profileExists(String userId) async {
     try {
       final response = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', userId)
+          .eq('role', 'caregiver')
           .maybeSingle();
       return response != null;
     } catch (e) {

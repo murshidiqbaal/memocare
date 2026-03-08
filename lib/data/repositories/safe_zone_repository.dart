@@ -56,11 +56,11 @@ class SafeZoneRepository {
     try {
       final response = await _supabase
           .from('caregiver_patient_links')
-          .select('caregiver_profiles(user_id, fcm_token)')
+          .select('caregiver:caregivers(user_id, fcm_token)')
           .eq('patient_id', patientId);
 
       final tokens = (response as List)
-          .map((row) => row['caregiver_profiles']['fcm_token'] as String?)
+          .map((row) => row['caregiver']['fcm_token'] as String?)
           .where((token) => token != null && token.isNotEmpty)
           .cast<String>()
           .toList();

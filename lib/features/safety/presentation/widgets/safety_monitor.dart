@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/sos_alert.dart';
+import 'package:dementia_care_app/data/models/sos_alert.dart';
 import '../controllers/sos_controller.dart';
 import '../screens/caregiver_alert_screen.dart';
 

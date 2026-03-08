@@ -1,17 +1,24 @@
 // lib/screens/caregiver/dashboard/caregiver_dashboard_screen.dart
+import 'package:dementia_care_app/core/services/realtime_service.dart';
+import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/caregiver_dashboard_tab.dart';
+import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/emergency_alert_screen.dart';
+import 'package:dementia_care_app/features/caregiver/presentation/screens/memories/caregiver_memories_screen.dart';
+import 'package:dementia_care_app/features/caregiver/presentation/screens/patients/caregiver_patients_screen.dart';
+import 'package:dementia_care_app/features/caregiver/presentation/screens/profile/caregiver_profile_screen.dart';
+import 'package:dementia_care_app/features/caregiver/presentation/screens/reminders/caregiver_reminders_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/models/sos_alert.dart';
 // Imports removed for patient picker
 import '../../../providers/sos_provider.dart';
-import '../../../services/realtime_service.dart';
-import '../memories/caregiver_memories_screen.dart';
-import '../patients/caregiver_patients_screen.dart';
-import '../profile/caregiver_profile_screen.dart';
-import '../reminders/caregiver_reminders_screen.dart';
-import 'caregiver_dashboard_tab.dart';
-import 'emergency_alert_screen.dart';
+// import '../../../services/realtime_service.dart';
+// import '../memories/caregiver_memories_screen.dart';
+// import '../patients/caregiver_patients_screen.dart';
+// import '../profile/caregiver_profile_screen.dart';
+// import '../reminders/caregiver_reminders_screen.dart';
+// import 'caregiver_dashboard_tab.dart';
+// import 'emergency_alert_screen.dart';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 class _DS {

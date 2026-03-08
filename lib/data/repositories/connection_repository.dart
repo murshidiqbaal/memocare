@@ -12,9 +12,10 @@ class ConnectionRepository {
 
     // 0. Get Correct Caregiver ID
     final caregiverData = await _supabase
-        .from('caregiver_profiles')
+        .from('profiles')
         .select('id')
         .eq('user_id', userId)
+        .eq('role', 'caregiver')
         .maybeSingle();
 
     if (caregiverData == null) {
@@ -61,6 +62,7 @@ class ConnectionRepository {
     await _supabase.from('caregiver_patient_links').insert({
       'caregiver_id': caregiverId,
       'patient_id': patientId,
+      'created_at': DateTime.now().toIso8601String(),
       'linked_at': DateTime.now().toIso8601String(),
     });
 
@@ -75,9 +77,10 @@ class ConnectionRepository {
     final userId = _supabase.auth.currentUser!.id;
 
     final caregiverData = await _supabase
-        .from('caregiver_profiles')
+        .from('profiles')
         .select('id')
         .eq('user_id', userId)
+        .eq('role', 'caregiver')
         .maybeSingle();
 
     if (caregiverData == null) return [];

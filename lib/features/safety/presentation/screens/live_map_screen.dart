@@ -5,7 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../../data/models/sos_alert.dart';
+import 'package:dementia_care_app/data/models/sos_alert.dart';
 import '../controllers/sos_controller.dart';
 
 class LiveMapScreen extends ConsumerStatefulWidget {

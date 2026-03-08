@@ -100,6 +100,8 @@ dev_dependencies:
 
   # -------- UI GENERATION --------
   flutter_launcher_icons: ^0.14.4
+  build_runner: ^2.4.8
+  hive_generator: ^2.0.1
 
 
 flutter_launcher_icons:

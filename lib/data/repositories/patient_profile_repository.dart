@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:dementia_care_app/models/user/patient_profile.dart';
+import 'package:dementia_care_app/data/models/user/patient_profile.dart';
+// import 'package:dementia_care_app/models/user/patient_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PatientProfileRepository {

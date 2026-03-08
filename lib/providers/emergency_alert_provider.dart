@@ -1,7 +1,7 @@
+import 'package:dementia_care_app/data/models/sos_alert.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/safety/data/models/sos_alert.dart';
-import '../features/safety/data/repositories/sos_repository.dart';
+import '../data/repositories/sos_repository.dart';
 import '../providers/auth_provider.dart';
 
 /// Provider for active alerts (patient view)

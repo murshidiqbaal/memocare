@@ -1,40 +1,18 @@
 // lib/data/repositories/sos_repository.dart
-//
-// ─── SOS Repository ──────────────────────────────────────────────────────────
-//
-// Single source of truth for all `sos_alerts` table operations.
-//
-// TABLE SCHEMA (sos_alerts):
-//   id              uuid  PK
-//   patient_id      uuid  FK → auth.users
-//   caregiver_id    uuid  FK → auth.users  (nullable — system-wide alert)
-//   message         text  DEFAULT 'SOS emergency triggered'
-//   status          text  DEFAULT 'active'  [active | acknowledged | resolved]
-//   location_lat    float8
-//   location_lng    float8
-//   triggered_at    timestamptz  DEFAULT now()
-//   acknowledged_at timestamptz  NULLABLE
-//   note            text  NULLABLE
-//
-// RLS (apply in Supabase console or migration):
-//   • Patients  → INSERT  WHERE patient_id  = auth.uid()
-//   • Caregivers→ SELECT  WHERE caregiver_id = auth.uid()
-//   • Caregivers→ UPDATE  WHERE caregiver_id = auth.uid()  (for acknowledge)
-//   • Admin     → ALL
-// ─────────────────────────────────────────────────────────────────────────────
-
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dartz/dartz.dart';
+import 'package:dementia_care_app/core/errors/failures.dart';
 import 'package:dementia_care_app/core/providers/supabase_provider.dart';
+import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:dementia_care_app/features/safety/data/models/live_location.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-
-import '../models/sos_alert.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider
@@ -51,45 +29,34 @@ final sosRepositoryProvider = Provider<SosRepository>((ref) {
 class SosRepository {
   final SupabaseClient _supabase;
   static const _offlineKey = 'sos_offline_queue_v2';
-  static const _tableName = 'sos_messages';
+  static const _tableName =
+      'sos_messages'; // Both versions used different table names or aliases
   static const _defaultMessage = 'SOS emergency triggered';
 
   final _uuid = const Uuid();
-
-  /// In-flight lock to prevent duplicate simultaneous sends.
   bool _isSending = false;
 
   SosRepository(this._supabase);
 
   // ── TRIGGER SOS ────────────────────────────────────────────────────────────
 
-  /// Core method called when the patient confirms SOS.
-  ///
-  /// Returns the number of alert rows inserted (0 if offline-queued).
   Future<SosTriggerResult> triggerSOS({
     String message = _defaultMessage,
   }) async {
-    if (_isSending) {
-      if (kDebugMode) print('[SosRepo] duplicate send blocked');
+    if (_isSending)
       return const SosTriggerResult(sent: 0, queued: true, error: null);
-    }
     _isSending = true;
 
     try {
       final patientId = _supabase.auth.currentUser?.id;
-      if (patientId == null) {
+      if (patientId == null)
         return const SosTriggerResult(
             sent: 0, queued: false, error: 'Not authenticated');
-      }
 
-      // 1. Try to get GPS location (non-blocking, 5s timeout)
       final (lat, lng) = await _safeLocation();
-
-      // 2. Fetch linked caregivers
       final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
-
-      // 3. Build payloads
       final now = DateTime.now().toIso8601String();
+
       final payloads = _buildPayloads(
         patientId: patientId,
         caregiverIds: caregiverIds,
@@ -99,27 +66,28 @@ class SosRepository {
         now: now,
       );
 
-      // 4. Insert into Supabase
       await _supabase.from(_tableName).insert(payloads);
 
-      if (kDebugMode) {
-        print('[SosRepo] ✅ Inserted ${payloads.length} SOS row(s)');
+      // Also update the newer 'sos_alerts' table if it exists and is used for live tracking
+      try {
+        await _supabase.from('sos_alerts').insert({
+          'id': _uuid.v4(),
+          'patient_id': patientId,
+          'latitude': lat,
+          'longitude': lng,
+          'status': 'active',
+          'message': message,
+          'created_at': now,
+        });
+      } catch (e) {
+        if (kDebugMode)
+          print('[SosRepo] Failed to insert into legacy sos_alerts table: $e');
       }
 
-      // 5. Trigger edge functions (best-effort, never block SOS)
-      await _callEdgeFunctions(patientId: patientId, lat: lat, lng: lng);
-
-      // 6. Drain offline queue if any built up
       unawaited(_drainOfflineQueue());
-
       return SosTriggerResult(
           sent: payloads.length, queued: false, error: null);
-    } catch (e, st) {
-      if (kDebugMode) {
-        print('[SosRepo] ❌ triggerSOS failed: $e');
-        print(st);
-      }
-      // Fallback: queue offline so it syncs later
+    } catch (e) {
       await _enqueueOffline(
         patientId: _supabase.auth.currentUser?.id ?? '',
         message: message,
@@ -130,39 +98,103 @@ class SosRepository {
     }
   }
 
-  // ── ACKNOWLEDGE ────────────────────────────────────────────────────────────
+  // Compatibility method from the other repository
+  Future<SosAlert> createSosAlert(String patientId, double lat, double long,
+      {String? message}) async {
+    final response = await _supabase
+        .from('sos_alerts')
+        .insert({
+          'id': _uuid.v4(),
+          'patient_id': patientId,
+          'latitude': lat,
+          'longitude': long,
+          'status': 'active',
+          'message': message ?? 'SOS emergency triggered',
+          'created_at': DateTime.now().toIso8601String(),
+        })
+        .select()
+        .single();
 
-  /// Caregiver acknowledges an alert. Updates status + acknowledged_at.
+    return SosAlert.fromJson(response);
+  }
+
+  Future<Either<Failure, SosAlert>> sendEmergencyAlert() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return const Left(AuthFailure('No user'));
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 3));
+
+      final alert = await createSosAlert(user.id, pos.latitude, pos.longitude);
+      return Right(alert);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  // ── LOCATION UPDATES ───────────────────────────────────────────────────────
+
+  Future<void> updateLiveLocation(
+      String patientId, double lat, double long) async {
+    await _supabase.from('live_locations').insert({
+      'patient_id': patientId,
+      'latitude': lat,
+      'longitude': long,
+      'recorded_at': DateTime.now().toIso8601String(),
+    });
+
+    await _supabase
+        .from('sos_alerts')
+        .update({'latitude': lat, 'longitude': long})
+        .eq('patient_id', patientId)
+        .inFilter('status', ['active', 'sent', 'pending']);
+
+    await _supabase
+        .from(_tableName)
+        .update({'location_lat': lat, 'location_lng': long})
+        .eq('patient_id', patientId)
+        .inFilter('status', ['active', 'sent', 'pending']);
+  }
+
+  // ── ACKNOWLEDGE / RESOLVE ──────────────────────────────────────────────────
+
   Future<void> acknowledgeAlert(String alertId) async {
     await _supabase.from(_tableName).update({
       'status': 'acknowledged',
       'acknowledged_at': DateTime.now().toIso8601String(),
     }).eq('id', alertId);
-  }
 
-  // ── RESOLVE ────────────────────────────────────────────────────────────────
-
-  /// Mark alert resolved (caregiver action).
-  Future<void> resolveAlert(String alertId) async {
-    await _supabase.from(_tableName).update({
-      'status': 'resolved',
+    await _supabase.from('sos_alerts').update({
+      'status': 'acknowledged',
+      'acknowledged_at': DateTime.now().toIso8601String(),
     }).eq('id', alertId);
   }
 
-  // ── STREAM (caregiver realtime) ────────────────────────────────────────────
+  Future<void> resolveAlert(String alertId) async {
+    await _supabase
+        .from(_tableName)
+        .update({'status': 'resolved'}).eq('id', alertId);
+    await _supabase.from('sos_alerts').update({
+      'status': 'resolved',
+      'resolved_at': DateTime.now().toIso8601String(),
+    }).eq('id', alertId);
+  }
 
-  /// Returns a stream of active SOS alerts filtered to the current caregiver.
-  /// Uses Supabase `.stream()` which re-emits on any row change automatically.
+  Future<void> resolveSosAlert(String alertId) => resolveAlert(alertId);
+
+  // ── STREAMS ────────────────────────────────────────────────────────────────
+
   Stream<List<SosAlert>> watchAlertsForCaregiver() async* {
     final caregiverId = _supabase.auth.currentUser?.id;
     if (caregiverId == null) {
       yield [];
       return;
     }
-    // Initial emit of current data
+
     yield await fetchActiveAlertsForCaregiver(caregiverId);
 
-    // Real-time stream — filtered to this caregiver
     final stream = _supabase
         .from(_tableName)
         .stream(primaryKey: ['id'])
@@ -171,88 +203,96 @@ class SosRepository {
 
     await for (final rows in stream) {
       yield rows
-          .where((r) => r['status'] == 'pending')
+          .where((r) => r['status'] == 'pending' || r['status'] == 'active')
           .map((r) => SosAlert.fromJson(_normaliseRow(r)))
           .toList();
     }
   }
 
-  /// One-shot fetch of active alerts for a caregiver (also used in initial seed).
   Future<List<SosAlert>> fetchActiveAlertsForCaregiver(
       String caregiverId) async {
-    try {
-      final rows = await _supabase
-          .from(_tableName)
-          .select()
-          .eq('caregiver_id', caregiverId)
-          .eq('status', 'pending')
-          .order('created_at', ascending: false);
+    final rows = await _supabase
+        .from(_tableName)
+        .select()
+        .eq('caregiver_id', caregiverId)
+        .inFilter('status', ['pending', 'active']).order('created_at',
+            ascending: false);
 
-      return (rows as List)
-          .map((r) => SosAlert.fromJson(_normaliseRow(r)))
-          .toList();
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] fetchActive error: $e');
-      return [];
-    }
+    return (rows as List)
+        .map((r) => SosAlert.fromJson(_normaliseRow(r)))
+        .toList();
   }
 
-  /// Fetch ALL alerts for a patient (history view).
-  Future<List<SosAlert>> fetchHistoryForPatient(String patientId,
-      {int limit = 20}) async {
-    try {
-      final rows = await _supabase
-          .from(_tableName)
-          .select()
-          .eq('patient_id', patientId)
-          .order('created_at', ascending: false)
-          .limit(limit);
+  Stream<List<SosAlert>> streamActiveAlerts() {
+    return _supabase
+        .from('sos_alerts')
+        .stream(primaryKey: ['id'])
+        .inFilter('status', ['active', 'sent', 'pending'])
+        .order('created_at', ascending: false)
+        .map((data) => data.map((json) => SosAlert.fromJson(json)).toList());
+  }
 
-      return (rows as List)
-          .map((r) => SosAlert.fromJson(_normaliseRow(r)))
-          .toList();
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] fetchHistory error: $e');
-      return [];
-    }
+  Stream<List<SosAlert>> watchActiveAlerts() => streamActiveAlerts();
+  Stream<List<SosAlert>> watchLinkedPatientsAlerts() => streamActiveAlerts();
+
+  Stream<List<LiveLocation>> streamLiveLocation(String patientId) {
+    return _supabase
+        .from('live_locations')
+        .stream(primaryKey: ['id'])
+        .eq('patient_id', patientId)
+        .order('recorded_at', ascending: false)
+        .limit(1)
+        .map(
+            (data) => data.map((json) => LiveLocation.fromJson(json)).toList());
+  }
+
+  Future<SosAlert?> getActiveAlert(String patientId) async {
+    final response = await _supabase
+        .from('sos_alerts')
+        .select()
+        .eq('patient_id', patientId)
+        .inFilter('status', ['active', 'sent', 'pending']).maybeSingle();
+
+    if (response == null) return null;
+    return SosAlert.fromJson(response);
+  }
+
+  Future<List<SosAlert>> getLinkedPatientsActiveAlerts() async {
+    final response = await _supabase
+        .from('sos_alerts')
+        .select()
+        .inFilter('status', ['active', 'sent', 'pending']);
+    return (response as List).map((j) => SosAlert.fromJson(j)).toList();
   }
 
   // ── PRIVATE HELPERS ────────────────────────────────────────────────────────
 
-  /// Safe GPS fetch — never throws. Returns (null, null) on any failure.
   Future<(double?, double?)> _safeLocation() async {
     try {
       final perm = await Geolocator.checkPermission();
       if (perm != LocationPermission.whileInUse &&
-          perm != LocationPermission.always) {
-        return (null, null);
-      }
+          perm != LocationPermission.always) return (null, null);
       final pos = await Geolocator.getCurrentPosition(
-        // ignore: deprecated_member_use
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 5));
+              desiredAccuracy: LocationAccuracy.high)
+          .timeout(const Duration(seconds: 5));
       return (pos.latitude, pos.longitude);
     } catch (_) {
       return (null, null);
     }
   }
 
-  /// Fetch all caregiver user IDs linked to a patient.
   Future<List<String>> _fetchLinkedCaregiverIds(String patientId) async {
     try {
       final links = await _supabase
           .from('caregiver_patient_links')
           .select('caregiver_id')
           .eq('patient_id', patientId);
-
       return (links as List).map((l) => l['caregiver_id'] as String).toList();
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] _fetchLinkedCaregiverIds error: $e');
+    } catch (_) {
       return [];
     }
   }
 
-  /// Build one payload row per linked caregiver (or a system row if none).
   List<Map<String, dynamic>> _buildPayloads({
     required String patientId,
     required List<String> caregiverIds,
@@ -289,43 +329,8 @@ class SosRepository {
         .toList();
   }
 
-  /// Invoke Supabase Edge Functions for email and SMS (best-effort).
-  Future<void> _callEdgeFunctions({
-    required String patientId,
-    required double? lat,
-    required double? lng,
-  }) async {
-    final body = {
-      'patient_id': patientId,
-      if (lat != null) 'latitude': lat,
-      if (lng != null) 'longitude': lng,
-    };
-
-    // Email notification
-    try {
-      await _supabase.functions
-          .invoke('send-sos-email', body: body)
-          .timeout(const Duration(seconds: 8));
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] send-sos-email failed (non-fatal): $e');
-    }
-
-    // SMS notification (placeholder — wired to edge function)
-    try {
-      await _supabase.functions
-          .invoke('send-sos-sms', body: body)
-          .timeout(const Duration(seconds: 8));
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] send-sos-sms failed (non-fatal): $e');
-    }
-  }
-
-  // ── OFFLINE QUEUE ──────────────────────────────────────────────────────────
-
-  Future<void> _enqueueOffline({
-    required String patientId,
-    required String message,
-  }) async {
+  Future<void> _enqueueOffline(
+      {required String patientId, required String message}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final queue = prefs.getStringList(_offlineKey) ?? [];
@@ -335,13 +340,9 @@ class SosRepository {
         'queued_at': DateTime.now().toIso8601String(),
       }));
       await prefs.setStringList(_offlineKey, queue);
-      if (kDebugMode) print('[SosRepo] Queued offline SOS.');
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] _enqueueOffline failed: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Re-sends locally queued SOS records when connectivity restores.
   Future<void> _drainOfflineQueue() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -367,9 +368,8 @@ class SosRepository {
             now: now,
           );
           await _supabase.from(_tableName).insert(payloads);
-          if (kDebugMode) print('[SosRepo] Drained 1 offline SOS');
-        } catch (e) {
-          remaining.add(encoded); // keep for next attempt
+        } catch (_) {
+          remaining.add(encoded);
         }
       }
 
@@ -378,23 +378,18 @@ class SosRepository {
       } else {
         await prefs.setStringList(_offlineKey, remaining);
       }
-    } catch (e) {
-      if (kDebugMode) print('[SosRepo] _drainOfflineQueue error: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Normalise Supabase row → `created_at` is canonical.
   Map<String, dynamic> _normaliseRow(Map<String, dynamic> row) {
     final map = Map<String, dynamic>.from(row);
     map['created_at'] ??=
         row['triggered_at'] ?? DateTime.now().toIso8601String();
+    map['latitude'] ??= row['location_lat'];
+    map['longitude'] ??= row['location_lng'];
     return map;
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Result type
-// ─────────────────────────────────────────────────────────────────────────────
 
 class SosTriggerResult {
   final int sent;

@@ -51,11 +51,12 @@ class PatientRepository {
     required String caregiverUserId,
   }) async {
     try {
-      // 1. Get the caregiver primary key (uuid) from caregiver_profiles
+      // 1. Get the caregiver primary key (uuid) from profiles
       final caregiverProfile = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', caregiverUserId)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (caregiverProfile == null) {
@@ -67,6 +68,7 @@ class PatientRepository {
       await _supabase.from('caregiver_patient_links').insert({
         'caregiver_id': caregiverId,
         'patient_id': patientId,
+        'created_at': DateTime.now().toIso8601String(),
         'linked_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -86,9 +88,10 @@ class PatientRepository {
     try {
       // 1. Ensure Caregiver Profile exists (Avoid FK error)
       final caregiverRes = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', user.id)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       String caregiverId;
@@ -96,10 +99,11 @@ class PatientRepository {
         final fullName =
             user.userMetadata?['full_name'] as String? ?? 'Caregiver';
         final insertRes = await _supabase
-            .from('caregiver_profiles')
+            .from('profiles')
             .insert({
               'user_id': user.id,
               'full_name': fullName,
+              'role': 'caregiver',
             })
             .select('id')
             .single();
@@ -136,6 +140,7 @@ class PatientRepository {
       await _supabase.from('caregiver_patient_links').insert({
         'caregiver_id': caregiverId,
         'patient_id': patientId,
+        'created_at': DateTime.now().toIso8601String(),
         'linked_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
@@ -151,9 +156,10 @@ class PatientRepository {
     try {
       // 1. Get caregiver id first
       final caregiverProfile = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', caregiverUserId)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (caregiverProfile == null) return [];
@@ -163,7 +169,7 @@ class PatientRepository {
       final List<dynamic> response =
           await _supabase.from('caregiver_patient_links').select('''
             linked_at,
-            patients!caregiver_patient_links_patient_fk (*)
+            patients (*)
           ''').eq('caregiver_id', caregiverId);
 
       return response.map((row) {

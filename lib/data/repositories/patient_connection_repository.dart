@@ -7,8 +7,8 @@ import '../models/patient.dart';
 ///
 /// KEY SCHEMA NOTE
 /// ───────────────
-/// caregiver_patient_links.caregiver_id  →  caregiver_profiles.id   (NOT auth.uid)
-/// caregiver_patient_links.patient_id    →  patients.id              (NOT auth.uid)
+/// caregiver_patient_links.caregiver_id  →  profiles.id   (NOT auth.uid)
+/// caregiver_patient_links.patient_id    →  patients.id   (NOT auth.uid)
 ///
 /// Both tables have a `user_id` column that links to auth.users.id.
 /// We must resolve the profile/patient row ID before querying the links table.
@@ -20,18 +20,23 @@ class PatientConnectionRepository {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  /// Resolve `caregiver_profiles.id` for the current authenticated user.
+  /// Resolve `profiles.id` for the current authenticated user.
   Future<String?> _resolveCaregiverId() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return null;
 
-    final row = await _supabase
-        .from('caregiver_profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+    try {
+      final row = await _supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('role', 'caregiver')
+          .maybeSingle();
 
-    return row?['id'] as String?;
+      return row?['id'] as String?;
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Resolve `patients.id` for the current authenticated user (patient side).
@@ -39,13 +44,17 @@ class PatientConnectionRepository {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return null;
 
-    final row = await _supabase
-        .from('patients')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+    try {
+      final row = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-    return row?['id'] as String?;
+      return row?['id'] as String?;
+    } catch (e) {
+      return null;
+    }
   }
 
   // ── Caregiver side ─────────────────────────────────────────────────────────
@@ -115,22 +124,23 @@ class PatientConnectionRepository {
       final patientId = await _resolvePatientId();
       if (patientId == null) return [];
 
+      // Query caregiver_patient_links and join with profiles table
       final List<dynamic> rows = await _supabase.from(_linksTable).select('''
-            linked_at,
-            caregiver:caregiver_profiles (
+            relationship,
+            profile:profiles!caregiver_id (
               id,
               user_id,
               full_name,
-              phone,
-              profile_photo_url
+              phone_number,
+              profile_photo_url,
+              created_at
             )
           ''').eq('patient_id', patientId);
 
       return rows
-          .where((r) => r['caregiver'] != null)
+          .where((r) => r['profile'] != null)
           .map((r) => Caregiver.fromJson(
-                Map<String, dynamic>.from(
-                    r['caregiver'] as Map<String, dynamic>),
+                Map<String, dynamic>.from(r as Map<String, dynamic>),
               ))
           .toList();
     } catch (e) {
@@ -200,6 +210,8 @@ class PatientConnectionRepository {
       _supabase.from(_linksTable).insert({
         'caregiver_id': caregiverId,
         'patient_id': patientId,
+        'created_at': DateTime.now().toIso8601String(),
+        'linked_at': DateTime.now().toIso8601String(),
       }),
       _supabase.from('invite_codes').update({'used': true}).eq('code', code),
     ]);

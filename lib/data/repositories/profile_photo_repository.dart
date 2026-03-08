@@ -49,13 +49,14 @@ class ProfilePhotoRepository {
           'profile_photo_url': publicUrl,
         });
       } else if (role == 'caregiver') {
-        // Update caregiver_profiles table (using role-based check)
-        // Ensure table name is correct. In `caregiver_repository`, it was 'caregiver_profiles'.
-        // Assuming unique constraint on user_id.
-        await _supabase.from('caregiver_profiles').upsert({
-          'user_id': userId,
-          'profile_photo_url': publicUrl,
-        }, onConflict: 'user_id');
+        // Update profiles table
+        await _supabase
+            .from('profiles')
+            .update({
+              'profile_photo_url': publicUrl,
+            })
+            .eq('user_id', userId)
+            .eq('role', 'caregiver');
       }
 
       // Return with timestamp to bust cache in UI immediately

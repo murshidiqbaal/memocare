@@ -1,12 +1,11 @@
+import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:dementia_care_app/features/safety/presentation/controllers/sos_controller.dart';
+import 'package:dementia_care_app/features/safety/presentation/screens/live_map_screen.dart';
+import 'package:dementia_care_app/providers/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
-import '../../../../providers/providers.dart'; // import linkedPatientsProvider
-import '../../data/models/sos_alert.dart';
-import '../controllers/sos_controller.dart';
-import 'live_map_screen.dart';
 
 class CaregiverAlertScreen extends ConsumerWidget {
   const CaregiverAlertScreen({super.key});
@@ -64,7 +63,7 @@ class CaregiverAlertScreen extends ConsumerWidget {
                       ?.fullName ?? // Patient model uses 'fullName'
                   'Unknown Patient';
 
-              return _buildAlertCard(context, alert, patientName);
+              return _buildAlertCard(context, alert as SosAlert, patientName);
             },
           );
         },

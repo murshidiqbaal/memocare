@@ -1,15 +1,14 @@
 import 'dart:async';
 
 import 'package:dartz/dartz.dart';
+import 'package:dementia_care_app/core/errors/failures.dart';
+import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:dementia_care_app/features/safety/data/models/live_location.dart';
+import 'package:dementia_care_app/providers/service_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-
-import '../../../../core/errors/failures.dart';
-import '../../../../providers/service_providers.dart';
-import '../models/live_location.dart';
-import '../models/sos_alert.dart';
 
 class SosRepository {
   final SupabaseClient _supabase;

@@ -1,5 +1,5 @@
+import 'package:dementia_care_app/core/services/battery_optimization_service.dart';
 import 'package:flutter/material.dart';
-import '../services/battery_optimization_service.dart';
 
 class DisableBatteryOptimizationDialog extends StatelessWidget {
   final BatteryOptimizationService _batteryService =

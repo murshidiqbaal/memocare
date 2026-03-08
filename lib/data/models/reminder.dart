@@ -1,43 +1,78 @@
+import 'package:hive/hive.dart';
+
+part 'reminder.g.dart';
+
+@HiveType(typeId: 0)
 enum ReminderType {
+  @HiveField(0)
   medication,
+  @HiveField(1)
   appointment,
+  @HiveField(2)
   task,
 }
 
+@HiveType(typeId: 1)
 enum ReminderFrequency {
+  @HiveField(0)
   once,
+  @HiveField(1)
   daily,
+  @HiveField(2)
   weekly,
+  @HiveField(3)
   custom,
 }
 
+@HiveType(typeId: 2)
 enum ReminderStatus {
+  @HiveField(0)
   pending,
+  @HiveField(1)
   completed,
+  @HiveField(2)
   missed,
 }
 
+@HiveType(typeId: 3)
 class Reminder {
+  @HiveField(0)
   final String id;
+  @HiveField(1)
   final String patientId;
+  @HiveField(2)
   final String caregiverId;
+  @HiveField(3)
   final String title;
+  @HiveField(4)
   final ReminderType type;
+  @HiveField(5)
   final String? description;
+  @HiveField(6)
   final DateTime reminderTime;
+  @HiveField(7)
   final ReminderFrequency repeatRule;
+  @HiveField(8)
   final ReminderStatus status;
+  @HiveField(9)
   final DateTime createdAt;
+  @HiveField(10)
   final List<DateTime> completionHistory;
+  @HiveField(11)
   final bool isSnoozed;
+  @HiveField(12)
   final int? snoozeDurationMinutes;
+  @HiveField(13)
   final DateTime? lastSnoozedAt;
 
   // Local only properties (not sent to Supabase)
+  @HiveField(14)
   final String? localAudioPath;
+  @HiveField(15)
   final int? notificationId;
 
   // Keeping this for compatibility in UI but it's local only since it's not in schema
+  @HiveField(16)
   final String? voiceAudioUrl;
 
   Reminder({
@@ -113,7 +148,7 @@ class Reminder {
       'is_snoozed': isSnoozed,
       'snooze_duration_minutes': snoozeDurationMinutes,
       'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
-      'voice_audio_url': voiceAudioUrl, // ← ADD THIS
+      'voice_audio_url': voiceAudioUrl,
     };
   }
 

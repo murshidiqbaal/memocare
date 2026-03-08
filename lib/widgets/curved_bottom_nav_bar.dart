@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/emergency_alert_provider.dart';
 import '../../widgets/sos_countdown_dialog.dart';
 
-/// Curved bottom navigation bar with central SOS button
-/// Designed for elderly users with large touch targets
 class CurvedBottomNavBar extends ConsumerWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -33,51 +31,54 @@ class CurvedBottomNavBar extends ConsumerWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Bottom Navigation Bar
+          /// Bottom Navigation Row
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Home Tab
-              _NavBarItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                isSelected: currentIndex == 0,
-                onTap: () => onTap(0),
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  isSelected: currentIndex == 0,
+                  onTap: () => onTap(0),
+                ),
               ),
 
-              // Reminders Tab
-              _NavBarItem(
-                icon: Icons.notifications_rounded,
-                label: 'Reminders',
-                isSelected: currentIndex == 1,
-                onTap: () => onTap(1),
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.photo_album_rounded,
+                  label: 'Memories',
+                  isSelected: currentIndex == 1,
+                  onTap: () => onTap(1),
+                ),
               ),
 
-              // Spacer for SOS button
-              const SizedBox(width: 80),
+              /// Space for SOS
+              const SizedBox(width: 70),
 
-              // Memories Tab
-              _NavBarItem(
-                icon: Icons.photo_album_rounded,
-                label: 'Memories',
-                isSelected: currentIndex == 2,
-                onTap: () => onTap(2),
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.videogame_asset_rounded,
+                  label: 'Games',
+                  isSelected: currentIndex == 2,
+                  onTap: () => onTap(2),
+                ),
               ),
 
-              // Profile Tab
-              _NavBarItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                isSelected: currentIndex == 3,
-                onTap: () => onTap(3),
+              Expanded(
+                child: _NavBarItem(
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
+                  isSelected: currentIndex == 3,
+                  onTap: () => onTap(3),
+                ),
               ),
             ],
           ),
 
-          // Central SOS Button
+          /// SOS Button
           Positioned(
-            left: MediaQuery.of(context).size.width / 2 - 40,
-            top: -20,
+            left: MediaQuery.of(context).size.width / 2 - 35,
+            top: -25,
             child: _SOSButton(
               onPressed: () => _handleSOSPress(context, ref),
             ),
@@ -88,10 +89,8 @@ class CurvedBottomNavBar extends ConsumerWidget {
   }
 
   void _handleSOSPress(BuildContext context, WidgetRef ref) {
-    // Start countdown
     ref.read(emergencySOSControllerProvider.notifier).startCountdown();
 
-    // Show countdown dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -100,7 +99,18 @@ class CurvedBottomNavBar extends ConsumerWidget {
   }
 }
 
-/// Navigation bar item
+// void _handleSOSPress(BuildContext context, WidgetRef ref) {
+//   // Start countdown
+//   ref.read(emergencySOSControllerProvider.notifier).startCountdown();
+
+//   // Show countdown dialog
+//   showDialog(
+//     context: context,
+//     barrierDismissible: false,
+//     builder: (context) => const SOSCountdownDialog(),
+//   );
+// }
+
 class _NavBarItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -118,34 +128,29 @@ class _NavBarItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 28,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 26,
+            color: isSelected ? Colors.teal : Colors.grey.shade600,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               color: isSelected ? Colors.teal : Colors.grey.shade600,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.teal : Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Central SOS emergency button
 class _SOSButton extends StatefulWidget {
   final VoidCallback onPressed;
 
@@ -163,12 +168,13 @@ class _SOSButtonState extends State<_SOSButton>
   @override
   void initState() {
     super.initState();
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
@@ -189,13 +195,11 @@ class _SOSButtonState extends State<_SOSButton>
           child: GestureDetector(
             onTap: widget.onPressed,
             child: Container(
-              width: 80,
-              height: 80,
+              width: 70,
+              height: 70,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                   colors: [
                     Colors.red.shade600,
                     Colors.red.shade800,
@@ -204,27 +208,21 @@ class _SOSButtonState extends State<_SOSButton>
                 boxShadow: [
                   BoxShadow(
                     color: Colors.red.withOpacity(0.5),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+                    blurRadius: 18,
                   ),
                 ],
               ),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.emergency,
-                    color: Colors.white,
-                    size: 32,
-                  ),
+                  Icon(Icons.emergency, color: Colors.white, size: 28),
                   SizedBox(height: 2),
                   Text(
                     'SOS',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
                     ),
                   ),
                 ],

@@ -6,13 +6,14 @@
 // 1. USING THE EDITABLE AVATAR WIDGET
 // ----------------------------------------------------------------------------
 
+import 'package:dementia_care_app/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
 import 'package:dementia_care_app/providers/auth_provider.dart';
 import 'package:dementia_care_app/providers/caregiver_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/profile_photo_provider.dart';
-import '../screens/patient/profile/viewmodels/patient_profile_viewmodel.dart';
+// import '../screens/patient/profile/viewmodels/patient_profile_viewmodel.dart';
 import '../widgets/editable_avatar.dart';
 
 class MyProfileScreen extends ConsumerWidget {

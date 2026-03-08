@@ -114,9 +114,10 @@ class EmergencyAlertRepository {
 
       // Get caregiver profile
       final caregiverData = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', user.id)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (caregiverData == null) return [];
@@ -160,9 +161,10 @@ class EmergencyAlertRepository {
 
       // Get caregiver profile
       final caregiverData = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', user.id)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (caregiverData == null) {
@@ -248,7 +250,7 @@ class EmergencyAlertRepository {
 
       // Get profile phone number
       final profile = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('phone_number')
           .eq('id', caregiverId)
           .single();

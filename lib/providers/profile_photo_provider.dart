@@ -1,13 +1,16 @@
 import 'dart:async';
 
+// import '../screens/patient/profile/viewmodels/patient_profile_viewmodel.dart';
+// import '../services/image_picker_service.dart'; // Added import
+import 'package:dementia_care_app/core/services/image_picker_service.dart';
+import 'package:dementia_care_app/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/profile_photo_repository.dart';
 import '../providers/auth_provider.dart';
 import '../providers/caregiver_profile_provider.dart';
 import '../providers/service_providers.dart';
-import '../screens/patient/profile/viewmodels/patient_profile_viewmodel.dart';
-import '../services/image_picker_service.dart'; // Added import
+// import 'package:dementia_care_app/features/patient/presentation/viewmodels/patient_profile_viewmodel.dart';
 
 // Provider for Image Picker
 final imagePickerServiceProvider = Provider<ImagePickerService>((ref) {

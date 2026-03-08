@@ -108,9 +108,10 @@ class PatientSelectionController extends StateNotifier<PatientState> {
     try {
       // 1. Get caregiver id first
       final caregiverData = await _supabase
-          .from('caregiver_profiles')
+          .from('profiles')
           .select('id')
           .eq('user_id', currentUser.id)
+          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (caregiverData == null) {
@@ -119,10 +120,10 @@ class PatientSelectionController extends StateNotifier<PatientState> {
       }
       final String caregiverId = caregiverData['id'];
 
-      // 2. Fetch linked patients via caregiver_patient_links joining with patient_profiles
+      // 2. Fetch linked patients via caregiver_patient_links joining with patients
       final response = await _supabase
           .from('caregiver_patient_links')
-          .select('patient_id, patients!caregiver_patient_links_patient_fk(*)')
+          .select('patient_id, patients(*)')
           .eq('caregiver_id', caregiverId);
 
       final List<dynamic> records = response as List<dynamic>;

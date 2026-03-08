@@ -1,12 +1,11 @@
 import 'dart:async';
 
+import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:dementia_care_app/data/repositories/sos_repository.dart';
 import 'package:dementia_care_app/features/safety/data/models/live_location.dart';
+import 'package:dementia_care_app/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-
-import '../../../../providers/auth_provider.dart';
-import '../../data/models/sos_alert.dart';
-import '../../data/repositories/sos_repository.dart';
 
 // --- State ---
 
@@ -46,7 +45,7 @@ class SosController extends StateNotifier<AsyncValue<void>> {
       );
 
       // 3. Update local state
-      _ref.read(activeSosAlertProvider.notifier).state = alert;
+      _ref.read(activeSosAlertProvider.notifier).state = alert as SosAlert?;
 
       // 4. Start tracking location
       _startLocationTracking(user.id);
@@ -121,7 +120,7 @@ final sosControllerProvider =
 /// Stream of ALL active alerts visible to the user (Caregiver View)
 final activeAlertsStreamProvider = StreamProvider<List<SosAlert>>((ref) {
   final repo = ref.watch(sosRepositoryProvider);
-  return repo.streamActiveAlerts();
+  return repo.watchActiveAlerts();
 });
 
 /// Stream of live location for a specific patient (for Map View)

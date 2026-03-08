@@ -20,23 +20,33 @@ class Caregiver {
   });
 
   factory Caregiver.fromJson(Map<String, dynamic> json) {
-    final dynamic profile = json['profiles'];
-    Map<String, dynamic> data = json;
+    // Handle nested caregiver data if present (from join queries)
+    final dynamic nestedCaregiver =
+        json['profile'] ?? json['caregiver'] ?? json['profiles'];
+    Map<String, dynamic> data = {};
 
-    if (profile is Map<String, dynamic>) {
-      data = {...profile, ...json};
+    if (nestedCaregiver is Map<String, dynamic>) {
+      data = nestedCaregiver;
+    } else {
+      data = json;
     }
 
+    // Merge root data (like relationship from link table) with caregiver data
+    final merged = <String, dynamic>{
+      ...data,
+      ...json, // json contains relationship from the link table
+    };
+
     return Caregiver(
-      id: (data['id'] ?? data['caregiver_id']) as String?,
-      userId: (data['user_id'] ?? data['id']) as String?,
-      fullName: (data['full_name'] ?? data['fullName']) as String?,
-      phone: (data['phone_number'] ?? data['phone']) as String?,
-      relationship: json['relationship'] as String?,
-      notificationEnabled: json['notification_enabled'] as bool? ?? true,
-      profilePhotoUrl: json['profile_photo_url'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String)
+      id: (merged['id'] ?? merged['caregiver_id']) as String?,
+      userId: (merged['user_id'] ?? merged['id']) as String?,
+      fullName: (merged['full_name'] ?? merged['fullName']) as String?,
+      phone: (merged['phone_number'] ?? merged['phone']) as String?,
+      relationship: merged['relationship'] as String?,
+      notificationEnabled: merged['notification_enabled'] as bool? ?? true,
+      profilePhotoUrl: merged['profile_photo_url'] as String?,
+      createdAt: merged['created_at'] != null
+          ? DateTime.tryParse(merged['created_at'] as String)
           : null,
     );
   }

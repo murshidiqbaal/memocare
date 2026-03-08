@@ -1,30 +1,54 @@
 import 'dart:async';
 
+import 'package:dementia_care_app/core/config/supabase_config.dart';
+import 'package:dementia_care_app/core/services/fcm_service.dart';
+import 'package:dementia_care_app/core/theme/memocare_theme.dart';
+import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
+import 'package:dementia_care_app/providers/service_providers.dart';
+import 'package:dementia_care_app/router/app_router.dart';
+import 'package:dementia_care_app/widgets/reliability_wrapper.dart';
+import 'package:dementia_care_app/widgets/safety_monitoring_wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'core/config/supabase_config.dart';
-import 'core/theme/memocare_theme.dart';
-import 'providers/service_providers.dart';
-import 'routes/app_router.dart';
-import 'services/fcm_service.dart';
-import 'widgets/reliability_wrapper.dart';
-import 'widgets/safety_monitoring_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: '.env');
 
+  // Hive Initialization
+  await Hive.initFlutter();
+
+  // Register Adapters Safely
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(ReminderTypeAdapter());
+  }
+  if (!Hive.isAdapterRegistered(1)) {
+    Hive.registerAdapter(ReminderFrequencyAdapter());
+  }
+  if (!Hive.isAdapterRegistered(2)) {
+    Hive.registerAdapter(ReminderStatusAdapter());
+  }
+  if (!Hive.isAdapterRegistered(3)) {
+    Hive.registerAdapter(ReminderAdapter());
+  }
+
+  debugPrint('Hive initialized');
+
+  // Open Reminders Box
+  await Hive.openBox<Reminder>('reminders');
+  debugPrint('Reminder box opened');
+
   // Firebase
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    print('Firebase initialization failed: $e');
+    debugPrint('Firebase initialization failed: $e');
   }
 
   // Supabase
@@ -37,7 +61,7 @@ void main() async {
 
   // Initialize essential services that need early setup
   try {
-    await container.read(reminderNotificationServiceProvider).init();
+    // await container.read(reminderNotificationServiceProvider).init();
     await container.read(fcmServiceProvider).initialize();
   } catch (e) {
     debugPrint('Service initialization failed: $e');
