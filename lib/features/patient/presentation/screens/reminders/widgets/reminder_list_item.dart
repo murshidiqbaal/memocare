@@ -72,7 +72,11 @@ class ReminderListItem extends StatelessWidget {
                     border: Border.all(
                       color: isCompleted
                           ? Colors.green
-                          : (isMissed ? Colors.red : Colors.teal),
+                          : (isMissed
+                              ? Colors.red
+                              : (reminder.localAudioPath != null
+                                  ? Colors.teal
+                                  : Colors.indigo.shade300)),
                       width: 2,
                     ),
                   ),

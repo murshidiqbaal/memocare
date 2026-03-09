@@ -260,6 +260,9 @@ class HomeViewModel extends StateNotifier<HomeState> {
     }).toList();
 
     state = state.copyWith(reminders: merged);
+
+    // Reschedule notifications for the merged list
+    _repository.scheduleFutureReminders(merged);
   }
 }
 

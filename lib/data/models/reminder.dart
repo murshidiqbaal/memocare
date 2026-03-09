@@ -125,8 +125,10 @@ class Reminder {
       lastSnoozedAt: json['last_snoozed_at'] != null
           ? DateTime.parse(json['last_snoozed_at'] as String).toLocal()
           : null,
-      localAudioPath: json['localAudioPath'] as String?,
-      notificationId: json['notificationId'] as int?,
+      localAudioPath: json['voice_audio_url'] as String? ??
+          json['localAudioPath'] as String?,
+      notificationId:
+          json['notification_id'] as int? ?? json['notificationId'] as int?,
       voiceAudioUrl: json['voice_audio_url'] as String?,
     );
   }
@@ -149,6 +151,8 @@ class Reminder {
       'snooze_duration_minutes': snoozeDurationMinutes,
       'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
       'voice_audio_url': voiceAudioUrl,
+      'notification_id': notificationId,
+      'voice_audio_url': localAudioPath,
     };
   }
 

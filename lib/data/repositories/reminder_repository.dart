@@ -87,15 +87,42 @@ class ReminderRepository {
 
       // Update Hive with the final reminders (including localAudioPath)
       await _localDatasource.saveAllReminders(updatedReminders);
+
+      // 4. Schedule local notifications for all future reminders
+      await scheduleFutureReminders(updatedReminders);
+
       debugPrint(
           'ReminderRepository: Synced ${updatedReminders.length} reminders from Supabase');
       return updatedReminders;
     } catch (e) {
       debugPrint('ReminderRepository: Supabase fetch failed: $e');
       // If sync fails, return what we have locally
-      return (await _localDatasource.getAllReminders())
+      final local = (await _localDatasource.getAllReminders())
           .where((r) => r.patientId == patientId)
           .toList();
+
+      // Still try to schedule what we have locally just in case
+      await scheduleFutureReminders(local);
+      return local;
+    }
+  }
+
+  /// Helper to schedule all future/pending reminders in the notification system
+  Future<void> scheduleFutureReminders(List<Reminder> reminders) async {
+    final now = DateTime.now();
+    int count = 0;
+    for (final r in reminders) {
+      // Only schedule if pending and either repeating or in the future
+      if (r.status == ReminderStatus.pending) {
+        if (r.repeatRule != ReminderFrequency.once ||
+            r.reminderTime.isAfter(now)) {
+          await _notificationService.scheduleReminder(r);
+          count++;
+        }
+      }
+    }
+    if (count > 0) {
+      debugPrint('ReminderRepository: Scheduled $count notifications');
     }
   }
 

@@ -13,6 +13,7 @@ import 'package:dementia_care_app/features/patient/presentation/screens/games/ga
 import 'package:dementia_care_app/features/patient/presentation/screens/games/mini_games/memory_match_game_screen.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/games/mini_games/reaction_tap_game_screen.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/patient_main_screen.dart';
+import 'package:dementia_care_app/features/patient/presentation/screens/reminders/reminder_alert_screen.dart';
 import 'package:dementia_care_app/features/shared/presentation/screens/notification_test_screen.dart';
 import 'package:dementia_care_app/features/shared/presentation/screens/splash_screen.dart';
 import 'package:dementia_care_app/widgets/realtime_initializer.dart';
@@ -134,6 +135,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               patientId: patientId,
               patientName: patientName,
             );
+          },
+        ),
+        // 🚨 ================= REMINDER ALERTS =================
+        GoRoute(
+          path: '/alert/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id'] ?? '';
+            return ReminderAlertScreen(reminderId: id);
           },
         ),
       ],

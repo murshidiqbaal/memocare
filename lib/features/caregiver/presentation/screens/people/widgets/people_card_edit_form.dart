@@ -30,7 +30,7 @@ class _PeopleCardEditFormState extends State<PeopleCardEditForm> {
   late TextEditingController _relController;
   late TextEditingController _descController;
   File? _imageFile;
-  String? _audioPath;
+  String? _localRecordingPath;
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _PeopleCardEditFormState extends State<PeopleCardEditForm> {
     _nameController = TextEditingController(text: p?.name);
     _relController = TextEditingController(text: p?.relationship);
     _descController = TextEditingController(text: p?.description);
-    _audioPath = p?.localAudioPath;
+    _localRecordingPath = p?.localAudioPath;
   }
 
   Future<void> _pickImage() async {
@@ -64,7 +64,8 @@ class _PeopleCardEditFormState extends State<PeopleCardEditForm> {
         voiceAudioUrl: widget.existingPerson?.voiceAudioUrl,
         localPhotoPath:
             _imageFile?.path ?? widget.existingPerson?.localPhotoPath,
-        localAudioPath: _audioPath ?? widget.existingPerson?.localAudioPath,
+        localAudioPath:
+            _localRecordingPath ?? widget.existingPerson?.localAudioPath,
         createdAt: widget.existingPerson?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -153,9 +154,9 @@ class _PeopleCardEditFormState extends State<PeopleCardEditForm> {
 
               VoiceRecorderWidget(
                 onRecordingComplete: (path) =>
-                    setState(() => _audioPath = path),
-                onDelete: () => setState(() => _audioPath = null),
-                existingAudioPath: _audioPath,
+                    setState(() => _localRecordingPath = path),
+                onDelete: () => setState(() => _localRecordingPath = null),
+                existingAudioPath: _localRecordingPath,
               ),
               const SizedBox(height: 32),
 

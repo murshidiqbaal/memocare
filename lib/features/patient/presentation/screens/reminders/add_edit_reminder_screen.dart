@@ -34,7 +34,14 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
   late TimeOfDay _selectedTime;
   ReminderFrequency _frequency = ReminderFrequency.once;
   ReminderType _type = ReminderType.medication;
-  String? _audioPath;
+  String? _localRecordingPath; // Renamed from _audioPath
+
+  bool get _hasVoice =>
+      (widget.existingReminder?.localAudioPath != null &&
+          widget.existingReminder!.localAudioPath!.isNotEmpty) ||
+      _localRecordingPath != null ||
+      (widget.existingReminder?.voiceAudioUrl != null &&
+          widget.existingReminder!.voiceAudioUrl!.isNotEmpty);
 
   @override
   void initState() {
@@ -48,7 +55,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         : TimeOfDay.now();
     _frequency = r?.repeatRule ?? ReminderFrequency.once;
     _type = r?.type ?? ReminderType.medication;
-    _audioPath =
+    _localRecordingPath =
         r?.localAudioPath; // Use local path if editing locally created reminder
   }
 
@@ -134,7 +141,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
       // ── Upload voice note if a new local recording exists ─────────────────
       String? remoteVoiceUrl = widget.existingReminder?.voiceAudioUrl;
 
-      final newLocalPath = _audioPath; // may be null
+      final newLocalPath = _localRecordingPath; // may be null
       final oldLocalPath = widget.existingReminder?.localAudioPath;
       final hasNewRecording =
           newLocalPath != null && newLocalPath != oldLocalPath;
@@ -178,7 +185,8 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         reminderTime: finalDateTime,
         repeatRule: _frequency,
         type: _type,
-        localAudioPath: _audioPath, // keep local path for offline playback
+        localAudioPath:
+            _localRecordingPath, // keep local path for offline playback
         voiceAudioUrl: remoteVoiceUrl, // synced remote URL
         patientId: effectivePatientId,
         caregiverId: currentUserId,
@@ -363,9 +371,10 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
 
             // Voice Recorder
             VoiceRecorderWidget(
-              onRecordingComplete: (path) => setState(() => _audioPath = path),
-              onDelete: () => setState(() => _audioPath = null),
-              existingAudioPath: _audioPath,
+              onRecordingComplete: (path) =>
+                  setState(() => _localRecordingPath = path),
+              onDelete: () => setState(() => _localRecordingPath = null),
+              existingAudioPath: _localRecordingPath,
             ),
 
             const SizedBox(height: 40),
