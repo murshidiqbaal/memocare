@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dementia_care_app/core/config/supabase_config.dart';
 import 'package:dementia_care_app/core/services/fcm_service.dart';
+import 'package:dementia_care_app/core/services/hive_service.dart';
 import 'package:dementia_care_app/core/theme/memocare_theme.dart';
 import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
@@ -22,27 +23,34 @@ void main() async {
   await dotenv.load(fileName: '.env');
 
   // Hive Initialization
-  await Hive.initFlutter();
+  try {
+    debugPrint('🚀 Starting Hive initialization...');
+    await Hive.initFlutter();
 
-  // Register Adapters Safely
-  if (!Hive.isAdapterRegistered(0)) {
-    Hive.registerAdapter(ReminderTypeAdapter());
-  }
-  if (!Hive.isAdapterRegistered(1)) {
-    Hive.registerAdapter(ReminderFrequencyAdapter());
-  }
-  if (!Hive.isAdapterRegistered(2)) {
-    Hive.registerAdapter(ReminderStatusAdapter());
-  }
-  if (!Hive.isAdapterRegistered(3)) {
-    Hive.registerAdapter(ReminderAdapter());
-  }
+    // Register Adapters Safely
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(ReminderTypeAdapter());
+      debugPrint('✅ ReminderTypeAdapter registered');
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(ReminderFrequencyAdapter());
+      debugPrint('✅ ReminderFrequencyAdapter registered');
+    }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter(ReminderStatusAdapter());
+      debugPrint('✅ ReminderStatusAdapter registered');
+    }
+    if (!Hive.isAdapterRegistered(3)) {
+      Hive.registerAdapter(ReminderAdapter());
+      debugPrint('✅ ReminderAdapter registered');
+    }
 
-  debugPrint('Hive initialized');
-
-  // Open Reminders Box
-  await Hive.openBox<Reminder>('reminders');
-  debugPrint('Reminder box opened');
+    // Open Reminders Box via HiveService
+    await HiveService.openReminderBox();
+    debugPrint('📦 Hive initialized and Reminder box opened');
+  } catch (e) {
+    debugPrint('❌ Hive initialization failed: $e');
+  }
 
   // Firebase
   try {
@@ -61,7 +69,7 @@ void main() async {
 
   // Initialize essential services that need early setup
   try {
-    // await container.read(reminderNotificationServiceProvider).init();
+    await container.read(reminderNotificationServiceProvider).init();
     await container.read(fcmServiceProvider).initialize();
   } catch (e) {
     debugPrint('Service initialization failed: $e');

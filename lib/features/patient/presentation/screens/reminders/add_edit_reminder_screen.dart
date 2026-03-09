@@ -10,7 +10,7 @@ import 'package:uuid/uuid.dart';
 // import '../../../../providers/auth_provider.dart';
 // import '../../../../providers/service_providers.dart';
 // import '../../../../services/notification/notification_permission_service.dart';
-import '../home/viewmodels/home_viewmodel.dart';
+import '../../../../../providers/reminder_providers_enhanced.dart';
 import 'widgets/voice_recorder_widget.dart';
 
 class AddEditReminderScreen extends ConsumerStatefulWidget {
@@ -190,12 +190,11 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
           widget.onSave!(newReminder);
         } else if (widget.existingReminder != null) {
           await ref
-              .read(homeViewModelProvider.notifier)
+              .read(updateReminderProvider.notifier)
               .updateReminder(newReminder);
         } else {
-          await ref
-              .read(homeViewModelProvider.notifier)
-              .addReminder(newReminder);
+          await ref.read(createReminderProvider.notifier).createReminder(
+              reminder: newReminder, patientId: effectivePatientId);
         }
 
         if (mounted) {

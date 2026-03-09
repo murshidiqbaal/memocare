@@ -194,6 +194,9 @@ class RealtimeService {
         if (newRecord.isEmpty) return;
         final reminder = Reminder.fromJson(newRecord);
 
+        // Update local Hive box
+        await _reminderRepo.addReminderLocally(reminder);
+
         if (isPatient) {
           if (reminder.reminderTime.isAfter(DateTime.now())) {
             await _notificationService.scheduleReminder(reminder);
@@ -203,6 +206,9 @@ class RealtimeService {
       } else if (eventType == PostgresChangeEvent.update) {
         if (newRecord.isEmpty) return;
         final reminder = Reminder.fromJson(newRecord);
+
+        // Update local Hive box
+        await _reminderRepo.updateReminderLocally(reminder);
 
         if (isPatient) {
           if (reminder.isCompleted) {
@@ -218,6 +224,9 @@ class RealtimeService {
       } else if (eventType == PostgresChangeEvent.delete) {
         final id = oldRecord['id'] as String?;
         if (id != null) {
+          // Update local Hive box
+          await _reminderRepo.deleteReminderLocally(id);
+
           if (isPatient) {
             await _notificationService.cancelNotification(id.hashCode);
             final user = _supabase.auth.currentUser;

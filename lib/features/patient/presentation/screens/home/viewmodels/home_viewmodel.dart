@@ -1,10 +1,10 @@
-import 'package:dementia_care_app/core/services/realtime_service.dart';
 import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
 import 'package:dementia_care_app/data/repositories/sos_repository.dart';
 import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../../providers/reminder_providers_enhanced.dart';
 import '../../../../../../providers/service_providers.dart';
 
 // import '../../../../data/models/reminder.dart';
@@ -254,14 +254,20 @@ final homeViewModelProvider =
   final reminderRepo = ref.watch(reminderRepositoryProvider);
   final safetyRepo = ref.watch(sosRepositoryProvider);
 
+  // We wait for the box to be ready before initializing the ViewModel's data
+  final boxAsync = ref.watch(reminderBoxProvider);
+
   final viewModel = HomeViewModel(reminderRepo, safetyRepo);
 
   final user = ref.watch(currentUserProvider);
+
   if (user != null) {
-    viewModel.loadReminders(user.id);
+    boxAsync.whenData((_) {
+      viewModel.loadReminders(user.id);
+    });
   }
 
-  ref.listen(realtimeReminderStreamProvider, (prev, next) {
+  ref.listen(patientRemindersStreamProvider, (prev, next) {
     next.whenData((reminders) {
       viewModel.updateRemindersFromRealtime(reminders);
     });

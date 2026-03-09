@@ -21,8 +21,10 @@ class Caregiver {
 
   factory Caregiver.fromJson(Map<String, dynamic> json) {
     // Handle nested caregiver data if present (from join queries)
-    final dynamic nestedCaregiver =
-        json['profile'] ?? json['caregiver'] ?? json['profiles'];
+    final dynamic nestedCaregiver = json['profile'] ??
+        json['caregiver'] ??
+        json['caregiver_profiles'] ??
+        json['profiles'];
     Map<String, dynamic> data = {};
 
     if (nestedCaregiver is Map<String, dynamic>) {

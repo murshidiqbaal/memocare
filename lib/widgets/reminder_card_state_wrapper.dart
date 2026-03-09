@@ -5,7 +5,7 @@ import '../data/models/reminder.dart';
 /// across the entire app (Patient dashboard, Reminder list, Caregiver view)
 ///
 /// UX Rules:
-/// - If remind_at < current_time AND status != completed:
+/// - If reminder_time < current_time AND status != completed:
 ///   → Grey card, reduced opacity, disabled interactions, "Missed" label
 /// - Else:
 ///   → Normal colorful card, active buttons

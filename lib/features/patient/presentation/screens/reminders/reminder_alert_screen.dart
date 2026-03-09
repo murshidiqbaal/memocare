@@ -62,14 +62,17 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
       // Determine what to play
       try {
         if (reminder.localAudioPath != null) {
-          await audioService.playLocalAudio(reminder.localAudioPath!);
+          await audioService.playLocalAudio(reminder.localAudioPath!,
+              loop: true);
         } else if (reminder.voiceAudioUrl != null) {
-          await audioService.playRemoteAudio(reminder.voiceAudioUrl!);
+          await audioService.playRemoteAudio(reminder.voiceAudioUrl!,
+              loop: true);
         } else {
           // Play default gentle tone
           // Make sure asset exists or handle error
           try {
-            await audioService.playAsset('assets/sounds/gentle_tone.mp3');
+            await audioService.playAsset('assets/sounds/gentle_tone.mp3',
+                loop: true);
           } catch (e) {
             debugPrint('Asset gentle_tone.mp3 not found, skipping tone.');
           }

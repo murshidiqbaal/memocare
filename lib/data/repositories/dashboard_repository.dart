@@ -22,16 +22,16 @@ class DashboardRepository {
             caregiver_id,
             patient_id,
             linked_at,
-            profiles!patient_id (
+            patients!patient_id (
               full_name,
-              avatar_url
+              profile_photo_url
             )
           ''').eq('caregiver_id', caregiverId);
 
       final links = <CaregiverPatientLink>[];
 
       for (var item in data) {
-        final profile = item['profiles'] as Map<String, dynamic>?;
+        final profile = item['patients'] as Map<String, dynamic>?;
         final link = CaregiverPatientLink(
           id: item['id'],
           caregiverId: item['caregiver_id'],
@@ -77,8 +77,8 @@ class DashboardRepository {
           .from('reminders')
           .select()
           .eq('patient_id', patientId)
-          .gte('remind_at', todayStart.toIso8601String())
-          .lt('remind_at', todayEnd.toIso8601String());
+          .gte('reminder_time', todayStart.toIso8601String())
+          .lt('reminder_time', todayEnd.toIso8601String());
 
       int completed = 0;
       int pending = 0;
@@ -89,7 +89,7 @@ class DashboardRepository {
         if (status == 'completed') {
           completed++;
         } else if (status == 'pending') {
-          if (DateTime.parse(r['remind_at']).isBefore(now)) {
+          if (DateTime.parse(r['reminder_time']).isBefore(now)) {
             missed++;
           } else {
             pending++;
@@ -190,8 +190,8 @@ class DashboardRepository {
           .select()
           .eq('patient_id', patientId)
           .eq('status', 'pending')
-          .gte('remind_at', now.toIso8601String())
-          .order('remind_at', ascending: true)
+          .gte('reminder_time', now.toIso8601String())
+          .order('reminder_time', ascending: true)
           .limit(1);
 
       if (data.isEmpty) return null;

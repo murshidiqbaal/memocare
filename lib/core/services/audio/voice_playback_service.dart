@@ -6,10 +6,11 @@ class VoicePlaybackService {
   final AudioPlayer _player = AudioPlayer();
 
   /// Plays audio from a local file path
-  Future<void> playLocalAudio(String filePath) async {
+  Future<void> playLocalAudio(String filePath, {bool loop = false}) async {
     try {
       if (await File(filePath).exists()) {
         await _player.setFilePath(filePath);
+        await _player.setLoopMode(loop ? LoopMode.one : LoopMode.off);
         await _player.play();
       } else {
         print('Voice note file not found at: $filePath');
@@ -20,9 +21,10 @@ class VoicePlaybackService {
   }
 
   /// Plays audio from a remote URL
-  Future<void> playRemoteAudio(String url) async {
+  Future<void> playRemoteAudio(String url, {bool loop = false}) async {
     try {
       await _player.setUrl(url);
+      await _player.setLoopMode(loop ? LoopMode.one : LoopMode.off);
       await _player.play();
     } catch (e) {
       print('Error playing remote audio: $e');
@@ -30,9 +32,10 @@ class VoicePlaybackService {
   }
 
   /// Plays a bundled asset (e.g. gentle tone)
-  Future<void> playAsset(String assetPath) async {
+  Future<void> playAsset(String assetPath, {bool loop = false}) async {
     try {
       await _player.setAsset(assetPath);
+      await _player.setLoopMode(loop ? LoopMode.one : LoopMode.off);
       await _player.play();
     } catch (e) {
       print('Error playing asset audio: $e');

@@ -27,10 +27,9 @@ class PatientConnectionRepository {
 
     try {
       final row = await _supabase
-          .from('profiles')
+          .from('caregiver_profiles')
           .select('id')
           .eq('user_id', userId)
-          .eq('role', 'caregiver')
           .maybeSingle();
 
       return row?['id'] as String?;
@@ -127,18 +126,18 @@ class PatientConnectionRepository {
       // Query caregiver_patient_links and join with profiles table
       final List<dynamic> rows = await _supabase.from(_linksTable).select('''
             relationship,
-            profile:profiles!caregiver_id (
+            caregiver_profiles!caregiver_id (
               id,
               user_id,
               full_name,
-              phone_number,
+              phone,
               profile_photo_url,
               created_at
             )
           ''').eq('patient_id', patientId);
 
       return rows
-          .where((r) => r['profile'] != null)
+          .where((r) => r['caregiver_profiles'] != null)
           .map((r) => Caregiver.fromJson(
                 Map<String, dynamic>.from(r as Map<String, dynamic>),
               ))

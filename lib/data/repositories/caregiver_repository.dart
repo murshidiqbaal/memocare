@@ -16,10 +16,9 @@ class CaregiverRepository {
       if (user == null) return null;
 
       final data = await _supabase
-          .from('profiles')
+          .from('caregiver_profiles')
           .select()
           .eq('user_id', user.id)
-          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (data == null) return null;
@@ -46,10 +45,9 @@ class CaregiverRepository {
     try {
       // 1. Check for existing profile by user_id
       final existing = await _supabase
-          .from('profiles')
+          .from('caregiver_profiles')
           .select('id')
           .eq('user_id', user.id)
-          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (existing != null) {
@@ -60,11 +58,10 @@ class CaregiverRepository {
       final fullName =
           user.userMetadata?['full_name'] as String? ?? 'Caregiver';
       final response = await _supabase
-          .from('profiles')
+          .from('caregiver_profiles')
           .insert({
             'user_id': user.id,
             'full_name': fullName,
-            'role': 'caregiver',
           })
           .select('id')
           .single();
@@ -83,11 +80,11 @@ class CaregiverRepository {
 
       final data = {
         'user_id': user.id,
-        'phone_number': caregiver.phone,
+        'full_name': caregiver.fullName,
+        'phone': caregiver.phone,
         'relationship': caregiver.relationship,
         'notification_enabled': caregiver.notificationEnabled,
         'profile_photo_url': caregiver.profilePhotoUrl,
-        'role': 'caregiver',
       };
 
       // Add ID if it exists (for explicit updates)
@@ -95,9 +92,9 @@ class CaregiverRepository {
         data['id'] = caregiver.id!;
       }
 
-      await _supabase.from('profiles').upsert(
+      await _supabase.from('caregiver_profiles').upsert(
             data,
-            onConflict: 'user_id, role',
+            onConflict: 'user_id',
           );
     } catch (e) {
       throw Exception('Failed to save profile: $e');

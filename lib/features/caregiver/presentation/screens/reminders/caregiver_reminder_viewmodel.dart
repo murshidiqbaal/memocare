@@ -65,7 +65,7 @@ class CaregiverReminderViewModel extends StateNotifier<CaregiverReminderState> {
           .from('reminders')
           .select()
           .eq('patient_id', state.selectedPatientId)
-          .order('remind_at', ascending: true);
+          .order('reminder_time', ascending: true);
 
       final reminders = (data as List)
           .map((r) => Reminder.fromJson(r as Map<String, dynamic>))

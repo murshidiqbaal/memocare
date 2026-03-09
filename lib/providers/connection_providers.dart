@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/caregiver.dart';
 import '../data/models/patient.dart';
-import '../providers/service_providers.dart';
+import 'service_providers.dart';
 
 // =============================================================================
 // PATIENT SIDE — CAREGIVERS LINKED TO A PATIENT

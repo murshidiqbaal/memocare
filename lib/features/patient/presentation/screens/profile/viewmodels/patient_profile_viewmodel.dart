@@ -61,7 +61,7 @@ final patientCaregiversProvider =
 
     final data = await supabase
         .from('caregiver_patient_links')
-        .select('*, caregiver:profiles!caregiver_id(*)')
+        .select('*, caregiver_profiles!caregiver_id(*)')
         .eq('patient_id', patientId)
         .order('linked_at', ascending: true);
 

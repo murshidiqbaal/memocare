@@ -35,20 +35,33 @@ CREATE POLICY "caregiver_profiles_update_own" ON public.caregiver_profiles
 CREATE POLICY "caregiver_profiles_delete_own" ON public.caregiver_profiles
     FOR DELETE USING (auth.uid() = user_id);
 
+-- ─── Helper Functions to Break RLS Recursion ──────────────────────────────
+-- By using SECURITY DEFINER, these functions bypass RLS and prevent infinite loops.
+
+CREATE OR REPLACE FUNCTION get_my_caregiver_id()
+RETURNS uuid
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT id FROM caregiver_profiles WHERE user_id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION get_my_patient_id()
+RETURNS uuid
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+    SELECT id FROM patients WHERE user_id = auth.uid() LIMIT 1;
+$$;
+
 -- ─── 3. caregiver_patient_links ───────────────────────────────────────────
--- Non-recursive: subqueries only hit caregiver_profiles/patients (simple rows).
+-- Non-recursive: subqueries utilize the security definer functions above.
 CREATE POLICY "cpl_caregiver_all" ON public.caregiver_patient_links
     FOR ALL USING (
-        caregiver_id IN (
-            SELECT id FROM public.caregiver_profiles WHERE user_id = auth.uid()
-        )
+        caregiver_id = get_my_caregiver_id()
     );
 
 CREATE POLICY "cpl_patient_select" ON public.caregiver_patient_links
     FOR SELECT USING (
-        patient_id IN (
-            SELECT id FROM public.patients WHERE user_id = auth.uid()
-        )
+        patient_id = get_my_patient_id()
     );
 
 -- ─── 4. patients ──────────────────────────────────────────────────────────
@@ -57,15 +70,13 @@ CREATE POLICY "patients_self_all" ON public.patients
     FOR ALL USING (auth.uid() = user_id);
 
 -- Caregiver: read-only access to LINKED patients.
--- NON-RECURSIVE: uses an EXISTS check that flows in one direction:
--- patients <- link table <- profile table (checks auth.uid).
+-- NON-RECURSIVE: uses security definer function to avoid querying caregiver_profiles with RLS.
 CREATE POLICY "patients_linked_caregiver_read" ON public.patients
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM public.caregiver_patient_links cpl
-            JOIN public.caregiver_profiles cp ON cp.id = cpl.caregiver_id
             WHERE cpl.patient_id = patients.id
-              AND cp.user_id = auth.uid()
+              AND cpl.caregiver_id = get_my_caregiver_id()
         )
     );
 

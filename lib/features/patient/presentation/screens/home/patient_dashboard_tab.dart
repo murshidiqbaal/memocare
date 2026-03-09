@@ -103,7 +103,7 @@ class PatientDashboardTab extends ConsumerWidget {
 
                         // Quick Actions Section
                         // const SectionTitle(title: 'Quick Actions'),
-                        SizedBox(height: 12 * scale),
+                        // SizedBox(height: 12 * scale),
                         // QuickActionGrid(
                         //   onMemoriesTap: () => _navigateToMemories(context),
                         //   onGamesTap: () => _navigateToGames(context),

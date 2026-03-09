@@ -6,15 +6,17 @@ import 'package:flutter/material.dart'; // Add for Color
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../../data/datasources/local/local_reminder_datasource.dart';
 import 'notification_permission_service.dart';
 
 class ReminderNotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  bool _isInitialized = false;
 
   // Centralized Permission Service
   final NotificationPermissionService _permissionService =
@@ -22,6 +24,8 @@ class ReminderNotificationService {
 
   /// Initialize the notification service and reschedule existing reminders
   Future<void> init() async {
+    if (_isInitialized) return;
+
     // 1. Initialize Timezones
     tz.initializeTimeZones();
     try {
@@ -62,6 +66,8 @@ class ReminderNotificationService {
 
     // 5. Reschedule all to ensure consistency (Now handled via Supabase Auth State)
     await _rescheduleAllReminders();
+
+    _isInitialized = true;
   }
 
   /// Handle notification tap to navigate to authorized alert screen
@@ -74,6 +80,11 @@ class ReminderNotificationService {
 
   /// Schedule a specific reminder
   Future<void> scheduleReminder(Reminder reminder) async {
+    if (!_isInitialized) {
+      print('WARNING: Cannot schedule reminder, service not initialized.');
+      return;
+    }
+
     // 1. Determine ID
     final int notificationId = reminder.notificationId ?? reminder.id.hashCode;
 
@@ -299,26 +310,19 @@ class ReminderNotificationService {
     await _notificationsPlugin.cancelAll();
   }
 
-  /// Fetch from Supabase and reschedule all suitable reminders
+  /// Fetch from Local Storage and reschedule all suitable reminders
   Future<void> _rescheduleAllReminders() async {
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) return;
-
-      print('Rescheduling all reminders from Supabase...');
+      print('Rescheduling all reminders from Local Storage...');
       await _notificationsPlugin.cancelAll();
 
-      final response = await Supabase.instance.client
-          .from('reminders')
-          .select()
-          .eq('patient_id', user.id);
+      final localDatasource = LocalReminderDatasource();
+      final reminders = await localDatasource.getAllReminders();
 
-      final List<dynamic> data = response;
       final now = DateTime.now();
       int scheduledCount = 0;
 
-      for (var json in data) {
-        final reminder = Reminder.fromJson(json);
+      for (var reminder in reminders) {
         if (reminder.status == ReminderStatus.completed) continue;
 
         if (reminder.repeatRule == ReminderFrequency.once &&
@@ -330,7 +334,7 @@ class ReminderNotificationService {
         await scheduleReminder(reminder);
         scheduledCount++;
       }
-      print('Rescheduled $scheduledCount valid reminders.');
+      print('Rescheduled $scheduledCount valid reminders from Hive.');
     } catch (e) {
       print('Error rescheduling reminders: $e');
     }

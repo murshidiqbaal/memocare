@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../providers/service_providers.dart';
+import '../router/app_router.dart';
 import 'disable_battery_optimization_dialog.dart';
 
 class ReliabilityWrapper extends ConsumerStatefulWidget {
@@ -45,8 +46,9 @@ class _ReliabilityWrapperState extends ConsumerState<ReliabilityWrapper> {
       final manufacturer = await batteryService.getManufacturer();
 
       if (mounted) {
+        final currentContext = rootNavigatorKey.currentContext ?? context;
         await showDialog(
-          context: context,
+          context: currentContext,
           barrierDismissible: false, // Force an action or "Later"
           builder: (context) => DisableBatteryOptimizationDialog(
             manufacturer: manufacturer,
