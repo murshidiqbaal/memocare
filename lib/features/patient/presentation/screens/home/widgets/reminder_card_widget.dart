@@ -141,8 +141,9 @@ class _ReminderCardState extends State<ReminderCard> {
   Widget build(BuildContext context) {
     final reminder = widget.reminder;
     final onToggle = widget.onToggle;
-    // 1. Calculate Scale Factor based on reference width (e.g. 475 mobile width)
     final double scale = MediaQuery.of(context).size.width / 475.0;
+    final isOverdue =
+        !reminder.isCompleted && reminder.reminderTime.isBefore(DateTime.now());
 
     return InkWell(
       onTap: () => _navigateToDetails(context),
@@ -152,18 +153,20 @@ class _ReminderCardState extends State<ReminderCard> {
         curve: Curves.easeInOut,
         padding: EdgeInsets.all(16 * scale),
         decoration: BoxDecoration(
-          color: reminder.isCompleted ? Colors.grey.shade100 : Colors.white,
+          color: reminder.isCompleted
+              ? Colors.grey.shade100
+              : (isOverdue ? Colors.red.shade50 : Colors.white),
           borderRadius: BorderRadius.circular(20 * scale),
           border: Border.all(
             color: reminder.isCompleted
                 ? Colors.grey.shade300
-                : Colors.teal.shade100,
+                : (isOverdue ? Colors.red.shade300 : Colors.teal.shade100),
             width: 2,
           ),
           boxShadow: [
             if (!reminder.isCompleted)
               BoxShadow(
-                color: Colors.teal.withOpacity(0.1),
+                color: (isOverdue ? Colors.red : Colors.teal).withOpacity(0.1),
                 blurRadius: 10 * scale,
                 offset: Offset(0, 4 * scale),
               ),
@@ -179,12 +182,18 @@ class _ReminderCardState extends State<ReminderCard> {
               decoration: BoxDecoration(
                 color: reminder.isCompleted
                     ? Colors.grey.shade200
-                    : Colors.teal.shade50,
+                    : (isOverdue ? Colors.red.shade100 : Colors.teal.shade50),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                reminder.isCompleted ? Icons.check : Icons.access_time_filled,
-                color: reminder.isCompleted ? Colors.grey : Colors.teal,
+                reminder.isCompleted
+                    ? Icons.check
+                    : (isOverdue
+                        ? Icons.priority_high
+                        : Icons.access_time_filled),
+                color: reminder.isCompleted
+                    ? Colors.grey
+                    : (isOverdue ? Colors.red : Colors.teal),
                 size: 28 * scale,
               ),
             ),
@@ -259,10 +268,29 @@ class _ReminderCardState extends State<ReminderCard> {
                           fontSize: 16 * scale,
                           color: reminder.isCompleted
                               ? Colors.grey
-                              : Colors.teal.shade700,
+                              : (isOverdue
+                                  ? Colors.red.shade700
+                                  : Colors.teal.shade700),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      if (isOverdue)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 6 * scale, vertical: 2 * scale),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(4 * scale),
+                          ),
+                          child: Text(
+                            'OVERDUE',
+                            style: TextStyle(
+                              fontSize: 10 * scale,
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
                       if (reminder.hasVoiceNote)
                         GestureDetector(
                           onTap: () {
@@ -354,10 +382,12 @@ class _ReminderCardState extends State<ReminderCard> {
                     decoration: BoxDecoration(
                       color: reminder.isCompleted
                           ? Colors.transparent
-                          : Colors.teal,
+                          : (isOverdue ? Colors.red : Colors.teal),
                       borderRadius: BorderRadius.circular(12 * scale),
                       border: Border.all(
-                        color: reminder.isCompleted ? Colors.grey : Colors.teal,
+                        color: reminder.isCompleted
+                            ? Colors.grey
+                            : (isOverdue ? Colors.red : Colors.teal),
                         width: 1.5,
                       ),
                     ),

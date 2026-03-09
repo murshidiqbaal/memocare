@@ -1,7 +1,6 @@
+import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import 'package:dementia_care_app/data/models/reminder.dart';
 
 class CaregiverReminderList extends StatelessWidget {
   final List<Reminder> reminders;
@@ -56,6 +55,8 @@ class CaregiverReminderList extends StatelessWidget {
             final reminder = reminders[index];
             final isCompleted = reminder.status == ReminderStatus.completed;
             final isMissed = reminder.status == ReminderStatus.missed;
+            final isOverdue =
+                !isCompleted && reminder.reminderTime.isBefore(DateTime.now());
             final hasVoice = reminder.voiceAudioUrl != null ||
                 reminder.localAudioPath != null;
 
@@ -73,7 +74,7 @@ class CaregiverReminderList extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isCompleted
                         ? Colors.green.shade50
-                        : (isMissed
+                        : (isMissed || isOverdue
                             ? Colors.red.shade50
                             : Colors.orange.shade50),
                     shape: BoxShape.circle,
@@ -81,10 +82,12 @@ class CaregiverReminderList extends StatelessWidget {
                   child: Icon(
                     isCompleted
                         ? Icons.check
-                        : (isMissed ? Icons.priority_high : Icons.access_time),
+                        : (isMissed || isOverdue
+                            ? Icons.priority_high
+                            : Icons.access_time),
                     color: isCompleted
                         ? Colors.green
-                        : (isMissed ? Colors.red : Colors.orange),
+                        : (isMissed || isOverdue ? Colors.red : Colors.orange),
                   ),
                 ),
                 title: Text(
@@ -94,8 +97,31 @@ class CaregiverReminderList extends StatelessWidget {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 4),
-                    Text(DateFormat('h:mm a').format(reminder.reminderTime)),
+                    Row(
+                      children: [
+                        Text(
+                            DateFormat('h:mm a').format(reminder.reminderTime)),
+                        if (isOverdue) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'OVERDUE',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     if (hasVoice)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),

@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PatientSOSScreen extends ConsumerStatefulWidget {
-  const PatientSOSScreen({super.key});
+  final bool triggerImmediately;
+  const PatientSOSScreen({super.key, this.triggerImmediately = false});
 
   @override
   ConsumerState<PatientSOSScreen> createState() => _PatientSOSScreenState();
@@ -35,6 +36,12 @@ class _PatientSOSScreenState extends ConsumerState<PatientSOSScreen>
     _scaleAnim = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _breathCtrl, curve: Curves.easeInOut),
     );
+
+    if (widget.triggerImmediately) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fireSOS();
+      });
+    }
   }
 
   @override

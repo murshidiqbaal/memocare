@@ -32,7 +32,8 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const PatientSOSScreen(),
+                builder: (context) =>
+                    const PatientSOSScreen(triggerImmediately: true),
               ),
             );
           },

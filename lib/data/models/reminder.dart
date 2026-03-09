@@ -152,7 +152,7 @@ class Reminder {
       'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
       'voice_audio_url': voiceAudioUrl,
       'notification_id': notificationId,
-      'voice_audio_url': localAudioPath,
+      // 'local_audio_path': localAudioPath,
     };
   }
 
