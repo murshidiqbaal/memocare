@@ -48,23 +48,24 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
   }
 
   Future<void> _playAudio(String? url, String? localPath) async {
-    if ((url == null || url.isEmpty) &&
-        (localPath == null || localPath.isEmpty)) {
-      return;
-    }
+    final source = localPath?.isNotEmpty == true ? localPath : url;
+    if (source == null || source.isEmpty) return;
 
     try {
       setState(() => _isLoadingAudio = true);
+      // Offline-first: prefer local file, fallback to remote URL
       if (localPath != null && localPath.isNotEmpty) {
         await _player.setFilePath(localPath);
-      } else if (url != null) {
-        await _player.setUrl(url);
+      } else {
+        await _player.setUrl(url!);
       }
       await _player.play();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not play audio: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not play audio: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoadingAudio = false);
     }
@@ -120,6 +121,38 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
             },
             icon: const Icon(Icons.edit),
             tooltip: 'Edit Reminder',
+          ),
+          IconButton(
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete Reminder'),
+                  content: const Text(
+                      'Are you sure you want to delete this reminder?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true && mounted) {
+                // Await deletion so Hive + Supabase are updated before popping
+                await ref
+                    .read(homeViewModelProvider.notifier)
+                    .deleteReminder(reminder.id);
+                if (mounted) Navigator.pop(context);
+              }
+            },
+            icon: const Icon(Icons.delete),
+            tooltip: 'Delete Reminder',
           ),
         ],
       ),
@@ -202,8 +235,7 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
             ],
 
             // Voice Note
-            if (reminder.voiceAudioUrl != null ||
-                reminder.localAudioPath != null) ...[
+            if (reminder.hasVoiceNote) ...[
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

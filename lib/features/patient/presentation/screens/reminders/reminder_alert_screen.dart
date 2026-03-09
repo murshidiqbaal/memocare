@@ -1,12 +1,12 @@
+import 'dart:async';
+
 import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:dementia_care_app/providers/service_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-// import '../../../../data/models/reminder.dart';
-// import '../../../../providers/service_providers.dart';
-import 'viewmodels/reminder_viewmodel.dart';
+import '../home/viewmodels/home_viewmodel.dart';
 
 class ReminderAlertScreen extends ConsumerStatefulWidget {
   final String reminderId;
@@ -24,6 +24,7 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
   late Animation<double> _pulseAnimation;
   // We'll track playing state locally using the stream from service
   bool _isPlaying = false;
+  StreamSubscription? _audioSubscription;
 
   @override
   void initState() {
@@ -51,7 +52,7 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
       final audioService = ref.read(voicePlaybackServiceProvider);
 
       // Listen to player state
-      audioService.playerStateStream.listen((state) {
+      _audioSubscription = audioService.playerStateStream.listen((state) {
         if (mounted) {
           setState(() {
             _isPlaying = state.playing;
@@ -59,17 +60,19 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
         }
       });
 
-      // Determine what to play
+      // Determine what to play — offline-first using audioSource getter
       try {
-        if (reminder.localAudioPath != null) {
-          await audioService.playLocalAudio(reminder.localAudioPath!,
-              loop: true);
-        } else if (reminder.voiceAudioUrl != null) {
-          await audioService.playRemoteAudio(reminder.voiceAudioUrl!,
-              loop: true);
+        final source = reminder.audioSource;
+        if (source != null && source.isNotEmpty) {
+          if (reminder.localAudioPath != null &&
+              reminder.localAudioPath!.isNotEmpty) {
+            await audioService.playLocalAudio(reminder.localAudioPath!,
+                loop: true);
+          } else {
+            await audioService.playRemoteAudio(source, loop: true);
+          }
         } else {
-          // Play default gentle tone
-          // Make sure asset exists or handle error
+          // No voice note — play default gentle tone
           try {
             await audioService.playAsset('assets/sounds/gentle_tone.mp3',
                 loop: true);
@@ -86,16 +89,17 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
   @override
   void dispose() {
     _pulseController.dispose();
+    _audioSubscription?.cancel();
     // Stop audio when leaving screen
     ref.read(voicePlaybackServiceProvider).stop();
     super.dispose();
   }
 
   Reminder? _getReminder() {
-    final reminderState = ref.read(reminderViewModelProvider);
+    // Read from homeViewModelProvider — the single source of truth for patient reminders.
+    final homeState = ref.read(homeViewModelProvider);
     try {
-      return reminderState.reminders
-          .firstWhere((r) => r.id == widget.reminderId);
+      return homeState.reminders.firstWhere((r) => r.id == widget.reminderId);
     } catch (_) {
       return null;
     }
@@ -103,7 +107,8 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
 
   void _onDone() {
     ref.read(voicePlaybackServiceProvider).stop();
-    ref.read(reminderViewModelProvider.notifier).markAsDone(widget.reminderId);
+    // Use homeViewModelProvider to mark done and trigger UI refresh
+    ref.read(homeViewModelProvider.notifier).toggleReminder(widget.reminderId);
     Navigator.pop(context); // Close alert
   }
 
@@ -123,17 +128,17 @@ class _ReminderAlertScreenState extends ConsumerState<ReminderAlertScreen>
       lastSnoozedAt: DateTime.now(),
     );
 
-    ref.read(reminderViewModelProvider.notifier).updateReminder(updated);
+    ref.read(homeViewModelProvider.notifier).updateReminder(updated);
     Navigator.pop(context); // Close alert
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch for changes (e.g. if reminder gets deleted externally)
-    final reminderState = ref.watch(reminderViewModelProvider);
+    // Watch homeViewModelProvider — the single source of truth for patient reminders.
+    final homeState = ref.watch(homeViewModelProvider);
     Reminder reminder;
     try {
-      reminder = reminderState.reminders.firstWhere(
+      reminder = homeState.reminders.firstWhere(
         (r) => r.id == widget.reminderId,
       );
     } catch (_) {

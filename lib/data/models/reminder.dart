@@ -195,7 +195,18 @@ class Reminder {
 
   // Convenience Getters & Aliases
   bool get isCompleted => status == ReminderStatus.completed;
-  bool get hasVoiceNote => voiceAudioUrl != null || localAudioPath != null;
+
+  /// True when any audio source is available (local file or remote URL).
+  bool get hasVoiceNote =>
+      (localAudioPath != null && localAudioPath!.isNotEmpty) ||
+      (voiceAudioUrl != null && voiceAudioUrl!.isNotEmpty);
+
+  /// Returns the best audio source: local file first (offline-first), then remote URL.
+  String? get audioSource =>
+      (localAudioPath != null && localAudioPath!.isNotEmpty)
+          ? localAudioPath
+          : voiceAudioUrl;
+
   DateTime get time => reminderTime;
   ReminderFrequency get frequency => repeatRule;
   int get snoozeCount => 0;

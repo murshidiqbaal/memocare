@@ -12,8 +12,7 @@ import 'package:dementia_care_app/features/patient/presentation/screens/home_loc
 import 'package:dementia_care_app/features/patient/presentation/screens/memories/memories_screen.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/reminders/reminder_list_screen.dart';
-import 'package:dementia_care_app/providers/emergency_alert_provider.dart';
-import 'package:dementia_care_app/widgets/sos_countdown_dialog.dart';
+import 'package:dementia_care_app/features/patient/presentation/screens/sos/patient_sos_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -217,12 +216,15 @@ class PatientDashboardTab extends ConsumerWidget {
 
   /// Show emergency SOS countdown dialog
   void _showSOSCountdown(BuildContext context, WidgetRef ref) {
-    ref.read(emergencySOSControllerProvider.notifier).startCountdown();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PatientSOSScreen()),
+    );
     showDialog(
       context: context,
       barrierDismissible: false,
       useSafeArea: false,
-      builder: (context) => const SOSCountdownDialog(),
+      builder: (context) => const PatientSOSScreen(),
     );
   }
 }

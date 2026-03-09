@@ -1,13 +1,18 @@
+import 'dart:io';
+
 import 'package:dementia_care_app/core/services/notification/reminder_notification_service.dart';
 import 'package:dementia_care_app/core/services/voice_service.dart';
 import 'package:dementia_care_app/data/datasources/local/local_reminder_datasource.dart';
 import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Enhanced ReminderRepository with:
 /// - Realtime streams for patient and caregiver
 /// - RLS-safe queries for caregiver-patient visibility
+/// - Offline-first voice audio download for offline playback
 /// - Proper error handling
 class ReminderRepository {
   final SupabaseClient _supabase;
@@ -24,18 +29,22 @@ class ReminderRepository {
 
   Future<void> init() async {}
 
-  /// Get reminders for a specific patient (Offline-First)
+  /// Get reminders for a specific patient
   Future<List<Reminder>> getReminders(String patientId) async {
-    // 1. Return local data immediately if available for ultra-fast startup
+    // 1. Return local data immediately for ultra-fast startup
     try {
-      final local = await _localDatasource.getAllReminders();
+      final localReminders = await _localDatasource.getAllReminders();
+      final local =
+          localReminders.where((r) => r.patientId == patientId).toList();
+
       if (local.isNotEmpty) {
         debugPrint(
             'ReminderRepository: Returning ${local.length} reminders from Hive');
         // We still sync in the background
-        _syncFromSupabase(patientId).catchError((e) {
+        _syncFromSupabase(patientId).then((reminders) {
+          // Sync successful, UI can be updated if listening to stream
+        }).catchError((e) {
           debugPrint('Background sync failed: $e');
-          return <Reminder>[];
         });
         return local;
       }
@@ -59,15 +68,74 @@ class ReminderRepository {
           .map((json) => Reminder.fromJson(json as Map<String, dynamic>))
           .toList();
 
-      // Update Hive
-      await _localDatasource.saveAllReminders(reminders);
+      // Clear local reminders that are no longer on Supabase
+      final localData = await _localDatasource.getAllReminders();
+      final localPatientReminders =
+          localData.where((r) => r.patientId == patientId);
+      final remoteIds = reminders.map((r) => r.id).toSet();
+
+      for (final local in localPatientReminders) {
+        if (!remoteIds.contains(local.id)) {
+          await _localDatasource.deleteReminder(local.id);
+        }
+      }
+
+      // Download voice audio locally for offline-first playback
+      final updatedReminders = await Future.wait(
+        reminders.map((r) => _ensureLocalAudio(r)),
+      );
+
+      // Update Hive with the final reminders (including localAudioPath)
+      await _localDatasource.saveAllReminders(updatedReminders);
       debugPrint(
-          'ReminderRepository: Synced ${reminders.length} reminders from Supabase');
-      return reminders;
+          'ReminderRepository: Synced ${updatedReminders.length} reminders from Supabase');
+      return updatedReminders;
     } catch (e) {
       debugPrint('ReminderRepository: Supabase fetch failed: $e');
-      // If sync fails, we already tried local in getReminders(), so we throw or return empty
-      return await _localDatasource.getAllReminders();
+      // If sync fails, return what we have locally
+      return (await _localDatasource.getAllReminders())
+          .where((r) => r.patientId == patientId)
+          .toList();
+    }
+  }
+
+  /// Downloads the remote voice audio to a local file if not already present.
+  /// Returns the reminder with [localAudioPath] set.
+  Future<Reminder> _ensureLocalAudio(Reminder reminder) async {
+    // Already has a valid local file — no download needed
+    if (reminder.localAudioPath != null &&
+        reminder.localAudioPath!.isNotEmpty) {
+      final file = File(reminder.localAudioPath!);
+      if (await file.exists()) return reminder;
+    }
+
+    // No remote URL to download from
+    if (reminder.voiceAudioUrl == null || reminder.voiceAudioUrl!.isEmpty) {
+      return reminder;
+    }
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final localPath = '${dir.path}/voice_${reminder.id}.m4a';
+
+      final file = File(localPath);
+      if (!await file.exists()) {
+        debugPrint(
+            'ReminderRepository: Downloading voice audio for ${reminder.id}');
+        final response = await http.get(Uri.parse(reminder.voiceAudioUrl!));
+        if (response.statusCode == 200) {
+          await file.writeAsBytes(response.bodyBytes);
+          debugPrint('ReminderRepository: Saved voice audio to $localPath');
+        } else {
+          debugPrint(
+              'ReminderRepository: Failed to download voice audio (${response.statusCode})');
+          return reminder;
+        }
+      }
+      return reminder.copyWith(localAudioPath: localPath);
+    } catch (e) {
+      debugPrint('ReminderRepository: Voice audio download error: $e');
+      return reminder;
     }
   }
 
@@ -119,9 +187,7 @@ class ReminderRepository {
       debugPrint('ReminderRepository: Added reminder to Supabase');
     } catch (e) {
       debugPrint('ReminderRepository: Supabase add failed (kept locally): $e');
-      // We don't throw here to allow offline mode to feel "working"
-      // But we might want to throw if we want the UI to show an error
-      rethrow;
+      // No rethrow to allow offline mode to feel "working"
     }
   }
 
@@ -180,7 +246,7 @@ class ReminderRepository {
     } catch (e) {
       debugPrint(
           'ReminderRepository: Supabase update failed (kept locally): $e');
-      rethrow;
+      // No rethrow
     }
   }
 
@@ -199,7 +265,7 @@ class ReminderRepository {
     } catch (e) {
       debugPrint(
           'ReminderRepository: Supabase delete failed (deleted locally): $e');
-      rethrow;
+      // No rethrow
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:dementia_care_app/features/patient/presentation/screens/sos/patient_sos_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,7 +28,15 @@ class SOSCountdownContent extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Warning Icon
-            _buildWarningIcon(sosState),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const PatientSOSScreen()));
+              },
+              child: _buildWarningIcon(sosState),
+            ),
 
             const SizedBox(height: 40),
 

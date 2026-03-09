@@ -67,10 +67,23 @@ class CaregiverReminderViewModel extends StateNotifier<CaregiverReminderState> {
           .eq('patient_id', state.selectedPatientId)
           .order('reminder_time', ascending: true);
 
-      final reminders = (data as List)
+      final incomingReminders = (data as List)
           .map((r) => Reminder.fromJson(r as Map<String, dynamic>))
           .toList();
-      state = state.copyWith(reminders: reminders, isLoading: false);
+
+      // Fix (Bug 6): Preserve local-only fields (localAudioPath, notificationId)
+      // from our existing memory state if they are available.
+      final localMap = {for (final r in state.reminders) r.id: r};
+      final mergedReminders = incomingReminders.map((r) {
+        final local = localMap[r.id];
+        if (local == null) return r;
+        return r.copyWith(
+          localAudioPath: local.localAudioPath ?? r.localAudioPath,
+          notificationId: local.notificationId ?? r.notificationId,
+        );
+      }).toList();
+
+      state = state.copyWith(reminders: mergedReminders, isLoading: false);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

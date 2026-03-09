@@ -128,6 +128,9 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
           widget.existingReminder?.notificationId ??
               DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
 
+      final String reminderId =
+          widget.existingReminder?.id ?? const Uuid().v4();
+
       // ── Upload voice note if a new local recording exists ─────────────────
       String? remoteVoiceUrl = widget.existingReminder?.voiceAudioUrl;
 
@@ -160,8 +163,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         final voiceService = ref.read(voiceStorageServiceProvider);
         remoteVoiceUrl = await voiceService.uploadVoiceNote(
           localPath: newLocalPath,
-          reminderId:
-              widget.existingReminder?.id ?? DateTime.now().toIso8601String(),
+          reminderId: reminderId,
           userId: currentUserId,
         );
 
@@ -170,7 +172,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
       // ──────────────────────────────────────────────────────────────────────
 
       final newReminder = Reminder(
-        id: widget.existingReminder?.id ?? const Uuid().v4(),
+        id: reminderId,
         title: _titleController.text,
         description: _descController.text,
         reminderTime: finalDateTime,

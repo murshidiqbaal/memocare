@@ -187,8 +187,12 @@ final llmMemoryQueryEngineProvider = Provider<LLMMemoryQueryEngine>((ref) {
 });
 
 // Voice Playback Service Provider
+// keepAlive ensures the same AudioPlayer instance is reused across screens,
+// preventing duplicate audio playing and memory leaks.
 final voicePlaybackServiceProvider = Provider<VoicePlaybackService>((ref) {
-  return VoicePlaybackService();
+  final service = VoicePlaybackService();
+  ref.onDispose(() => service.dispose());
+  return service;
 });
 
 // Generic Query Engine Provider - can be toggled in settings or based on availability

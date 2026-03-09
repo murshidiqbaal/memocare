@@ -244,8 +244,22 @@ class HomeViewModel extends StateNotifier<HomeState> {
     }
   }
 
-  void updateRemindersFromRealtime(List<Reminder> reminders) {
-    state = state.copyWith(reminders: reminders);
+  void updateRemindersFromRealtime(List<Reminder> incoming) {
+    // Build a lookup of our current reminders by ID (which have localAudioPath)
+    final localMap = {for (final r in state.reminders) r.id: r};
+
+    final merged = incoming.map((r) {
+      final local = localMap[r.id];
+      if (local == null) return r;
+
+      // Prefer local fields that Supabase doesn't know about
+      return r.copyWith(
+        localAudioPath: local.localAudioPath ?? r.localAudioPath,
+        notificationId: local.notificationId ?? r.notificationId,
+      );
+    }).toList();
+
+    state = state.copyWith(reminders: merged);
   }
 }
 
