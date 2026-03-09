@@ -30,6 +30,12 @@ class SafetyStatusCard extends ConsumerWidget {
                 String subtitle;
 
                 switch (status) {
+                  case -1:
+                    title = 'Location Unavailable';
+                    color = Colors.grey;
+                    icon = Icons.location_off_rounded;
+                    subtitle = 'Home safe zone not configured.';
+                    break;
                   case 0:
                     title = 'Safe at Home';
                     color = Colors.green;

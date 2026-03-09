@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/auth/providers/auth_provider.dart';
 import '../services/notification/reminder_notification_service.dart';
 
 // Provide the LocationRepository
