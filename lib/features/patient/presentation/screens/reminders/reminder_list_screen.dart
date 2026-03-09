@@ -1,12 +1,11 @@
 import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/home/viewmodels/home_viewmodel.dart';
+import 'package:dementia_care_app/features/patient/presentation/screens/home/widgets/reminder_card_widget.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/reminders/reminder_detail_screen.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/reminders/voice_reminder_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 class ReminderListScreen extends ConsumerWidget {
   const ReminderListScreen({super.key});
@@ -103,17 +102,19 @@ class ReminderListScreen extends ConsumerWidget {
             ? const Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  _buildList(context, homeState.todayReminders, viewModel),
-                  _buildList(context, homeState.upcomingReminders, viewModel),
-                  _buildList(context, homeState.completedReminders, viewModel),
+                  _buildList(context, homeState.todayReminders, viewModel, ref),
+                  _buildList(
+                      context, homeState.upcomingReminders, viewModel, ref),
+                  _buildList(
+                      context, homeState.completedReminders, viewModel, ref),
                 ],
               ),
       ),
     );
   }
 
-  Widget _buildList(
-      BuildContext context, List<Reminder> reminders, HomeViewModel viewModel) {
+  Widget _buildList(BuildContext context, List<Reminder> reminders,
+      HomeViewModel viewModel, WidgetRef ref) {
     if (reminders.isEmpty) {
       return Center(
         child: Column(
@@ -135,159 +136,15 @@ class ReminderListScreen extends ConsumerWidget {
       itemCount: reminders.length,
       itemBuilder: (context, index) {
         final reminder = reminders[index];
-        return _buildReminderCard(context, reminder, viewModel);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ReminderCard(
+            reminder: reminder,
+            onToggle: () => viewModel.toggleReminder(reminder.id),
+            onDelete: () => viewModel.deleteReminder(reminder.id),
+          ),
+        );
       },
     );
-  }
-
-  Widget _buildReminderCard(
-      BuildContext context, Reminder reminder, HomeViewModel viewModel) {
-    final isDone = reminder.status == ReminderStatus.completed;
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  ReminderDetailScreen(reminderId: reminder.id),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // Type Icon Badge
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: _getTypeColor(reminder.type).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getTypeIcon(reminder.type),
-                      color: _getTypeColor(reminder.type),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Title and Time
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          reminder.title,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            decoration:
-                                isDone ? TextDecoration.lineThrough : null,
-                            color: isDone ? Colors.grey : Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time,
-                                size: 14, color: Colors.grey),
-                            const SizedBox(width: 4),
-                            Text(
-                              DateFormat('h:mm a')
-                                  .format(reminder.reminderTime),
-                              style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                            if (reminder.repeatRule !=
-                                ReminderFrequency.once) ...[
-                              const SizedBox(width: 8),
-                              const Icon(Icons.repeat,
-                                  size: 14, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Text(
-                                reminder.repeatRule.name,
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 12),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Checkbox
-                  if (!isDone)
-                    IconButton(
-                      icon: const Icon(Icons.check_circle_outline,
-                          size: 32, color: Colors.grey),
-                      onPressed: () {
-                        // Calls HomeViewModel toggle
-                        viewModel.toggleReminder(reminder.id);
-                      },
-                    )
-                  else
-                    IconButton(
-                      icon: const Icon(Icons.check_circle,
-                          size: 32, color: Colors.green),
-                      onPressed: () {
-                        // Allow untoggling? Yes, toggleReminder supports it.
-                        viewModel.toggleReminder(reminder.id);
-                      },
-                    ),
-                ],
-              ),
-              // Optional: Voice Indicator if present
-              if (reminder.voiceAudioUrl != null ||
-                  reminder.localAudioPath != null) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(Icons.mic, size: 16, color: Colors.teal),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Voice note attached',
-                      style:
-                          TextStyle(color: Colors.teal.shade700, fontSize: 12),
-                    ),
-                  ],
-                )
-              ]
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _getTypeColor(ReminderType type) {
-    switch (type) {
-      case ReminderType.medication:
-        return Colors.redAccent;
-      case ReminderType.appointment:
-        return Colors.blueAccent;
-      case ReminderType.task:
-        return Colors.orangeAccent;
-    }
-  }
-
-  IconData _getTypeIcon(ReminderType type) {
-    switch (type) {
-      case ReminderType.medication:
-        return Icons.medication;
-      case ReminderType.appointment:
-        return Icons.calendar_month;
-      case ReminderType.task:
-        return Icons.task_alt;
-    }
   }
 }

@@ -89,7 +89,22 @@ class SafetyStatusCard extends ConsumerWidget {
                   ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Row(
+                children: [
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Checking your safety status...',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
               error: (err, stack) => const Row(
                 children: [
                   Icon(Icons.error_outline, color: Colors.grey, size: 36),

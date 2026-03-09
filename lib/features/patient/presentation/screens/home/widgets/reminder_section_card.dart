@@ -339,6 +339,11 @@ class _ReminderSectionCardState extends ConsumerState<ReminderSectionCard> {
                   .read(homeViewModelProvider.notifier)
                   .toggleReminder(reminder.id);
             },
+            onDelete: () {
+              ref
+                  .read(homeViewModelProvider.notifier)
+                  .deleteReminder(reminder.id);
+            },
           ),
         );
       }).toList(),

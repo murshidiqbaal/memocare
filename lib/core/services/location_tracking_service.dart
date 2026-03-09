@@ -33,17 +33,30 @@ class LocationTrackingService {
   Timer? _trackingTimer;
   DateTime? _lastAlertTime;
   PatientHomeLocation? _currentHome;
+  String? _activePatientId;
 
   // Safe Zone Status
-  // 0 = Safe, 1 = Near Boundary, 2 = Outside
+  // 0 = Safe, 1 = Near Boundary, 2 = Outside, -1 = No Home Set
   int currentStatus = 0;
-  StreamController<int> statusStreamController =
+  final StreamController<int> statusStreamController =
       StreamController<int>.broadcast();
 
   LocationTrackingService(
       this._locationRepo, this._notifService, this._supabase);
 
   Future<void> startTracking(String patientId) async {
+    // Prevent duplicate start for same patient
+    if (_activePatientId == patientId && _trackingTimer != null) {
+      // Still emit current status to new listeners
+      statusStreamController.add(currentStatus);
+      return;
+    }
+
+    _activePatientId = patientId;
+
+    // Requirement: Emit initial 'Safe' (0) immediately to prevent stuck loading
+    statusStreamController.add(currentStatus);
+
     // 1. Check permissions
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -62,30 +75,49 @@ class LocationTrackingService {
     }
 
     // 2. Fetch home location initially
-    _currentHome = await _locationRepo.getPatientHomeLocation(patientId);
-    if (_currentHome == null) return;
+    try {
+      _currentHome = await _locationRepo.getPatientHomeLocation(patientId);
+      if (_currentHome == null) {
+        // -1 = Safe zone not configured
+        currentStatus = -1;
+        statusStreamController.add(currentStatus);
+        return;
+      }
+    } catch (e) {
+      print('Error fetching home location: $e');
+    }
 
-    // 3. Start Timer (runs every 60 seconds to save battery, handles background if configured)
+    // 3. Start Timer (runs every 45 seconds)
     _trackingTimer?.cancel();
     _trackingTimer = Timer.periodic(const Duration(seconds: 45), (timer) async {
       await _checkLocation(patientId);
     });
 
-    // Also run immediately
+    // Also run immediately to update status from '0' to actual
     await _checkLocation(patientId);
   }
 
   void stopTracking() {
     _trackingTimer?.cancel();
     _trackingTimer = null;
+    _activePatientId = null;
   }
 
   Future<void> _checkLocation(String patientId) async {
-    if (_currentHome == null) return;
+    if (_currentHome == null) {
+      // Re-fetch in case it was set recently
+      _currentHome = await _locationRepo.getPatientHomeLocation(patientId);
+      if (_currentHome == null) {
+        if (currentStatus != -1) {
+          currentStatus = -1;
+          statusStreamController.add(currentStatus);
+        }
+        return;
+      }
+    }
 
     try {
       Position position = await Geolocator.getCurrentPosition(
-        // High accuracy for safety, but can be adjusted for battery
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),
       );
@@ -116,7 +148,6 @@ class LocationTrackingService {
             patientId, position.latitude, position.longitude, distance);
       }
     } catch (e) {
-      // Handle location errors quietly in background
       print('Location tracking error: $e');
     }
   }
@@ -129,7 +160,7 @@ class LocationTrackingService {
       return;
     }
 
-    // Attempt to find linked caregiver to notify (for location_alerts table)
+    // Attempt to find linked caregiver to notify
     String? caregiverId;
     try {
       final linkResponse = await _supabase
@@ -140,12 +171,9 @@ class LocationTrackingService {
       if (linkResponse != null) {
         caregiverId = linkResponse['caregiver_id']?.toString();
       }
-    } catch (e) {
-      // Ignored
-    }
+    } catch (e) {}
 
     try {
-      // 1. Insert alert in Supabase
       await _locationRepo.insertLocationAlert(
         patientId: patientId,
         caregiverId: caregiverId ?? '',
@@ -156,7 +184,6 @@ class LocationTrackingService {
 
       _lastAlertTime = DateTime.now();
 
-      // 2. Trigger local SOS feedback for patient
       await _notifService.showEmergencyNotification(
         title: 'SAFETY ALERT',
         body: 'You have left your safe zone. Your caregiver has been notified.',
@@ -168,8 +195,17 @@ class LocationTrackingService {
 }
 
 // Provider for observing safety status in UI
+// Refactored to auto-trigger tracking when patient profile is ready
 final safetyStatusProvider = StreamProvider<int>((ref) {
   final service = ref.watch(locationTrackingServiceProvider);
+  final profileAsync = ref.watch(userProfileProvider);
+
+  profileAsync.whenData((profile) {
+    if (profile != null && profile.role == 'patient') {
+      service.startTracking(profile.id);
+    }
+  });
+
   return service.statusStreamController.stream;
 });
 

@@ -8,11 +8,13 @@ import 'package:just_audio/just_audio.dart';
 class ReminderCard extends StatefulWidget {
   final Reminder reminder;
   final VoidCallback onToggle;
+  final VoidCallback? onDelete;
 
   const ReminderCard({
     super.key,
     required this.reminder,
     required this.onToggle,
+    this.onDelete,
   });
 
   @override
@@ -100,6 +102,41 @@ class _ReminderCardState extends State<ReminderCard> {
     );
   }
 
+  Future<void> _showDeleteConfirmDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Reminder?'),
+        content: const Text(
+          'Are you sure you want to remove this reminder? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child:
+                Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && widget.onDelete != null) {
+      widget.onDelete!();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final reminder = widget.reminder;
@@ -176,12 +213,15 @@ class _ReminderCardState extends State<ReminderCard> {
                           Icon(Icons.volunteer_activism,
                               size: 12 * scale, color: Colors.indigo.shade700),
                           SizedBox(width: 4 * scale),
-                          Text(
-                            'Added by Caregiver',
-                            style: TextStyle(
-                              fontSize: 11 * scale,
-                              color: Colors.indigo.shade700,
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              'Added by Caregiver',
+                              style: TextStyle(
+                                fontSize: 11 * scale,
+                                color: Colors.indigo.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -255,11 +295,11 @@ class _ReminderCardState extends State<ReminderCard> {
                                             : Icons.play_arrow,
                                         size: 14 * scale,
                                         color: Colors.deepOrange),
-                                SizedBox(width: 4 * scale),
+                                // SizedBox(width: 4 * scale),
                                 Text(
                                   'Voice Note',
                                   style: TextStyle(
-                                    fontSize: 12 * scale,
+                                    fontSize: 10 * scale,
                                     color: Colors.deepOrange.shade700,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -274,46 +314,65 @@ class _ReminderCardState extends State<ReminderCard> {
               ),
             ),
 
-            SizedBox(width: 8 * scale),
+            // SizedBox(width: 12 * scale),
 
-            // Edit Button (Only if not completed)
-            if (!reminder.isCompleted)
-              IconButton(
-                onPressed: () => _navigateToEdit(context),
-                icon: Icon(Icons.edit, color: Colors.teal.shade700),
-                iconSize: 24 * scale,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+            // Actions Area
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Edit & Delete (Only if not completed)
+                if (!reminder.isCompleted) ...[
+                  IconButton(
+                    onPressed: () => _navigateToEdit(context),
+                    icon: Icon(Icons.edit, color: Colors.teal.shade700),
+                    iconSize: 22 * scale,
+                    padding: EdgeInsets.all(4 * scale),
+                    constraints: const BoxConstraints(),
+                  ),
+                  if (widget.onDelete != null) ...[
+                    // SizedBox(width: 8 * scale),
+                    IconButton(
+                      onPressed: () => _showDeleteConfirmDialog(context),
+                      icon: Icon(Icons.delete_outline,
+                          color: Colors.red.shade400),
+                      iconSize: 22 * scale,
+                      padding: EdgeInsets.all(4 * scale),
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                  // SizedBox(width: 12 * scale),
+                ],
 
-            SizedBox(width: 8 * scale),
-
-            // Action Button
-            InkWell(
-              onTap: onToggle,
-              borderRadius: BorderRadius.circular(16 * scale),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: EdgeInsets.symmetric(
-                    horizontal: 16 * scale, vertical: 10 * scale),
-                decoration: BoxDecoration(
-                  color:
-                      reminder.isCompleted ? Colors.transparent : Colors.teal,
-                  borderRadius: BorderRadius.circular(16 * scale),
-                  border: Border.all(
-                    color: reminder.isCompleted ? Colors.grey : Colors.teal,
-                    width: 1.5,
+                // Action Button (Done / Undo)
+                InkWell(
+                  onTap: onToggle,
+                  borderRadius: BorderRadius.circular(12 * scale),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 12 * scale, vertical: 8 * scale),
+                    decoration: BoxDecoration(
+                      color: reminder.isCompleted
+                          ? Colors.transparent
+                          : Colors.teal,
+                      borderRadius: BorderRadius.circular(12 * scale),
+                      border: Border.all(
+                        color: reminder.isCompleted ? Colors.grey : Colors.teal,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      reminder.isCompleted ? 'Undo' : 'Done',
+                      style: TextStyle(
+                        color:
+                            reminder.isCompleted ? Colors.grey : Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14 * scale,
+                      ),
+                    ),
                   ),
                 ),
-                child: Text(
-                  reminder.isCompleted ? 'Undo' : 'Done',
-                  style: TextStyle(
-                    color: reminder.isCompleted ? Colors.grey : Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15 * scale,
-                  ),
-                ),
-              ),
+              ],
             ),
           ],
         ),
