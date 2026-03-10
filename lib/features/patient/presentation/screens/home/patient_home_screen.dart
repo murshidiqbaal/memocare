@@ -5,8 +5,7 @@ import 'package:dementia_care_app/features/patient/presentation/screens/games/ga
 import 'package:dementia_care_app/features/patient/presentation/screens/home/patient_dashboard_tab.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/memories/memories_screen.dart';
 import 'package:dementia_care_app/features/patient/presentation/screens/profile/patient_profile_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/sos/patient_sos_screen.dart';
-import 'package:dementia_care_app/widgets/sos_countdown_content.dart';
+import 'package:dementia_care_app/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,8 +31,7 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    const PatientSOSScreen(triggerImmediately: true),
+                builder: (context) => const PatientEmergencyAlertScreen(),
               ),
             );
           },
@@ -95,27 +93,7 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
         ],
 
         /// SOS Screen
-        actionBarView: Container(
-          color: Colors.red.shade900,
-          child: SOSCountdownContent(
-            onCancel: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tap any tab to return'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            onClose: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tap any tab to return'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-        ),
+        actionBarView: const PatientEmergencyAlertScreen(),
       ),
     );
   }

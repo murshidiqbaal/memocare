@@ -29,8 +29,7 @@ final sosRepositoryProvider = Provider<SosRepository>((ref) {
 class SosRepository {
   final SupabaseClient _supabase;
   static const _offlineKey = 'sos_offline_queue_v2';
-  static const _tableName =
-      'sos_messages'; // Both versions used different table names or aliases
+  static const _tableName = 'sos_messages';
   static const _defaultMessage = 'SOS emergency triggered';
 
   final _uuid = const Uuid();
@@ -43,15 +42,17 @@ class SosRepository {
   Future<SosTriggerResult> triggerSOS({
     String message = _defaultMessage,
   }) async {
-    if (_isSending)
+    if (_isSending) {
       return const SosTriggerResult(sent: 0, queued: true, error: null);
+    }
     _isSending = true;
 
     try {
       final patientId = _supabase.auth.currentUser?.id;
-      if (patientId == null)
+      if (patientId == null) {
         return const SosTriggerResult(
             sent: 0, queued: false, error: 'Not authenticated');
+      }
 
       final (lat, lng) = await _safeLocation();
       final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
@@ -68,26 +69,11 @@ class SosRepository {
 
       await _supabase.from(_tableName).insert(payloads);
 
-      // Also update the newer 'sos_alerts' table if it exists and is used for live tracking
-      try {
-        await _supabase.from('sos_alerts').insert({
-          'id': _uuid.v4(),
-          'patient_id': patientId,
-          'latitude': lat,
-          'longitude': lng,
-          'status': 'active',
-          'message': message,
-          'created_at': now,
-        });
-      } catch (e) {
-        if (kDebugMode)
-          print('[SosRepo] Failed to insert into legacy sos_alerts table: $e');
-      }
-
       unawaited(_drainOfflineQueue());
       return SosTriggerResult(
           sent: payloads.length, queued: false, error: null);
     } catch (e) {
+      if (kDebugMode) print('[SosRepo] triggerSOS Error: $e');
       await _enqueueOffline(
         patientId: _supabase.auth.currentUser?.id ?? '',
         message: message,
@@ -98,19 +84,19 @@ class SosRepository {
     }
   }
 
-  // Compatibility method from the other repository
+  // Compatibility method
   Future<SosAlert> createSosAlert(String patientId, double lat, double long,
       {String? message}) async {
     final response = await _supabase
-        .from('sos_alerts')
+        .from(_tableName)
         .insert({
           'id': _uuid.v4(),
           'patient_id': patientId,
-          'latitude': lat,
-          'longitude': long,
+          'location_lat': lat,
+          'location_lng': long,
           'status': 'active',
-          'message': message ?? 'SOS emergency triggered',
-          'created_at': DateTime.now().toIso8601String(),
+          'message': message ?? _defaultMessage,
+          'triggered_at': DateTime.now().toIso8601String(),
         })
         .select()
         .single();
@@ -146,12 +132,6 @@ class SosRepository {
     });
 
     await _supabase
-        .from('sos_alerts')
-        .update({'latitude': lat, 'longitude': long})
-        .eq('patient_id', patientId)
-        .inFilter('status', ['active', 'sent', 'pending']);
-
-    await _supabase
         .from(_tableName)
         .update({'location_lat': lat, 'location_lng': long})
         .eq('patient_id', patientId)
@@ -165,18 +145,10 @@ class SosRepository {
       'status': 'acknowledged',
       'acknowledged_at': DateTime.now().toIso8601String(),
     }).eq('id', alertId);
-
-    await _supabase.from('sos_alerts').update({
-      'status': 'acknowledged',
-      'acknowledged_at': DateTime.now().toIso8601String(),
-    }).eq('id', alertId);
   }
 
   Future<void> resolveAlert(String alertId) async {
-    await _supabase
-        .from(_tableName)
-        .update({'status': 'resolved'}).eq('id', alertId);
-    await _supabase.from('sos_alerts').update({
+    await _supabase.from(_tableName).update({
       'status': 'resolved',
       'resolved_at': DateTime.now().toIso8601String(),
     }).eq('id', alertId);
@@ -199,7 +171,7 @@ class SosRepository {
         .from(_tableName)
         .stream(primaryKey: ['id'])
         .eq('caregiver_id', caregiverId)
-        .order('created_at', ascending: false);
+        .order('triggered_at', ascending: false);
 
     await for (final rows in stream) {
       yield rows
@@ -215,7 +187,7 @@ class SosRepository {
         .from(_tableName)
         .select()
         .eq('caregiver_id', caregiverId)
-        .inFilter('status', ['pending', 'active']).order('created_at',
+        .inFilter('status', ['pending', 'active']).order('triggered_at',
             ascending: false);
 
     return (rows as List)
@@ -225,10 +197,10 @@ class SosRepository {
 
   Stream<List<SosAlert>> streamActiveAlerts() {
     return _supabase
-        .from('sos_alerts')
+        .from(_tableName)
         .stream(primaryKey: ['id'])
         .inFilter('status', ['active', 'sent', 'pending'])
-        .order('created_at', ascending: false)
+        .order('triggered_at', ascending: false)
         .map((data) => data.map((json) => SosAlert.fromJson(json)).toList());
   }
 
@@ -248,7 +220,7 @@ class SosRepository {
 
   Future<SosAlert?> getActiveAlert(String patientId) async {
     final response = await _supabase
-        .from('sos_alerts')
+        .from(_tableName)
         .select()
         .eq('patient_id', patientId)
         .inFilter('status', ['active', 'sent', 'pending']).maybeSingle();
@@ -259,7 +231,7 @@ class SosRepository {
 
   Future<List<SosAlert>> getLinkedPatientsActiveAlerts() async {
     final response = await _supabase
-        .from('sos_alerts')
+        .from(_tableName)
         .select()
         .inFilter('status', ['active', 'sent', 'pending']);
     return (response as List).map((j) => SosAlert.fromJson(j)).toList();
@@ -308,10 +280,10 @@ class SosRepository {
           'patient_id': patientId,
           'caregiver_id': null,
           'message': message,
-          'status': 'pending',
+          'status': 'active',
           'location_lat': lat,
           'location_lng': lng,
-          'created_at': now,
+          'triggered_at': now,
         }
       ];
     }
@@ -321,10 +293,10 @@ class SosRepository {
               'patient_id': patientId,
               'caregiver_id': cId,
               'message': message,
-              'status': 'pending',
+              'status': 'active',
               'location_lat': lat,
               'location_lng': lng,
-              'created_at': now,
+              'triggered_at': now,
             })
         .toList();
   }
@@ -383,8 +355,8 @@ class SosRepository {
 
   Map<String, dynamic> _normaliseRow(Map<String, dynamic> row) {
     final map = Map<String, dynamic>.from(row);
-    map['created_at'] ??=
-        row['triggered_at'] ?? DateTime.now().toIso8601String();
+    map['triggered_at'] ??=
+        row['created_at'] ?? DateTime.now().toIso8601String();
     map['latitude'] ??= row['location_lat'];
     map['longitude'] ??= row['location_lng'];
     return map;

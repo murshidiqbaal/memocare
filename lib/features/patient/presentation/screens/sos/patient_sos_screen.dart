@@ -7,7 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PatientSOSScreen extends ConsumerStatefulWidget {
   final bool triggerImmediately;
-  const PatientSOSScreen({super.key, this.triggerImmediately = false});
+  final bool isEmbedded;
+  const PatientSOSScreen({
+    super.key,
+    this.triggerImmediately = false,
+    this.isEmbedded = false,
+  });
 
   @override
   ConsumerState<PatientSOSScreen> createState() => _PatientSOSScreenState();
@@ -39,7 +44,10 @@ class _PatientSOSScreenState extends ConsumerState<PatientSOSScreen>
 
     if (widget.triggerImmediately) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fireSOS();
+        // Only start countdown automatically if not already fired
+        if (!_fired) {
+          _startCountdown();
+        }
       });
     }
   }
@@ -163,24 +171,9 @@ class _PatientSOSScreenState extends ConsumerState<PatientSOSScreen>
     final sosState = ref.watch(sosControllerProvider);
     final isSending = sosState is SosSending;
 
-    return Scaffold(
-      backgroundColor:
-          _isCountingDown ? Colors.red.shade900 : Colors.red.shade50,
-      appBar: AppBar(
-        title: Text(
-          'Emergency SOS',
-          style: TextStyle(
-            color: _isCountingDown ? Colors.white : Colors.red.shade900,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(
-          color: _isCountingDown ? Colors.white : Colors.red.shade900,
-        ),
-      ),
-      body: SafeArea(
+    final content = Container(
+      color: _isCountingDown ? Colors.red.shade900 : Colors.red.shade50,
+      child: SafeArea(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -288,6 +281,27 @@ class _PatientSOSScreenState extends ConsumerState<PatientSOSScreen>
           ),
         ),
       ),
+    );
+
+    if (widget.isEmbedded) return content;
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text(
+          'Emergency SOS',
+          style: TextStyle(
+            color: _isCountingDown ? Colors.white : Colors.red.shade900,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: _isCountingDown ? Colors.white : Colors.red.shade900,
+        ),
+      ),
+      body: content,
     );
   }
 }
