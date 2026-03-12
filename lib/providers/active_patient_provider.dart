@@ -1,8 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models/patient.dart';
 import 'connection_providers.dart' as connection_providers;
+
+String requireActivePatientId(BuildContext context, WidgetRef ref) {
+  final patientId = ref.read(activePatientIdProvider);
+  if (patientId == null || patientId.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No patient selected.'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    throw Exception('No patient selected.');
+  }
+  return patientId;
+}
 
 final activePatientIdProvider =
     StateNotifierProvider<ActivePatientNotifier, String?>((ref) {

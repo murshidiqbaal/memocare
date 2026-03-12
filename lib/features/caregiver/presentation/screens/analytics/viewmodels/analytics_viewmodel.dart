@@ -1,140 +1,107 @@
+// lib/features/caregiver/presentation/screens/analytics/viewmodels/analytics_viewmodel.dart
+
+// import 'package:dementia_care_app/features/caregiver/providers/caregiver_dashboard_providers.dart';
+import 'package:dementia_care_app/providers/active_patient_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/analytics_stats.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
 class AnalyticsState {
-  final AnalyticsStats stats;
   final bool isLoading;
+  final String? error;
+  final AnalyticsStats stats;
   final TimeRange selectedRange;
 
-  AnalyticsState({
-    required this.stats,
+  const AnalyticsState({
     this.isLoading = false,
+    this.error,
+    this.stats = AnalyticsStats.empty,
     this.selectedRange = TimeRange.thisWeek,
   });
 
   AnalyticsState copyWith({
-    AnalyticsStats? stats,
     bool? isLoading,
+    String? error,
+    AnalyticsStats? stats,
     TimeRange? selectedRange,
-  }) {
-    return AnalyticsState(
-      stats: stats ?? this.stats,
-      isLoading: isLoading ?? this.isLoading,
-      selectedRange: selectedRange ?? this.selectedRange,
-    );
-  }
+    bool clearError = false,
+  }) =>
+      AnalyticsState(
+        isLoading: isLoading ?? this.isLoading,
+        error: clearError ? null : (error ?? this.error),
+        stats: stats ?? this.stats,
+        selectedRange: selectedRange ?? this.selectedRange,
+      );
 }
 
-class AnalyticsViewModel extends StateNotifier<AnalyticsState> {
-  AnalyticsViewModel() : super(AnalyticsState(stats: AnalyticsStats())) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifier
+// ─────────────────────────────────────────────────────────────────────────────
+class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
+  AnalyticsNotifier(this._ref) : super(const AnalyticsState()) {
     loadData();
   }
 
+  final Ref _ref;
+
   Future<void> loadData() async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final patientId = _ref.read(activePatientIdProvider);
+      if (patientId == null) {
+        state = state.copyWith(isLoading: false, stats: AnalyticsStats.empty);
+        return;
+      }
 
-    // Simulate aggregation delay
-    await Future.delayed(const Duration(milliseconds: 800));
+      final db = Supabase.instance.client;
 
-    // Generate Dummy Data based on selected range
-    // In real app: fetch from DB/Repository based on range dates
-    final newStats = _generateDummyStats(state.selectedRange);
+      // Fetch from game_analytics
+      final rows = await db
+          .from('game_analytics')
+          .select()
+          .eq('patient_id', patientId)
+          .limit(1);
 
-    state = state.copyWith(
-      stats: newStats,
-      isLoading: false,
-    );
+      final AnalyticsStats stats;
+      if ((rows as List).isEmpty) {
+        stats = AnalyticsStats.empty;
+      } else {
+        stats = AnalyticsStats.fromSupabase(
+          gameAnalyticsRow: rows.first as Map<String, dynamic>,
+        );
+      }
+
+      state = state.copyWith(isLoading: false, stats: stats);
+    } on PostgrestException catch (e) {
+      debugPrint('[Analytics] loadData: ${e.message}');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Could not load analytics: ${e.message}',
+      );
+    } catch (e) {
+      debugPrint('[Analytics] loadData: $e');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Unexpected error: $e',
+      );
+    }
   }
 
   void setTimeRange(TimeRange range) {
     state = state.copyWith(selectedRange: range);
-    loadData();
-  }
-
-  AnalyticsStats _generateDummyStats(TimeRange range) {
-    // 1. Base Numbers Simulation
-    bool isWeek = range == TimeRange.thisWeek || range == TimeRange.lastWeek;
-
-    // Reminders
-    int total = isWeek ? 28 : 120;
-    int completed = isWeek ? (range == TimeRange.thisWeek ? 24 : 20) : 100;
-    int missed = total - completed;
-    int adherence = ((completed / total) * 100).round();
-
-    // Safety
-    int breaches =
-        range == TimeRange.thisWeek ? 0 : (range == TimeRange.lastWeek ? 2 : 5);
-    bool isSafe = true;
-
-    // Insights Generation (Rule-Based)
-    List<InsightItem> insights = [];
-    if (adherence < 80) {
-      insights.add(InsightItem(
-          text: 'Reminder adherence dropped below 80%.',
-          type: InsightType.warning));
-    } else {
-      insights.add(InsightItem(
-          text: 'Great reminder adherence this week.',
-          type: InsightType.positive));
-    }
-
-    if (breaches > 0) {
-      insights.add(InsightItem(
-          text: '$breaches safe-zone breaches detected.',
-          type: InsightType.warning));
-    } else {
-      insights.add(InsightItem(
-          text: 'Patient remained safe in zone all week.',
-          type: InsightType.positive));
-    }
-
-    if (isWeek && completed > 20) {
-      insights.add(InsightItem(
-          text: 'Game engagement improving steadily.',
-          type: InsightType.positive));
-    }
-
-    // Suggestions Generation
-    List<String> suggestions = [];
-    if (missed > 2) {
-      suggestions
-          .add('Consider checking medication routine or snooze settings.');
-    }
-    if (breaches > 1) {
-      suggestions.add('Review safe-zone radius settings in Safety tab.');
-    }
-    suggestions
-        .add('Encourage daily memory journal entry to boost cognitive recall.');
-
-    return AnalyticsStats(
-      reminderAdherencePercent: adherence,
-      remindersMissedCount: missed,
-      completedReminders: completed,
-      missedReminders: missed,
-      voiceRemindersPlayed: isWeek ? 12 : 45,
-      weeklyAdherence: [3, 4, 4, 3, 2, 4, 4], // Mock daily counts
-
-      gamesScore: range == TimeRange.thisWeek ? 850 : 720,
-      avgGameDurationMinutes: 15,
-      dailyGameSessions: [1, 2, 0, 1, 3, 2, 1],
-
-      safeZoneBreaches: breaches,
-      consecutiveSafeDays: 5,
-      isCurrentlySafe: isSafe,
-      weeklyBreaches: [0, 0, 0, breaches, 0, 0, 0], // Put breaches on Wed/Thu
-
-      journalEntryDays: 4,
-      journalPhotoCount: 12,
-      journalConsistencyPercent: 60,
-
-      insights: insights,
-      suggestions: suggestions,
-    );
+    loadData(); // re-fetch with new range when you add date filtering
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider
+// ─────────────────────────────────────────────────────────────────────────────
 final analyticsProvider =
-    StateNotifierProvider<AnalyticsViewModel, AnalyticsState>((ref) {
-  return AnalyticsViewModel();
-});
+    StateNotifierProvider<AnalyticsNotifier, AnalyticsState>(
+  (ref) => AnalyticsNotifier(ref),
+);

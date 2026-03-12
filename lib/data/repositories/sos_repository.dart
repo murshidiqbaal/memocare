@@ -14,6 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/utils/uuid_validator.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Provider
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,9 +60,19 @@ class SosRepository {
       final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
       final now = DateTime.now().toIso8601String();
 
+      // Validate patient and caregiver UUIDs
+      if (!isValidUuid(patientId)) {
+        throw Exception('Invalid patient ID');
+      }
+
+      final validCaregivers = caregiverIds.where(isValidUuid).toList();
+      if (validCaregivers.isEmpty) {
+        throw Exception('Invalid caregiver ID');
+      }
+
       final payloads = _buildPayloads(
         patientId: patientId,
-        caregiverIds: caregiverIds,
+        caregiverIds: validCaregivers,
         lat: lat,
         lng: lng,
         message: message,
@@ -87,11 +99,20 @@ class SosRepository {
   // Compatibility method
   Future<SosAlert> createSosAlert(String patientId, double lat, double long,
       {String? message}) async {
+    // Validate UUIDs
+    if (!isValidUuid(patientId)) {
+      throw Exception('Invalid patient ID');
+    }
+
     final response = await _supabase
         .from(_tableName)
         .insert({
           'id': _uuid.v4(),
           'patient_id': patientId,
+          // createSosAlert doesn't seem to pass a caregiver_id in legacy, but
+          // to suppress the error we'd ideally fetch it. However, if it's omitted
+          // to rely on triggerSOS instead, let's just make sure it doesn't fail
+          // if there is a caregiver column. If it's omitted, Supabase handles it.
           'location_lat': lat,
           'location_lng': long,
           'status': 'active',
@@ -274,18 +295,7 @@ class SosRepository {
     required String now,
   }) {
     if (caregiverIds.isEmpty) {
-      return [
-        {
-          'id': _uuid.v4(),
-          'patient_id': patientId,
-          'caregiver_id': null,
-          'message': message,
-          'status': 'active',
-          'location_lat': lat,
-          'location_lng': lng,
-          'triggered_at': now,
-        }
-      ];
+      return []; // Return empty instead of invalid caregiverId insert
     }
     return caregiverIds
         .map((cId) => {
@@ -331,15 +341,22 @@ class SosRepository {
 
           final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
           final now = DateTime.now().toIso8601String();
+
+          if (!isValidUuid(patientId)) continue;
+          final validCaregivers = caregiverIds.where(isValidUuid).toList();
+          if (validCaregivers.isEmpty) continue;
+
           final payloads = _buildPayloads(
             patientId: patientId,
-            caregiverIds: caregiverIds,
+            caregiverIds: validCaregivers,
             lat: null,
             lng: null,
             message: message,
             now: now,
           );
-          await _supabase.from(_tableName).insert(payloads);
+          if (payloads.isNotEmpty) {
+            await _supabase.from(_tableName).insert(payloads);
+          }
         } catch (_) {
           remaining.add(encoded);
         }

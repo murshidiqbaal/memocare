@@ -192,9 +192,7 @@ class ReminderNotificationService {
       priority: Priority.high,
       fullScreenIntent: true,
       styleInformation: const BigTextStyleInformation(''),
-      sound: useCustomSound
-          ? const RawResourceAndroidNotificationSound('gentle_tone')
-          : null,
+      playSound: true,
       visibility: NotificationVisibility.public,
     );
 
@@ -203,7 +201,6 @@ class ReminderNotificationService {
       presentSound: true,
       presentAlert: true,
       presentBadge: true,
-      sound: useCustomSound ? 'gentle_tone.aiff' : null,
       interruptionLevel: InterruptionLevel.timeSensitive,
     );
 

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../../core/utils/uuid_validator.dart';
 import '../../../../providers/service_providers.dart';
 
 final patientSosRepositoryProvider = Provider<PatientSosRepository>((ref) {
@@ -45,7 +47,14 @@ class PatientSosRepository {
       // If location fails, we still send the SOS without it
     }
 
-    // 3. Insert into sos_messages
+    // 3. Validate UUIDs and Insert into sos_messages
+    if (!isValidUuid(patientId)) {
+      throw Exception('Invalid patient ID');
+    }
+    if (!isValidUuid(caregiverId)) {
+      throw Exception('Invalid caregiver ID');
+    }
+
     await _supabase.from(_tableName).insert({
       'patient_id': patientId,
       'caregiver_id': caregiverId,

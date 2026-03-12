@@ -70,7 +70,6 @@ const _reminderChannel = AndroidNotificationChannel(
   importance: Importance.max,
   playSound: true,
   enableVibration: true,
-  sound: RawResourceAndroidNotificationSound('gentle_tone'),
 );
 
 const _emergencyChannel = AndroidNotificationChannel(
@@ -110,9 +109,6 @@ AndroidNotificationDetails _androidDetails(AndroidNotificationChannel ch) {
     enableVibration: true,
     visibility: NotificationVisibility.public,
     styleInformation: const BigTextStyleInformation(''),
-    sound: ch.id == 'reminder_channel'
-        ? const RawResourceAndroidNotificationSound('gentle_tone')
-        : null,
   );
 }
 

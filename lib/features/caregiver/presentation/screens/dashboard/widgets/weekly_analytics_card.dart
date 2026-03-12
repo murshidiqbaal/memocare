@@ -49,12 +49,12 @@ class WeeklyAnalyticsCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.analytics,
-                      color: Colors.purple.shade600, size: 24),
+                      color: Colors.purple.shade600, size: 18),
                   const SizedBox(width: 8),
                   const Text(
                     'Weekly Analytics',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -63,7 +63,7 @@ class WeeklyAnalyticsCard extends StatelessWidget {
               ),
               TextButton.icon(
                 onPressed: onViewFullAnalytics,
-                icon: const Icon(Icons.arrow_forward, size: 18),
+                icon: const Icon(Icons.arrow_forward, size: 12),
                 label: const Text('Full Report'),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.purple.shade700,

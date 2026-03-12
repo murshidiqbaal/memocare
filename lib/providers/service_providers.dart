@@ -2,7 +2,6 @@ import 'package:dementia_care_app/core/services/audio/voice_playback_service.dar
 import 'package:dementia_care_app/core/services/battery_optimization_service.dart';
 import 'package:dementia_care_app/core/services/fcm_service.dart';
 import 'package:dementia_care_app/core/services/hive_service.dart';
-import 'package:dementia_care_app/core/services/llm_memory_query_engine.dart';
 import 'package:dementia_care_app/core/services/memory_query_engine.dart';
 import 'package:dementia_care_app/core/services/notification/reminder_notification_service.dart';
 import 'package:dementia_care_app/core/services/notification_trigger_service.dart';
@@ -23,12 +22,10 @@ import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
 import 'package:dementia_care_app/data/repositories/sos_repository.dart';
 import 'package:dementia_care_app/data/repositories/voice_assistant_repository.dart';
 import 'package:dementia_care_app/providers/supabase_provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../data/datasources/local/local_reminder_datasource.dart';
+import 'package:dementia_care_app/data/datasources/local/local_reminder_datasource.dart';
 
 export 'supabase_provider.dart';
 
@@ -44,8 +41,6 @@ final localReminderDatasourceProvider =
     Provider<LocalReminderDatasource>((ref) {
   return LocalReminderDatasource();
 });
-
-// Supabase Client is now imported from providers/supabase_provider.dart
 
 // FCM Service Provider
 final fcmServiceProvider = Provider<FCMService>((ref) {
@@ -152,7 +147,7 @@ final ttsServiceProvider = Provider<TTSService>((ref) {
   return TTSService();
 });
 
-// Legacy Memory Query Engine Provider (Keyword based)
+// Memory Query Engine Provider (Keyword based)
 final memoryQueryEngineProvider = Provider<MemoryQueryEngine>((ref) {
   final reminderRepo = ref.watch(reminderRepositoryProvider);
   final peopleRepo = ref.watch(peopleRepositoryProvider);
@@ -167,25 +162,6 @@ final memoryQueryEngineProvider = Provider<MemoryQueryEngine>((ref) {
   );
 });
 
-// Enhanced LLM Memory Query Engine Provider (Gemini based)
-final llmMemoryQueryEngineProvider = Provider<LLMMemoryQueryEngine>((ref) {
-  final reminderRepo = ref.watch(reminderRepositoryProvider);
-  final peopleRepo = ref.watch(peopleRepositoryProvider);
-  final memoryRepo = ref.watch(memoryRepositoryProvider);
-  final supabase = ref.watch(supabaseClientProvider);
-
-  // Use API key from .env file
-  final apiKey = dotenv.env['GOOGLE_GEMINI_API_KEY'] ?? '';
-
-  return LLMMemoryQueryEngine(
-    reminderRepo,
-    peopleRepo,
-    memoryRepo,
-    supabase,
-    apiKey,
-  );
-});
-
 // Voice Playback Service Provider
 // keepAlive ensures the same AudioPlayer instance is reused across screens,
 // preventing duplicate audio playing and memory leaks.
@@ -195,17 +171,12 @@ final voicePlaybackServiceProvider = Provider<VoicePlaybackService>((ref) {
   return service;
 });
 
-// Generic Query Engine Provider - can be toggled in settings or based on availability
-// For now, defaulting to LLM if API key is present
-final activeMemoryQueryEngineProvider = Provider<dynamic>((ref) {
-  final llmEngine = ref.watch(llmMemoryQueryEngineProvider);
-  final legacyEngine = ref.watch(memoryQueryEngineProvider);
-
-  final hasApiKey = dotenv.env['GOOGLE_GEMINI_API_KEY'] != null &&
-      dotenv.env['GOOGLE_GEMINI_API_KEY']!.isNotEmpty;
-
-  return hasApiKey ? llmEngine : legacyEngine;
+// Generic Query Engine Provider
+// Defaulting to legacy engine as LLM is removed
+final activeMemoryQueryEngineProvider = Provider<MemoryQueryEngine>((ref) {
+  return ref.watch(memoryQueryEngineProvider);
 });
+
 // Battery Optimization Service Provider
 final batteryOptimizationServiceProvider =
     Provider<BatteryOptimizationService>((ref) {

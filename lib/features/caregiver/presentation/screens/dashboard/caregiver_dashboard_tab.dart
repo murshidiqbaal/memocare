@@ -7,7 +7,6 @@ import 'package:dementia_care_app/features/caregiver/presentation/screens/dashbo
 import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/caregiver_reminder_list.dart';
 import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/live_patient_map.dart';
 import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/memory_review_widget.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/patient_safety_monitor_card.dart';
 import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/patient_status_card_widget.dart';
 import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/sos_alert_banner.dart';
 import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/widgets/weekly_analytics_card.dart';
@@ -332,15 +331,15 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
                               status: dashState.patientStatus),
                         ),
 
-                        // ── Safety Monitor ────────────────────────────────
-                        if (hasPatient && dashState.selectedPatientId != null)
-                          _Section(
-                            child: PatientSafetyMonitorCard(
-                              patientId: dashState.selectedPatientId!,
-                              patientName: dashState.selectedPatientName,
-                              caregiverId: caregiverId,
-                            ),
-                          ),
+                        // // ── Safety Monitor ────────────────────────────────
+                        // if (hasPatient && dashState.selectedPatientId != null)
+                        //   _Section(
+                        //     child: PatientSafetyMonitorCard(
+                        //       patientId: dashState.selectedPatientId!,
+                        //       patientName: dashState.selectedPatientName,
+                        //       caregiverId: caregiverId,
+                        //     ),
+                        //   ),
 
                         // ── Quick Actions ─────────────────────────────────
                         _Section(

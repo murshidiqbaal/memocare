@@ -9,7 +9,7 @@ final voiceAssistantProvider = StateNotifierProvider.family<
     VoiceAssistantViewModel, VoiceAssistantState, String>((ref, patientId) {
   final repository = ref.watch(voiceAssistantRepositoryProvider);
   final ttsService = ref.watch(ttsServiceProvider);
-  final queryEngine = ref.watch(llmMemoryQueryEngineProvider);
+  final queryEngine = ref.watch(memoryQueryEngineProvider);
   return VoiceAssistantViewModel(
       repository, ttsService, queryEngine, patientId);
 });

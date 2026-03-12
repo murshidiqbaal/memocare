@@ -7,6 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/uuid_validator.dart';
+
 final sosServiceProvider = Provider<SosService>((ref) {
   return SosService(ref.watch(supabaseClientProvider));
 });
@@ -34,6 +36,10 @@ class SosService {
     final lng = position?.longitude;
 
     try {
+      if (!isValidUuid(patientId)) {
+        throw Exception('Invalid patient ID');
+      }
+
       // Fetch linked caregivers to insert individual SOS alerts per caregiver
       final links = await _supabase
           .from('caregiver_patient_links')
@@ -42,17 +48,23 @@ class SosService {
 
       List<Map<String, dynamic>> payloads = [];
 
-      if (links.isEmpty) {
-        // Even if no specific caregiver is linked, we log the alert for the overall system or future caregivers
+      final validCaregivers = links
+          .map((l) => l['caregiver_id'] as String?)
+          .where(isValidUuid)
+          .toList();
+
+      if (validCaregivers.isEmpty) {
+        throw Exception('Invalid caregiver ID');
+      }
+
+      for (var caregiverId in validCaregivers) {
         payloads.add({
           'patient_id': patientId,
-          'caregiver_id': null,
+          'caregiver_id': caregiverId,
           'location_lat': lat,
           'location_lng': lng,
           'status': 'active',
         });
-      } else {
-        sandboxPayloads(links, patientId, lat, lng, payloads);
       }
 
       await _processInsert(payloads);
@@ -69,11 +81,14 @@ class SosService {
         print('Failed to upload SOS. Queueing offline. Error: $e');
       }
 
+      // If we don't have a valid patient ID, we shouldn't even queue it.
+      if (!isValidUuid(patientId)) return;
+
       List<Map<String, dynamic>> fallbackPayloads = [
         {
           'patient_id': patientId,
           'caregiver_id':
-              null, // We queue a general one when offline since we failed to fetch links
+              null, // Need to make sure this doesn't break later sync
           'location_lat': lat,
           'location_lng': lng,
           'status': 'active',
@@ -130,8 +145,36 @@ class SosService {
       for (final encoded in queue) {
         try {
           final sosData = jsonDecode(encoded) as Map<String, dynamic>;
-          // Refetch caregiver links if possible to map out properly on reconnect, or just push general
-          await _processInsert([sosData]);
+          final patientId = sosData['patient_id'] as String?;
+          if (!isValidUuid(patientId)) continue; // Discard invalid offline data
+
+          // Refetch caregiver links if possible to map out properly on reconnect
+          final links = await _supabase
+              .from('caregiver_patient_links')
+              .select('caregiver_id')
+              .eq('patient_id', patientId!);
+
+          final validCaregivers = links
+              .map((l) => l['caregiver_id'] as String?)
+              .where(isValidUuid)
+              .toList();
+
+          if (validCaregivers.isEmpty) continue; // Still no valid caregiver
+
+          List<Map<String, dynamic>> payloads = [];
+          for (var cid in validCaregivers) {
+            payloads.add({
+              'patient_id': patientId,
+              'caregiver_id': cid,
+              'location_lat': sosData['location_lat'],
+              'location_lng': sosData['location_lng'],
+              'status': sosData['status'] ?? 'active',
+            });
+          }
+
+          if (payloads.isNotEmpty) {
+            await _processInsert(payloads);
+          }
         } catch (e) {
           remainingQueue.add(encoded);
         }

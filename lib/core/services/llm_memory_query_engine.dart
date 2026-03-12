@@ -1,331 +1,365 @@
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/data/repositories/memory_repository.dart';
-import 'package:dementia_care_app/data/repositories/people_repository.dart';
-import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+// import 'package:dementia_care_app/data/models/reminder.dart';
+// import 'package:dementia_care_app/data/repositories/memory_repository.dart';
+// import 'package:dementia_care_app/data/repositories/people_repository.dart';
+// import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
+// import 'package:flutter/foundation.dart';
+// import 'package:google_generative_ai/google_generative_ai.dart';
+// import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Enhanced AI-powered memory retrieval engine with LLM integration
-/// Uses Google Gemini for natural language understanding and context-aware responses
-/// Optimized for dementia patients with empathetic, clear communication
-class LLMMemoryQueryEngine {
-  final ReminderRepository _reminderRepo;
-  final PeopleRepository _peopleRepo;
-  final MemoryRepository _memoryRepo;
-  // ignore: unused_field
-  final SupabaseClient _supabase;
-  final String _geminiApiKey;
+// /// Enhanced AI-powered memory retrieval engine with LLM integration
+// /// Uses Google Gemini for natural language understanding and context-aware responses
+// /// Optimized for dementia patients with empathetic, clear communication
+// class LLMMemoryQueryEngine {
+//   final ReminderRepository _reminderRepo;
+//   final PeopleRepository _peopleRepo;
+//   final MemoryRepository _memoryRepo;
+//   // ignore: unused_field
+//   final SupabaseClient _supabase;
+//   final String _geminiApiKey;
 
-  late final GenerativeModel _model;
-  bool _isInitialized = false;
+//   // ── Cooldown & Protection ──────────────────────────────────────────────────
+//   static DateTime? _lastGeminiCall;
+//   static const _cooldown = Duration(seconds: 4);
+//   static const _maxRetries = 2;
+//   static const _retryDelay = Duration(seconds: 5);
 
-  LLMMemoryQueryEngine(
-    this._reminderRepo,
-    this._peopleRepo,
-    this._memoryRepo,
-    this._supabase,
-    this._geminiApiKey,
-  ) {
-    _initializeModel();
-  }
+//   // late final GenerativeModel _model;
+//   bool _isInitialized = false;
 
-  /// Initialize Gemini model with dementia-care optimized settings
-  void _initializeModel() {
-    try {
-      _model = GenerativeModel(
-        model: 'gemini-1.5-flash', // Fast, free tier available
-        apiKey: _geminiApiKey,
-        generationConfig: GenerationConfig(
-          temperature: 0.7, // Balanced creativity and consistency
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 200, // Keep responses concise
-        ),
-        safetySettings: [
-          SafetySetting(HarmCategory.harassment, HarmBlockThreshold.high),
-          SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.high),
-          SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.high),
-          SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.high),
-        ],
-      );
-      _isInitialized = true;
-    } catch (e) {
-      print('Error initializing Gemini model: $e');
-      _isInitialized = false;
-    }
-  }
+//   LLMMemoryQueryEngine(
+//     this._reminderRepo,
+//     this._peopleRepo,
+//     this._memoryRepo,
+//     this._supabase,
+//     this._geminiApiKey,
+//   ) {
+//     _initializeModel();
+//   }
 
-  /// Process a patient query with LLM-powered understanding
-  Future<String> processQuery(String query, String patientId) async {
-    try {
-      // Step 1: Gather patient context (memories, reminders, people)
-      final context = await _gatherPatientContext(patientId);
+//   /// Initialize Gemini model with dementia-care optimized settings
+//   // void _initializeModel() {
+//   //   try {
+//   //     _model = GenerativeModel(
+//   //       model: 'gemini-2.0-flash', // Fast, latest model
+//   //       apiKey: _geminiApiKey,
+//   //       generationConfig: GenerationConfig(
+//   //         temperature: 0.7, // Balanced creativity and consistency
+//   //         topK: 40,
+//   //         topP: 0.95,
+//   //         maxOutputTokens: 200, // Keep responses concise
+//   //       ),
+//   //       safetySettings: [
+//   //         SafetySetting(HarmCategory.harassment, HarmBlockThreshold.high),
+//   //         SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.high),
+//   //         SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.high),
+//   //         SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.high),
+//   //       ],
+//   //     );
+//   //     _isInitialized = true;
+//   //   } catch (e) {
+//   //     print('Error initializing Gemini model: $e');
+//   //     _isInitialized = false;
+//   //   }
+//   // }
 
-      // Step 2: If LLM is available, use it for intelligent response
-      if (_isInitialized) {
-        return await _generateLLMResponse(query, context);
-      } else {
-        // Fallback to keyword-based system
-        return await _generateKeywordResponse(query, patientId, context);
-      }
-    } catch (e) {
-      print('Memory query error: $e');
-      return _getEmpatheticFallback();
-    }
-  }
+//   /// Process a patient query with LLM-powered understanding
+//   Future<String> processQuery(String query, String patientId) async {
+//     try {
+//       // Step 1: Gather patient context (memories, reminders, people)
+//       final context = await _gatherPatientContext(patientId);
 
-  /// Gather comprehensive patient context
-  Future<PatientContext> _gatherPatientContext(String patientId) async {
-    try {
-      // Initialize repositories
-      await Future.wait([
-        _reminderRepo.init(),
-      ]);
+//       // Step 2: If LLM is available, use it for intelligent response
+//       if (_isInitialized) {
+//         return await _generateLLMResponse(query, context);
+//       } else {
+//         // Fallback to keyword-based system
+//         return await _generateKeywordResponse(query, patientId, context);
+//       }
+//     } catch (e) {
+//       print('Memory query error: $e');
+//       return _getEmpatheticFallback();
+//     }
+//   }
 
-      // Fetch data
-      final results = await Future.wait([
-        _peopleRepo.getPeople(patientId),
-        _memoryRepo.getMemories(patientId),
-        _reminderRepo.getReminders(patientId),
-      ]);
-      final people = results[0] as List;
-      final memories = results[1] as List;
-      final reminders = results[2] as List<Reminder>;
+//   /// Gather comprehensive patient context
+//   Future<PatientContext> _gatherPatientContext(String patientId) async {
+//     try {
+//       // Initialize repositories
+//       await Future.wait([
+//         _reminderRepo.init(),
+//       ]);
 
-      // Get today's and upcoming reminders
-      final now = DateTime.now();
-      final todayReminders = reminders.where((r) {
-        return r.reminderTime.day == now.day &&
-            r.reminderTime.month == now.month &&
-            r.reminderTime.year == now.year &&
-            r.status == ReminderStatus.pending;
-      }).toList();
+//       // Fetch data
+//       final results = await Future.wait([
+//         _peopleRepo.getPeople(patientId),
+//         _memoryRepo.getMemories(patientId),
+//         _reminderRepo.getReminders(patientId),
+//       ]);
+//       final people = results[0] as List;
+//       final memories = results[1] as List;
+//       final reminders = results[2] as List<Reminder>;
 
-      final upcomingReminders = reminders.where((r) {
-        return r.reminderTime.isAfter(now) &&
-            r.status == ReminderStatus.pending;
-      }).toList()
-        ..sort((a, b) => a.reminderTime.compareTo(b.reminderTime));
+//       // Get today's and upcoming reminders
+//       final now = DateTime.now();
+//       final todayReminders = reminders.where((r) {
+//         return r.reminderTime.day == now.day &&
+//             r.reminderTime.month == now.month &&
+//             r.reminderTime.year == now.year &&
+//             r.status == ReminderStatus.pending;
+//       }).toList();
 
-      // Get recent memories (last 7 days)
-      final recentMemories = memories.where((m) {
-        final daysDiff = now.difference(m.createdAt).inDays;
-        return daysDiff <= 7;
-      }).toList();
+//       final upcomingReminders = reminders.where((r) {
+//         return r.reminderTime.isAfter(now) &&
+//             r.status == ReminderStatus.pending;
+//       }).toList()
+//         ..sort((a, b) => a.reminderTime.compareTo(b.reminderTime));
 
-      return PatientContext(
-        todayReminders: todayReminders,
-        upcomingReminders: upcomingReminders.take(5).toList(),
-        people: people,
-        recentMemories: recentMemories.take(5).toList(),
-      );
-    } catch (e) {
-      print('Error gathering context: $e');
-      return PatientContext();
-    }
-  }
+//       // Get recent memories (last 7 days)
+//       final recentMemories = memories.where((m) {
+//         final daysDiff = now.difference(m.createdAt).inDays;
+//         return daysDiff <= 7;
+//       }).toList();
 
-  /// Generate LLM-powered response with patient context
-  Future<String> _generateLLMResponse(
-    String query,
-    PatientContext context,
-  ) async {
-    try {
-      // Build context-aware prompt
-      final prompt = _buildContextPrompt(query, context);
+//       return PatientContext(
+//         todayReminders: todayReminders,
+//         upcomingReminders: upcomingReminders.take(5).toList(),
+//         people: people,
+//         recentMemories: recentMemories.take(5).toList(),
+//       );
+//     } catch (e) {
+//       print('Error gathering context: $e');
+//       return PatientContext();
+//     }
+//   }
 
-      // Generate response
-      final response = await _model.generateContent([Content.text(prompt)]);
-      final text = response.text?.trim();
+//   /// Generate LLM-powered response with patient context
+//   Future<String> _generateLLMResponse(
+//     String query,
+//     PatientContext context,
+//   ) async {
+//     // 1. Cooldown Guard
+//     final now = DateTime.now();
+//     if (_lastGeminiCall != null &&
+//         now.difference(_lastGeminiCall!) < _cooldown) {
+//       debugPrint('LLM Cooldown active - skipping generation');
+//       return await _generateKeywordResponse(query, '', context);
+//     }
+//     _lastGeminiCall = now;
 
-      if (text != null && text.isNotEmpty) {
-        return text;
-      } else {
-        return _getEmpatheticFallback();
-      }
-    } catch (e) {
-      print('LLM generation error: $e');
-      // Fallback to keyword-based response
-      return await _generateKeywordResponse(query, '', context);
-    }
-  }
+//     int retryCount = 0;
 
-  /// Build context-aware prompt for Gemini
-  String _buildContextPrompt(String query, PatientContext context) {
-    final buffer = StringBuffer();
+//     // while (true) {
+//     //   try {
+//     //     // 2. Build context-aware prompt
+//     //     final prompt = _buildContextPrompt(query, context);
 
-    // System instruction
-    buffer.writeln(
-        '''You are a caring AI assistant for a dementia patient. Your role is to:
-- Answer questions clearly and simply
-- Be warm, patient, and reassuring
-- Use short sentences (max 2-3 sentences)
-- Avoid medical jargon
-- Never mention that the patient has dementia
-- Focus on positive, helpful information
+//     //     // 3. Generate response with retry logic
+//     //     // final response = await _model.generateContent([Content.text(prompt)]);
+//     //     // final text = response.text?.trim();
 
-Patient's question: "$query"
+//     //     if (text != null && text.isNotEmpty) {
+//     //       return text;
+//     //     } else {
+//     //       return _getEmpatheticFallback();
+//     //     }
+//     //   } catch (e) {
+//     //     final errorStr = e.toString().toLowerCase();
 
-Available information:''');
+//     //     // 4. Quota Exceeded (429) Handling
+//     //     if (errorStr.contains('429') || errorStr.contains('quota')) {
+//     //       if (retryCount < _maxRetries) {
+//     //         retryCount++;
+//     //         debugPrint(
+//     //           'Gemini Quota Exceeded (LLM). Retrying in ${_retryDelay.inSeconds}s (Attempt $retryCount/$_maxRetries)...',
+//     //         );
+//     //         await Future.delayed(_retryDelay);
+//     //         continue;
+//     //       }
+//     //     }
 
-    // Add today's reminders
-    if (context.todayReminders.isNotEmpty) {
-      buffer.writeln('\nToday\'s reminders:');
-      for (var reminder in context.todayReminders.take(3)) {
-        final time = _formatTime(reminder.reminderTime);
-        buffer.writeln('- ${reminder.title} at $time');
-      }
-    }
+//   //       print('LLM generation error: $e');
+//   //       // Fallback to keyword-based response
+//   //       return await _generateKeywordResponse(query, '', context);
+//   //     }
+//   //   }
+//   // }
 
-    // Add upcoming events
-    if (context.upcomingReminders.isNotEmpty) {
-      buffer.writeln('\nUpcoming events:');
-      for (var reminder in context.upcomingReminders.take(3)) {
-        final date = _formatDate(reminder.reminderTime);
-        final time = _formatTime(reminder.reminderTime);
-        buffer.writeln('- ${reminder.title} on $date at $time');
-      }
-    }
+//   /// Build context-aware prompt for Gemini
+//   String _buildContextPrompt(String query, PatientContext context) {
+//     final buffer = StringBuffer();
 
-    // Add people information
-    if (context.people.isNotEmpty) {
-      buffer.writeln('\nImportant people:');
-      for (var person in context.people.take(3)) {
-        buffer.writeln(
-            '- ${person.name} (${person.relationship})${person.description != null ? ': ${person.description}' : ''}');
-      }
-    }
+//     // System instruction
+//     buffer.writeln(
+//         '''You are a caring AI assistant for a dementia patient. Your role is to:
+// - Answer questions clearly and simply
+// - Be warm, patient, and reassuring
+// - Use short sentences (max 2-3 sentences)
+// - Avoid medical jargon
+// - Never mention that the patient has dementia
+// - Focus on positive, helpful information
 
-    // Add recent memories
-    if (context.recentMemories.isNotEmpty) {
-      buffer.writeln('\nRecent activities:');
-      for (var memory in context.recentMemories.take(3)) {
-        buffer.writeln('- ${memory.title}');
-      }
-    }
+// Patient's question: "$query"
 
-    buffer.writeln('\nProvide a helpful, warm response (2-3 sentences max):');
+// Available information:''');
 
-    return buffer.toString();
-  }
+//     // Add today's reminders
+//     if (context.todayReminders.isNotEmpty) {
+//       buffer.writeln('\nToday\'s reminders:');
+//       for (var reminder in context.todayReminders.take(3)) {
+//         final time = _formatTime(reminder.reminderTime);
+//         buffer.writeln('- ${reminder.title} at $time');
+//       }
+//     }
 
-  /// Fallback keyword-based response (when LLM unavailable)
-  Future<String> _generateKeywordResponse(
-    String query,
-    String patientId,
-    PatientContext context,
-  ) async {
-    final lowerQuery = query.toLowerCase();
+//     // Add upcoming events
+//     if (context.upcomingReminders.isNotEmpty) {
+//       buffer.writeln('\nUpcoming events:');
+//       for (var reminder in context.upcomingReminders.take(3)) {
+//         final date = _formatDate(reminder.reminderTime);
+//         final time = _formatTime(reminder.reminderTime);
+//         buffer.writeln('- ${reminder.title} on $date at $time');
+//       }
+//     }
 
-    // Reminder queries
-    if (lowerQuery.contains('medicine') ||
-        lowerQuery.contains('medication') ||
-        lowerQuery.contains('pill') ||
-        lowerQuery.contains('reminder')) {
-      if (context.todayReminders.isEmpty) {
-        return "You don't have any reminders right now. You're all caught up!";
-      }
-      final next = context.todayReminders.first;
-      final time = _formatTime(next.reminderTime);
-      return 'Yes, you have ${next.title} at $time today.';
-    }
+//     // Add people information
+//     if (context.people.isNotEmpty) {
+//       buffer.writeln('\nImportant people:');
+//       for (var person in context.people.take(3)) {
+//         buffer.writeln(
+//             '- ${person.name} (${person.relationship})${person.description != null ? ': ${person.description}' : ''}');
+//       }
+//     }
 
-    // Time/schedule queries
-    if (lowerQuery.contains('time') || lowerQuery.contains('when')) {
-      if (context.upcomingReminders.isNotEmpty) {
-        final next = context.upcomingReminders.first;
-        final date = _formatDate(next.reminderTime);
-        final time = _formatTime(next.reminderTime);
-        return 'Your next event is ${next.title} on $date at $time.';
-      }
-    }
+//     // Add recent memories
+//     if (context.recentMemories.isNotEmpty) {
+//       buffer.writeln('\nRecent activities:');
+//       for (var memory in context.recentMemories.take(3)) {
+//         buffer.writeln('- ${memory.title}');
+//       }
+//     }
 
-    // People queries
-    if (lowerQuery.contains('who') ||
-        lowerQuery.contains('family') ||
-        lowerQuery.contains('visit')) {
-      if (context.people.isNotEmpty) {
-        final person = context.people.first;
-        return "${person.name} is your ${person.relationship}. ${person.description ?? 'They care about you very much.'}";
-      }
-      return 'Your family and friends care about you. They visit regularly.';
-    }
+//     buffer.writeln('\nProvide a helpful, warm response (2-3 sentences max):');
 
-    // Past activity queries
-    if (lowerQuery.contains('yesterday') || lowerQuery.contains('did i')) {
-      if (context.recentMemories.isNotEmpty) {
-        final activities =
-            context.recentMemories.map((m) => m.title).take(2).join(' and ');
-        return 'Recently you enjoyed: $activities. You had a good time!';
-      }
-      return 'You had a good day and took care of yourself.';
-    }
+//     return buffer.toString();
+//   }
 
-    // General help
-    return "I'm here to help you remember things. You can ask me about your schedule, family, or what you did recently.";
-  }
+//   /// Fallback keyword-based response (when LLM unavailable)
+//   Future<String> _generateKeywordResponse(
+//     String query,
+//     String patientId,
+//     PatientContext context,
+//   ) async {
+//     final lowerQuery = query.toLowerCase();
 
-  /// Empathetic fallback response
-  String _getEmpatheticFallback() {
-    return "I'm here to help you. Can you ask me that again in a different way?";
-  }
+//     // Reminder queries
+//     if (lowerQuery.contains('medicine') ||
+//         lowerQuery.contains('medication') ||
+//         lowerQuery.contains('pill') ||
+//         lowerQuery.contains('reminder')) {
+//       if (context.todayReminders.isEmpty) {
+//         return "You don't have any reminders right now. You're all caught up!";
+//       }
+//       final next = context.todayReminders.first;
+//       final time = _formatTime(next.reminderTime);
+//       return 'Yes, you have ${next.title} at $time today.';
+//     }
 
-  /// Format time in 12-hour format
-  String _formatTime(DateTime time) {
-    final hour =
-        time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
-  }
+//     // Time/schedule queries
+//     if (lowerQuery.contains('time') || lowerQuery.contains('when')) {
+//       if (context.upcomingReminders.isNotEmpty) {
+//         final next = context.upcomingReminders.first;
+//         final date = _formatDate(next.reminderTime);
+//         final time = _formatTime(next.reminderTime);
+//         return 'Your next event is ${next.title} on $date at $time.';
+//       }
+//     }
 
-  /// Format date in friendly format
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final tomorrow = now.add(const Duration(days: 1));
+//     // People queries
+//     if (lowerQuery.contains('who') ||
+//         lowerQuery.contains('family') ||
+//         lowerQuery.contains('visit')) {
+//       if (context.people.isNotEmpty) {
+//         final person = context.people.first;
+//         return "${person.name} is your ${person.relationship}. ${person.description ?? 'They care about you very much.'}";
+//       }
+//       return 'Your family and friends care about you. They visit regularly.';
+//     }
 
-    if (date.day == now.day &&
-        date.month == now.month &&
-        date.year == now.year) {
-      return 'today';
-    } else if (date.day == tomorrow.day &&
-        date.month == tomorrow.month &&
-        date.year == tomorrow.year) {
-      return 'tomorrow';
-    } else {
-      final months = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December'
-      ];
-      return '${months[date.month - 1]} ${date.day}';
-    }
-  }
+//     // Past activity queries
+//     if (lowerQuery.contains('yesterday') || lowerQuery.contains('did i')) {
+//       if (context.recentMemories.isNotEmpty) {
+//         final activities =
+//             context.recentMemories.map((m) => m.title).take(2).join(' and ');
+//         return 'Recently you enjoyed: $activities. You had a good time!';
+//       }
+//       return 'You had a good day and took care of yourself.';
+//     }
 
-  /// Check if LLM is available
-  bool get isLLMAvailable => _isInitialized;
-}
+//     // General help
+//     return "I'm here to help you remember things. You can ask me about your schedule, family, or what you did recently.";
+//   }
 
-/// Patient context data structure
-class PatientContext {
-  final List<dynamic> todayReminders;
-  final List<dynamic> upcomingReminders;
-  final List<dynamic> people;
-  final List<dynamic> recentMemories;
+//   /// Empathetic fallback response
+//   String _getEmpatheticFallback() {
+//     return "I'm here to help you. Can you ask me that again in a different way?";
+//   }
 
-  PatientContext({
-    this.todayReminders = const [],
-    this.upcomingReminders = const [],
-    this.people = const [],
-    this.recentMemories = const [],
-  });
-}
+//   /// Format time in 12-hour format
+//   String _formatTime(DateTime time) {
+//     final hour =
+//         time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
+//     final minute = time.minute.toString().padLeft(2, '0');
+//     final period = time.hour >= 12 ? 'PM' : 'AM';
+//     return '$hour:$minute $period';
+//   }
+
+//   /// Format date in friendly format
+//   String _formatDate(DateTime date) {
+//     final now = DateTime.now();
+//     final tomorrow = now.add(const Duration(days: 1));
+
+//     if (date.day == now.day &&
+//         date.month == now.month &&
+//         date.year == now.year) {
+//       return 'today';
+//     } else if (date.day == tomorrow.day &&
+//         date.month == tomorrow.month &&
+//         date.year == tomorrow.year) {
+//       return 'tomorrow';
+//     } else {
+//       final months = [
+//         'January',
+//         'February',
+//         'March',
+//         'April',
+//         'May',
+//         'June',
+//         'July',
+//         'August',
+//         'September',
+//         'October',
+//         'November',
+//         'December'
+//       ];
+//       return '${months[date.month - 1]} ${date.day}';
+//     }
+//   }
+
+//   /// Check if LLM is available
+//   bool get isLLMAvailable => _isInitialized;
+// }
+
+// /// Patient context data structure
+// class PatientContext {
+//   final List<dynamic> todayReminders;
+//   final List<dynamic> upcomingReminders;
+//   final List<dynamic> people;
+//   final List<dynamic> recentMemories;
+
+//   PatientContext({
+//     this.todayReminders = const [],
+//     this.upcomingReminders = const [],
+//     this.people = const [],
+//     this.recentMemories = const [],
+//   });
+// }

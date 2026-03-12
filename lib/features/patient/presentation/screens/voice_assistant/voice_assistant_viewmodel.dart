@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/core/services/llm_memory_query_engine.dart';
+import 'package:dementia_care_app/core/services/memory_query_engine.dart';
 import 'package:dementia_care_app/core/services/tts_service.dart';
 import 'package:dementia_care_app/data/models/voice_query.dart';
 import 'package:dementia_care_app/data/repositories/voice_assistant_repository.dart';
@@ -56,7 +56,7 @@ class VoiceAssistantState {
 class VoiceAssistantViewModel extends StateNotifier<VoiceAssistantState> {
   final VoiceAssistantRepository _repository;
   final TTSService _ttsService;
-  final LLMMemoryQueryEngine _queryEngine;
+  final MemoryQueryEngine _queryEngine;
   final String patientId;
 
   late stt.SpeechToText _speech;

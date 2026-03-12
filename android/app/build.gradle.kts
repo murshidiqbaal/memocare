@@ -7,8 +7,8 @@ plugins {
 }
 
 android {
-    namespace = "com.example.memocare"
-    compileSdk = flutter.compileSdkVersion
+    namespace = "com.example.dementia_care_app"
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -23,8 +23,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.memocare"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

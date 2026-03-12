@@ -16,10 +16,18 @@ import 'widgets/voice_recorder_widget.dart';
 class AddEditReminderScreen extends ConsumerStatefulWidget {
   final Reminder? existingReminder;
   final String? targetPatientId;
+  final String? initialTitle;
+  final ReminderType? initialType;
   final Function(Reminder)? onSave;
 
-  const AddEditReminderScreen(
-      {super.key, this.existingReminder, this.targetPatientId, this.onSave});
+  const AddEditReminderScreen({
+    super.key,
+    this.existingReminder,
+    this.targetPatientId,
+    this.initialTitle,
+    this.initialType,
+    this.onSave,
+  });
 
   @override
   ConsumerState<AddEditReminderScreen> createState() =>
@@ -47,14 +55,15 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
   void initState() {
     super.initState();
     final r = widget.existingReminder;
-    _titleController = TextEditingController(text: r?.title);
+    _titleController =
+        TextEditingController(text: r?.title ?? widget.initialTitle);
     _descController = TextEditingController(text: r?.description);
     _selectedDate = r?.reminderTime ?? DateTime.now();
     _selectedTime = r != null
         ? TimeOfDay(hour: r.reminderTime.hour, minute: r.reminderTime.minute)
         : TimeOfDay.now();
     _frequency = r?.repeatRule ?? ReminderFrequency.once;
-    _type = r?.type ?? ReminderType.medication;
+    _type = r?.type ?? widget.initialType ?? ReminderType.medication;
     _localRecordingPath =
         r?.localAudioPath; // Use local path if editing locally created reminder
   }

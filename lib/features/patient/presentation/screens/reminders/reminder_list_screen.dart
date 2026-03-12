@@ -7,6 +7,8 @@ import 'package:dementia_care_app/features/patient/presentation/screens/reminder
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../medicine_scanner/presentation/screens/medicine_scan_screen.dart';
+
 class ReminderListScreen extends ConsumerWidget {
   const ReminderListScreen({super.key});
 
@@ -61,6 +63,24 @@ class ReminderListScreen extends ConsumerWidget {
                 child: const Icon(Icons.mic, color: Colors.teal),
               ),
               tooltip: 'Add by Voice',
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const MedicineScanScreen()),
+                );
+              },
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.document_scanner, color: Colors.teal),
+              ),
+              tooltip: 'Scan Medicine',
             ),
             IconButton(
               onPressed: () {
