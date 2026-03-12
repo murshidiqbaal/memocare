@@ -1,10 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dementia_care_app/core/theme/emotional_theme_extension.dart';
-import 'package:dementia_care_app/data/models/memory.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/memories/memory_upload_screen.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/memories/memory_viewmodel.dart';
-import 'package:dementia_care_app/providers/active_patient_provider.dart';
-import 'package:dementia_care_app/widgets/patient_selector_dropdown.dart';
+import 'package:memocare/core/theme/emotional_theme_extension.dart';
+import 'package:memocare/data/models/memory.dart';
+import 'package:memocare/features/caregiver/presentation/screens/memories/memory_upload_screen.dart';
+import 'package:memocare/features/caregiver/presentation/screens/memories/memory_viewmodel.dart';
+import 'package:memocare/providers/active_patient_provider.dart';
+import 'package:memocare/widgets/patient_selector_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

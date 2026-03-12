@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:dementia_care_app/core/theme/emotional_theme_extension.dart';
-import 'package:dementia_care_app/providers/game_providers.dart';
+import 'package:memocare/core/theme/emotional_theme_extension.dart';
+import 'package:memocare/providers/game_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

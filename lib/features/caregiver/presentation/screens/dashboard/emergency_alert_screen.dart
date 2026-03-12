@@ -1,12 +1,12 @@
-import 'package:dementia_care_app/core/services/call_service.dart';
-import 'package:dementia_care_app/data/repositories/sos_repository.dart';
-import 'package:dementia_care_app/providers/connection_providers.dart';
+import 'package:memocare/core/services/call_service.dart';
+import 'package:memocare/data/repositories/sos_repository.dart';
+import 'package:memocare/providers/connection_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:memocare/data/models/sos_alert.dart';
 
 class EmergencyAlertScreen extends ConsumerStatefulWidget {
   final SosAlert alert;

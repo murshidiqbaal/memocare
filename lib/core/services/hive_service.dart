@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
+import 'package:memocare/data/models/reminder.dart';
 
 class HiveService {
   static const String remindersBoxName = 'reminders';

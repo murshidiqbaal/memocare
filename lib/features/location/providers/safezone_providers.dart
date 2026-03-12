@@ -1,8 +1,8 @@
-import 'package:dementia_care_app/data/models/safe_zone.dart';
-import 'package:dementia_care_app/features/location/models/location_change_request.dart';
-import 'package:dementia_care_app/features/location/services/location_change_request_service.dart';
-import 'package:dementia_care_app/features/location/services/safezone_service.dart';
-import 'package:dementia_care_app/providers/safe_zone_provider.dart';
+import 'package:memocare/data/models/safe_zone.dart';
+import 'package:memocare/features/location/models/location_change_request.dart';
+import 'package:memocare/features/location/services/location_change_request_service.dart';
+import 'package:memocare/features/location/services/safezone_service.dart';
+import 'package:memocare/providers/safe_zone_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/supabase_provider.dart';

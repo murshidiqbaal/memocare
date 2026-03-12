@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:dementia_care_app/data/models/safe_zone.dart';
-import 'package:dementia_care_app/features/location/models/safezone_alert.dart';
+import 'package:memocare/data/models/safe_zone.dart';
+import 'package:memocare/features/location/models/safezone_alert.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -36,8 +36,19 @@ class SafeZoneService {
   }) async {
     await stopMonitoring(); // teardown existing subscription
 
-    _patientId = patientId;
+    // Resolve internal patient ID if auth ID was passed
+    final patientRow = await _supabase
+        .from('patients')
+        .select('id')
+        .eq('user_id', patientId)
+        .maybeSingle();
+
+    final String resolvedId = patientRow?['id'] ?? patientId;
+
+    _patientId = resolvedId;
     _currentZone = safeZone;
+
+    print('Starting SafeZone Monitoring for Patient: $resolvedId (Input: $patientId)');
 
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
@@ -50,8 +61,8 @@ class SafeZoneService {
     final locationSettings = AndroidSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 50, // metres
-      intervalDuration: Duration(seconds: 30),
-      foregroundNotificationConfig: ForegroundNotificationConfig(
+      intervalDuration: const Duration(seconds: 30),
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
         notificationText: 'MemoCare is monitoring your safe zone.',
         notificationTitle: 'Safe Zone Active',
         enableWakeLock: true,
@@ -65,7 +76,7 @@ class SafeZoneService {
       onError: (e) => debugPrint('[SafeZoneService] Stream error: $e'),
     );
 
-    debugPrint('[SafeZoneService] Monitoring started for patient $patientId');
+    debugPrint('[SafeZoneService] Monitoring started for patient $resolvedId');
   }
 
   /// Stops the location stream.

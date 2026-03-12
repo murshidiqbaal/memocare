@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/data/models/person.dart';
 import 'package:flutter/material.dart';
+import 'package:memocare/data/models/person.dart';
 
 class PeopleCardListItem extends StatelessWidget {
   final Person person;

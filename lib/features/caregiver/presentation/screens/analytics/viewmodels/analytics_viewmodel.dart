@@ -1,9 +1,9 @@
 // lib/features/caregiver/presentation/screens/analytics/viewmodels/analytics_viewmodel.dart
 
-// import 'package:dementia_care_app/features/caregiver/providers/caregiver_dashboard_providers.dart';
-import 'package:dementia_care_app/providers/active_patient_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:memocare/features/caregiver/providers/caregiver_dashboard_providers.dart';
+import 'package:memocare/providers/active_patient_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/analytics_stats.dart';

@@ -13,12 +13,12 @@
 
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:memocare/data/models/sos_alert.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:dementia_care_app/providers/sos_provider.dart';
+import 'package:memocare/providers/sos_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Top-level widget — mounted once in CaregiverDashboardTab

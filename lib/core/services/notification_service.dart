@@ -1,7 +1,7 @@
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/router/app_router.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/router/app_router.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 

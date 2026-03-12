@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/providers/connection_providers.dart';
+import 'package:memocare/providers/connection_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';

@@ -176,7 +176,7 @@ Replace your patient home screen navigation with `PatientMainScreen`:
 
 ```dart
 // In your router or main.dart
-import 'package:dementia_care_app/screens/patient/patient_main_screen.dart';
+import 'package:memocare/screens/patient/patient_main_screen.dart';
 
 // Use PatientMainScreen instead of individual screens
 MaterialApp(
@@ -188,7 +188,7 @@ MaterialApp(
 
 ```dart
 // In caregiver dashboard or navigation
-import 'package:dementia_care_app/screens/caregiver/alerts/caregiver_alerts_screen.dart';
+import 'package:memocare/screens/caregiver/alerts/caregiver_alerts_screen.dart';
 
 // Add to caregiver menu
 ListTile(

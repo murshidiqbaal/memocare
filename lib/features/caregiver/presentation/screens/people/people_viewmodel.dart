@@ -1,6 +1,6 @@
-import 'package:dementia_care_app/data/models/person.dart';
-import 'package:dementia_care_app/data/repositories/people_repository.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
+import 'package:memocare/data/models/person.dart';
+import 'package:memocare/data/repositories/people_repository.dart';
+import 'package:memocare/providers/service_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // import '../../../../data/models/person.dart';

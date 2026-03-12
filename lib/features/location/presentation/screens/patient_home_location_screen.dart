@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/features/location/providers/safezone_providers.dart';
-import 'package:dementia_care_app/providers/safe_zone_provider.dart';
+import 'package:memocare/features/location/providers/safezone_providers.dart';
+import 'package:memocare/providers/safe_zone_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

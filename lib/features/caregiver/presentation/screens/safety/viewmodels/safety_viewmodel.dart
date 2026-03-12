@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/location_log.dart';
-import 'package:dementia_care_app/data/models/safe_zone.dart';
+import 'package:memocare/data/models/location_log.dart';
+import 'package:memocare/data/models/safe_zone.dart';
 
 // import '../../../../data/models/location_log.dart';
 // import '../../../../data/models/safe_zone.dart';

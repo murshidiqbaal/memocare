@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

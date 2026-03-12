@@ -4,12 +4,12 @@ from pathlib import Path
 
 # The absolute path to lib directory
 lib_dir = Path(r"d:\vscode\memocare\memocare\lib")
-package_name = "dementia_care_app"
+package_name = "memocare"
 
 def resolve_import(file_path, import_str):
     # This takes an import string like '../../core/utils.dart'
     # and the path to the current file (e.g. lib/screens/auth/login.dart)
-    # and returns 'package:dementia_care_app/core/utils.dart'
+    # and returns 'package:memocare/core/utils.dart'
     
     if import_str.startswith('package:') or import_str.startswith('dart:'):
         return import_str

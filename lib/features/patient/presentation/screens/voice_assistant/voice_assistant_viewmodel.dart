@@ -1,7 +1,7 @@
-import 'package:dementia_care_app/core/services/memory_query_engine.dart';
-import 'package:dementia_care_app/core/services/tts_service.dart';
-import 'package:dementia_care_app/data/models/voice_query.dart';
-import 'package:dementia_care_app/data/repositories/voice_assistant_repository.dart';
+import 'package:memocare/core/services/memory_query_engine.dart';
+import 'package:memocare/core/services/tts_service.dart';
+import 'package:memocare/data/models/voice_query.dart';
+import 'package:memocare/data/repositories/voice_assistant_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 

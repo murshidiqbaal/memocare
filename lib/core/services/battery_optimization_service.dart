@@ -24,7 +24,7 @@ class BatteryOptimizationService {
       // This requires <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
       final intent = AndroidIntent(
         action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-        data: 'package:dementia_care_app',
+        data: 'package:memocare',
       );
       await intent.launch();
     } catch (e) {

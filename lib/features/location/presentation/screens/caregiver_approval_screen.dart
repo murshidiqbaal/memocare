@@ -6,9 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/features/location/models/location_change_request.dart';
-import 'package:dementia_care_app/features/location/providers/safezone_providers.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/features/location/models/location_change_request.dart';
+import 'package:memocare/features/location/providers/safezone_providers.dart';
 
 /// Caregiver screen listing pending home location change requests.
 /// Caregivers can approve or reject each request from linked patients.

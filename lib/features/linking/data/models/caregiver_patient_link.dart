@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/data/models/user/profile.dart';
+import 'package:memocare/data/models/user/profile.dart';
 
 class CaregiverPatientLink {
   final String id;

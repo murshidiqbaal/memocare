@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/models/reminder.dart';
 import 'auth_provider.dart';
 import 'service_providers.dart';
@@ -88,10 +89,25 @@ class CreateReminderNotifier extends AsyncNotifier<void> {
 
       final repository = ref.read(reminderRepositoryProvider);
       final notificationService = ref.read(reminderNotificationServiceProvider);
+      final supabase = Supabase.instance.client;
+
+      // Resolve internal Caregiver ID (caregiver_profiles.id)
+      final caregiverRes = await supabase
+          .from('caregiver_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      
+      final String resolvedCaregiverId = caregiverRes?['id'] ?? user.id;
+
+      print('Creating Reminder: Patient=$patientId, Caregiver=$resolvedCaregiverId (Auth=${user.id})');
 
       // Create reminder in database
       await repository.createReminderForPatient(
-        reminder: reminder.copyWith(patientId: patientId, caregiverId: user.id),
+        reminder: reminder.copyWith(
+          patientId: patientId, 
+          caregiverId: resolvedCaregiverId
+        ),
       );
 
       // Schedule notification

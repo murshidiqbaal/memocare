@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/core/services/location_tracking_service.dart';
+import 'package:memocare/core/services/location_tracking_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

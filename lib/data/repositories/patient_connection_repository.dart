@@ -32,9 +32,13 @@ class PatientConnectionRepository {
           .eq('user_id', userId)
           .maybeSingle();
 
-      return row?['id'] as String?;
+      if (row == null) {
+        throw Exception('Caregiver profile not found. Please complete your profile first.');
+      }
+      return row['id'] as String;
     } catch (e) {
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to resolve caregiver identity: $e');
     }
   }
 
@@ -205,15 +209,51 @@ class PatientConnectionRepository {
 
     if (existing != null) throw Exception('Already connected to this patient');
 
-    await Future.wait([
-      _supabase.from(_linksTable).insert({
-        'caregiver_id': caregiverId,
-        'patient_id': patientId,
-        'created_at': DateTime.now().toIso8601String(),
-        'linked_at': DateTime.now().toIso8601String(),
-      }),
-      _supabase.from('invite_codes').update({'used': true}).eq('code', code),
-    ]);
+    final String trimmedCode = code.trim().toUpperCase();
+
+    print('Linking Caregiver ($caregiverId) to Patient ($patientId) via Invite Code ($trimmedCode)');
+    
+    // Use a transaction-like approach (wait for both)
+    await _supabase.from(_linksTable).insert({
+      'caregiver_id': caregiverId,
+      'patient_id': patientId,
+      'created_at': DateTime.now().toIso8601String(),
+      'linked_at': DateTime.now().toIso8601String(),
+    });
+
+    await _supabase
+        .from('invite_codes')
+        .update({'used': true})
+        .eq('code', trimmedCode);
+  }
+
+  /// Specialized method to preview a patient before linking
+  Future<Patient> getPatientByInviteCode(String code) async {
+    final String trimmedCode = code.trim().toUpperCase();
+    
+    final invite = await _supabase
+        .from('invite_codes')
+        .select('patient_id, expires_at, used')
+        .eq('code', trimmedCode)
+        .maybeSingle();
+
+    if (invite == null) throw Exception('Invalid invite code');
+    if (invite['used'] == true) throw Exception('This code has already been used');
+
+    final expiresAt = DateTime.parse(invite['expires_at'] as String);
+    if (DateTime.now().isAfter(expiresAt)) throw Exception('This code has expired');
+
+    final String patientId = invite['patient_id'] as String;
+
+    final patientRow = await _supabase
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .maybeSingle();
+
+    if (patientRow == null) throw Exception('Patient record not found');
+
+    return Patient.fromJson(patientRow);
   }
 
   /// Remove the link between the current caregiver and a patient.

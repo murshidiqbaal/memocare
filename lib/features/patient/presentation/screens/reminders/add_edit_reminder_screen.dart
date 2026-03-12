@@ -1,9 +1,10 @@
-import 'package:dementia_care_app/core/services/notification/notification_permission_service.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
+import 'package:memocare/core/services/notification/notification_permission_service.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/providers/service_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 // import '../../../../data/models/reminder.dart';
@@ -42,7 +43,8 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
   late TimeOfDay _selectedTime;
   ReminderFrequency _frequency = ReminderFrequency.once;
   ReminderType _type = ReminderType.medication;
-  String? _localRecordingPath; // Renamed from _audioPath
+  String? _localRecordingPath;
+  bool _alarmEnabled = false;
 
   bool get _hasVoice =>
       (widget.existingReminder?.localAudioPath != null &&
@@ -64,8 +66,8 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         : TimeOfDay.now();
     _frequency = r?.repeatRule ?? ReminderFrequency.once;
     _type = r?.type ?? widget.initialType ?? ReminderType.medication;
-    _localRecordingPath =
-        r?.localAudioPath; // Use local path if editing locally created reminder
+    _localRecordingPath = r?.localAudioPath;
+    _alarmEnabled = r?.alarmEnabled ?? false;
   }
 
   Future<void> _pickDate() async {
@@ -135,10 +137,46 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
       );
 
       final currentUser = ref.read(currentUserProvider);
-      final currentUserId = currentUser?.id ?? 'offline_user';
-      final effectivePatientId = widget.targetPatientId ??
-          widget.existingReminder?.patientId ??
-          currentUserId;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final supabase = Supabase.instance.client;
+
+      // 1. Resolve Caregiver Profile ID (caregiver_profiles.id)
+      final caregiverRes = await supabase
+          .from('caregiver_profiles')
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+      if (caregiverRes == null) {
+        throw Exception('Caregiver profile not found');
+      }
+      final String resolvedCaregiverId = caregiverRes['id'];
+
+      // 2. Resolve Patient ID (patients.id)
+      String resolvedPatientId;
+      if (widget.targetPatientId != null) {
+        resolvedPatientId = widget.targetPatientId!;
+      } else if (widget.existingReminder?.patientId != null) {
+        resolvedPatientId = widget.existingReminder!.patientId;
+      } else {
+        // Fallback for patient-owned reminders
+        final patientRes = await supabase
+            .from('patients')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+
+        if (patientRes == null) {
+          throw Exception('Patient profile not found');
+        }
+        resolvedPatientId = patientRes['id'];
+      }
+
+      print(
+          'Resolved IDs for Reminder: Caregiver=$resolvedCaregiverId, Patient=$resolvedPatientId (Auth=${currentUser.id})');
 
       final int stableNotificationId =
           widget.existingReminder?.notificationId ??
@@ -155,7 +193,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
       final hasNewRecording =
           newLocalPath != null && newLocalPath != oldLocalPath;
 
-      if (hasNewRecording && currentUser != null) {
+      if (hasNewRecording) {
         // Show a brief loading indicator while uploading
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -180,7 +218,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         remoteVoiceUrl = await voiceService.uploadVoiceNote(
           localPath: newLocalPath,
           reminderId: reminderId,
-          userId: currentUserId,
+          userId: currentUser.id,
         );
 
         if (mounted) ScaffoldMessenger.of(context).clearSnackBars();
@@ -197,11 +235,12 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         localAudioPath:
             _localRecordingPath, // keep local path for offline playback
         voiceAudioUrl: remoteVoiceUrl, // synced remote URL
-        patientId: effectivePatientId,
-        caregiverId: currentUserId,
+        patientId: resolvedPatientId,
+        caregiverId: resolvedCaregiverId,
         createdAt: widget.existingReminder?.createdAt ?? DateTime.now(),
         status: widget.existingReminder?.status ?? ReminderStatus.pending,
         notificationId: stableNotificationId,
+        alarmEnabled: _alarmEnabled,
       );
 
       try {
@@ -213,7 +252,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
               .updateReminder(newReminder);
         } else {
           await ref.read(createReminderProvider.notifier).createReminder(
-              reminder: newReminder, patientId: effectivePatientId);
+              reminder: newReminder, patientId: resolvedPatientId);
         }
 
         if (mounted) {
@@ -384,6 +423,22 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
                   setState(() => _localRecordingPath = path),
               onDelete: () => setState(() => _localRecordingPath = null),
               existingAudioPath: _localRecordingPath,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Alarm Toggle
+            SwitchListTile(
+              title: const Text("Enable Full Screen Alarm",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text("Plays a loud alarm for this reminder"),
+              value: _alarmEnabled,
+              activeColor: Colors.teal,
+              onChanged: (value) {
+                setState(() {
+                  _alarmEnabled = value;
+                });
+              },
             ),
 
             const SizedBox(height: 40),

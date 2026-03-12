@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:dementia_care_app/data/models/user/caregiver_profile.dart';
-import 'package:dementia_care_app/data/repositories/caregiver_profile_repository.dart';
-import 'package:dementia_care_app/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/data/models/user/caregiver_profile.dart';
+import 'package:memocare/data/repositories/caregiver_profile_repository.dart';
+import 'package:memocare/providers/auth_provider.dart';
 import 'package:uuid/uuid.dart';
 
 // Manual provider definition to avoid build_runner dependency

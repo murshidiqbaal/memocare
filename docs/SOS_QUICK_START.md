@@ -106,7 +106,7 @@ dart run build_runner build --delete-conflicting-outputs
 ### Step 3: Update Patient Navigation
 ```dart
 // Replace your patient home with:
-import 'package:dementia_care_app/screens/patient/patient_main_screen.dart';
+import 'package:memocare/screens/patient/patient_main_screen.dart';
 
 // In your router:
 GoRoute(
@@ -118,7 +118,7 @@ GoRoute(
 ### Step 4: Add to Caregiver Menu
 ```dart
 // In caregiver dashboard:
-import 'package:dementia_care_app/screens/caregiver/alerts/caregiver_alerts_screen.dart';
+import 'package:memocare/screens/caregiver/alerts/caregiver_alerts_screen.dart';
 
 ListTile(
   leading: Icon(Icons.emergency, color: Colors.red),

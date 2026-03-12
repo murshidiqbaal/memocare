@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/data/repositories/safe_zone_repository.dart';
-import 'package:dementia_care_app/features/location/models/location_change_request.dart';
+import 'package:memocare/data/repositories/safe_zone_repository.dart';
+import 'package:memocare/features/location/models/location_change_request.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

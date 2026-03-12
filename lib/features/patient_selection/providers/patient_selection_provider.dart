@@ -108,10 +108,9 @@ class PatientSelectionController extends StateNotifier<PatientState> {
     try {
       // 1. Get caregiver id first
       final caregiverData = await _supabase
-          .from('profiles')
+          .from('caregiver_profiles')
           .select('id')
           .eq('user_id', currentUser.id)
-          .eq('role', 'caregiver')
           .maybeSingle();
 
       if (caregiverData == null) {

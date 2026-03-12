@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
-import 'package:dementia_care_app/providers/active_patient_provider.dart';
-import 'package:dementia_care_app/widgets/patient_selector_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
+import 'package:memocare/providers/active_patient_provider.dart';
+import 'package:memocare/widgets/patient_selector_dropdown.dart';
 
 // import '../../../providers/active_patient_provider.dart';
 // import '../../../widgets/patient_selector_dropdown.dart';

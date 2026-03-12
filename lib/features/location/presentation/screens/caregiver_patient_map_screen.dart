@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/features/live_location/providers/live_location_provider.dart';
-import 'package:dementia_care_app/features/location/services/safezone_service.dart';
-import 'package:dementia_care_app/providers/active_patient_provider.dart';
-import 'package:dementia_care_app/providers/safe_zone_provider.dart';
+import 'package:memocare/features/live_location/providers/live_location_provider.dart';
+import 'package:memocare/features/location/services/safezone_service.dart';
+import 'package:memocare/providers/active_patient_provider.dart';
+import 'package:memocare/providers/safe_zone_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

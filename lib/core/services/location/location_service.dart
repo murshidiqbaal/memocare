@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/location_log.dart';
-import 'package:dementia_care_app/data/models/safe_zone.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:memocare/data/models/location_log.dart';
+import 'package:memocare/data/models/safe_zone.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Enhanced location tracking service with Android 14+ support

@@ -1,7 +1,7 @@
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/data/repositories/memory_repository.dart';
-import 'package:dementia_care_app/data/repositories/people_repository.dart';
-import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/data/repositories/memory_repository.dart';
+import 'package:memocare/data/repositories/people_repository.dart';
+import 'package:memocare/data/repositories/reminder_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Query types for classification

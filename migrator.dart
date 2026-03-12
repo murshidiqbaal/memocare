@@ -3,7 +3,7 @@ import 'dart:io';
 void main() async {
   try {
     final libDir = Directory('d:/vscode/memocare/memocare/lib');
-    final packagePrefix = 'package:dementia_care_app/';
+    final packagePrefix = 'package:memocare/';
     int changedCount = 0;
     StringBuffer log = StringBuffer();
     log.writeln("Starting migration...");

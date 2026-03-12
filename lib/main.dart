@@ -1,21 +1,25 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/core/config/supabase_config.dart';
-import 'package:dementia_care_app/core/services/fcm_service.dart';
-import 'package:dementia_care_app/core/services/hive_service.dart';
-import 'package:dementia_care_app/core/theme/memocare_theme.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
-import 'package:dementia_care_app/router/app_router.dart';
-import 'package:dementia_care_app/widgets/reliability_wrapper.dart';
-import 'package:dementia_care_app/widgets/safety_monitoring_wrapper.dart';
+import 'package:memocare/core/config/supabase_config.dart';
+import 'package:memocare/core/services/fcm_service.dart';
+import 'package:memocare/core/services/hive_service.dart';
+import 'package:memocare/core/theme/memocare_theme.dart';
+import 'package:memocare/data/models/reminder.dart';
+// import 'package:memocare/data/models/reminder.g.dart';
+// import 'package:memocare/data/models/reminder.g.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/providers/service_providers.dart';
+import 'package:memocare/router/app_router.dart';
+import 'package:memocare/widgets/reliability_wrapper.dart';
+import 'package:memocare/widgets/safety_monitoring_wrapper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+// import 'data/models/reminder.g.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,13 +1,12 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/core/services/notification/reminder_notification_service.dart';
-import 'package:dementia_care_app/data/models/location_alert.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/data/models/sos_alert.dart';
-import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
-// import 'package:dementia_care_app/services/notification/reminder_notification_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/data/models/location_alert.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/data/models/sos_alert.dart';
+import 'package:memocare/data/repositories/reminder_repository.dart';
+import 'package:memocare/providers/service_providers.dart';
+import 'package:memocare/services/reminder_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Stream Providers for Realtime Data

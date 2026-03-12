@@ -52,17 +52,17 @@ class LinkRepository {
 
   Future<List<CaregiverPatientLink>> getLinkedCaregivers(
       String patientId) async {
-    // Determine table relationship. Assuming 'profiles' is linked via 'caregiver_id'
+    // Determine table relationship. Using caregiver_profiles linked via caregiver_id
     final data = await _supabase
-        .from('caregiver_patients')
-        .select('*, related_profile:profiles!caregiver_id(*)')
+        .from('caregiver_patient_links')
+        .select('*, related_profile:caregiver_profiles!caregiver_id(*)')
         .eq('patient_id', patientId);
 
     return (data as List).map((e) => CaregiverPatientLink.fromJson(e)).toList();
   }
 
   Future<void> removeCaregiver(String linkId) async {
-    await _supabase.from('caregiver_patients').delete().eq('id', linkId);
+    await _supabase.from('caregiver_patient_links').delete().eq('id', linkId);
   }
 
   // --- Caregiver Methods ---
@@ -93,7 +93,7 @@ class LinkRepository {
 
     // 2. Check if already linked
     final existingLinks = await _supabase
-        .from('caregiver_patients')
+        .from('caregiver_patient_links')
         .select()
         .eq('caregiver_id', caregiverId)
         .eq('patient_id', patientId);
@@ -103,7 +103,8 @@ class LinkRepository {
     }
 
     // 3. Create Link
-    await _supabase.from('caregiver_patients').insert({
+    print('Linking Caregiver ($caregiverId) to Patient ($patientId) via Invite (LinkRepo)');
+    await _supabase.from('caregiver_patient_links').insert({
       'caregiver_id': caregiverId,
       'patient_id': patientId,
       'created_at': DateTime.now().toIso8601String(),
@@ -117,10 +118,10 @@ class LinkRepository {
 
   Future<List<CaregiverPatientLink>> getLinkedPatients(
       String caregiverId) async {
-    // Determine table relationship. Assuming 'profiles' is linked via 'patient_id'
+    // Determine table relationship. Using patients linked via patient_id
     final data = await _supabase
-        .from('caregiver_patients')
-        .select('*, related_profile:profiles!patient_id(*)')
+        .from('caregiver_patient_links')
+        .select('*, related_profile:patients!patient_id(*)')
         .eq('caregiver_id', caregiverId);
 
     return (data as List).map((e) => CaregiverPatientLink.fromJson(e)).toList();

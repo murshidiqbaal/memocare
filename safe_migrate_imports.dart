@@ -1,7 +1,7 @@
 import 'dart:io';
 
 void main() async {
-  final packageName = 'dementia_care_app';
+  final packageName = 'memocare';
   final libDir = Directory('lib');
   final libAbsolute = libDir.absolute.path.replaceAll('\\', '/');
   final logFile = File('migration_log.txt');

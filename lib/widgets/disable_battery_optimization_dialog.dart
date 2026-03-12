@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/core/services/battery_optimization_service.dart';
+import 'package:memocare/core/services/battery_optimization_service.dart';
 import 'package:flutter/material.dart';
 
 class DisableBatteryOptimizationDialog extends StatelessWidget {

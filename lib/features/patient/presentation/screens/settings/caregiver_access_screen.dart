@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/features/linking/data/models/invite_code.dart';
-import 'package:dementia_care_app/features/linking/presentation/controllers/link_controller.dart';
+import 'package:memocare/features/linking/data/models/invite_code.dart';
+import 'package:memocare/features/linking/presentation/controllers/link_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

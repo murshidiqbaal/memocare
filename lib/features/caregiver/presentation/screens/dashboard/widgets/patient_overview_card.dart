@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/data/models/caregiver_patient_link.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
+import 'package:memocare/data/models/caregiver_patient_link.dart';
+import 'package:memocare/data/models/reminder.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/features/linking/data/models/caregiver_patient_link.dart';
+import 'package:memocare/features/linking/data/models/caregiver_patient_link.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ConnectionRepository {
@@ -10,12 +10,11 @@ class ConnectionRepository {
   Future<void> connectToPatient(String code) async {
     final userId = _supabase.auth.currentUser!.id;
 
-    // 0. Get Correct Caregiver ID
+    // 0. Get Correct Caregiver ID (profiles.id)
     final caregiverData = await _supabase
-        .from('profiles')
+        .from('caregiver_profiles')
         .select('id')
         .eq('user_id', userId)
-        .eq('role', 'caregiver')
         .maybeSingle();
 
     if (caregiverData == null) {
@@ -46,19 +45,9 @@ class ConnectionRepository {
       throw Exception('This invite code has expired');
     }
 
-    // 2. Check if already linked
-    final existingLink = await _supabase
-        .from('caregiver_patient_links')
-        .select('id')
-        .eq('caregiver_id', caregiverId)
-        .eq('patient_id', patientId)
-        .maybeSingle();
-
-    if (existingLink != null) {
-      throw Exception('You are already connected to this patient');
-    }
-
     // 3. Create the secure link
+    print('Linking Caregiver ($caregiverId) to Patient ($patientId)');
+
     await _supabase.from('caregiver_patient_links').insert({
       'caregiver_id': caregiverId,
       'patient_id': patientId,
@@ -77,10 +66,9 @@ class ConnectionRepository {
     final userId = _supabase.auth.currentUser!.id;
 
     final caregiverData = await _supabase
-        .from('profiles')
+        .from('caregiver_profiles')
         .select('id')
         .eq('user_id', userId)
-        .eq('role', 'caregiver')
         .maybeSingle();
 
     if (caregiverData == null) return [];
@@ -88,33 +76,42 @@ class ConnectionRepository {
 
     final List<dynamic> data = await _supabase
         .from('caregiver_patient_links')
-        .select('*, profiles:patient_id(full_name, email)')
+        .select('*, patients:patient_id(full_name)')
         .eq('caregiver_id', caregiverId);
 
     return data.map((json) {
-      final profile = json['profiles'] as Map<String, dynamic>?;
+      final patient = json['patients'] as Map<String, dynamic>?;
       return CaregiverPatientLink.fromJson({
         ...json,
-        'patient_name': profile?['full_name'],
-        'patient_email': profile?['email'],
+        'patient_name': patient?['full_name'],
       });
     }).toList();
   }
 
   /// Get list of linked caregivers for a patient
   Future<List<CaregiverPatientLink>> getLinkedCaregivers() async {
-    final patientId = _supabase.auth.currentUser!.id;
+    final authId = _supabase.auth.currentUser!.id;
+
+    // Resolve internal patient ID
+    final patientRow = await _supabase
+        .from('patients')
+        .select('id')
+        .eq('user_id', authId)
+        .maybeSingle();
+
+    if (patientRow == null) return [];
+    final String patientId = patientRow['id'];
+
     final List<dynamic> data = await _supabase
         .from('caregiver_patient_links')
-        .select('*, profiles:caregiver_id(full_name, email)')
+        .select('*, caregiver_profiles:caregiver_id(full_name)')
         .eq('patient_id', patientId);
 
     return data.map((json) {
-      final profile = json['profiles'] as Map<String, dynamic>?;
+      final caregiver = json['caregiver_profiles'] as Map<String, dynamic>?;
       return CaregiverPatientLink.fromJson({
         ...json,
-        'caregiver_name': profile?['full_name'],
-        'caregiver_email': profile?['email'],
+        'caregiver_name': caregiver?['full_name'],
       });
     }).toList();
   }

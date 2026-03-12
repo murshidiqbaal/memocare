@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/router/app_router.dart';
 import 'package:flutter/material.dart'; // Add for Color
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/router/app_router.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -64,10 +65,44 @@ class ReminderNotificationService {
     // 4. Ensure Permissions (Android 13+, Exact Alarm, Battery Optimization)
     await _permissionService.ensureNotificationsReady();
 
-    // 5. Reschedule all to ensure consistency (Now handled via Supabase Auth State)
+    // 5. Create Notification Channels
+    await _createNotificationChannels();
+
+    // 6. Reschedule all to ensure consistency
     await _rescheduleAllReminders();
 
     _isInitialized = true;
+  }
+
+  Future<void> _createNotificationChannels() async {
+    final androidPlugin =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return;
+
+    // Reminder Channel
+    const reminderChannel = AndroidNotificationChannel(
+      'reminder_channel',
+      'Reminders',
+      description: 'Standard medicine and task reminders',
+      importance: Importance.defaultImportance,
+      playSound: true,
+    );
+
+    // Alarm Channel
+    const alarmChannel = AndroidNotificationChannel(
+      'alarm_channel',
+      'Alarm Notifications',
+      description: 'Medicine reminder alarms',
+      importance: Importance.max,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('alarm'),
+      enableVibration: true,
+    );
+
+    await androidPlugin.createNotificationChannel(reminderChannel);
+    await androidPlugin.createNotificationChannel(alarmChannel);
+    print('✅ Notification channels created');
   }
 
   /// Handle notification tap to navigate to authorized alert screen
@@ -116,10 +151,6 @@ class ReminderNotificationService {
       canScheduleExact = await _permissionService.isExactAlarmGranted;
     }
 
-    AndroidScheduleMode scheduleMode = canScheduleExact
-        ? AndroidScheduleMode.exactAllowWhileIdle
-        : AndroidScheduleMode.inexactAllowWhileIdle;
-
     if (!canScheduleExact) {
       print(
           'Exact Alarm Permission Missing. Fallback to INEXACT mode for ${reminder.title}.');
@@ -127,100 +158,72 @@ class ReminderNotificationService {
 
     // 6. Attempt Scheduling
     try {
-      // Attempt 1: Preferred Mode + Custom Sound
-      await _scheduleNotification(
-        id: notificationId,
-        title: reminder.title,
-        body: "It's time for your reminder",
-        scheduledDate: scheduledDate,
-        matchComponents: matchComponents,
-        payload: reminder.id,
-        useCustomSound: true,
-        androidScheduleMode: scheduleMode,
-      );
-      print('✅ Scheduled notification for ${reminder.title} at $scheduledDate');
-      print(
-          'Scheduled (${scheduleMode.name}+Sound) for ${reminder.title} at $scheduledDate');
-    } catch (e1) {
-      print('Schedule attempt 1 failed (${scheduleMode.name}): $e1');
-
-      // Fallback Strategy
-      if (scheduleMode == AndroidScheduleMode.exactAllowWhileIdle) {
-        print('Trying fallback to INEXACT mode due to error.');
-        scheduleMode = AndroidScheduleMode.inexactAllowWhileIdle;
-      }
-
-      try {
-        // Attempt 2: (Fallback Mode) + Default Sound (safer)
-        await _scheduleNotification(
+      if (reminder.alarmEnabled) {
+        // High Priority Alarm
+        await _notificationsPlugin.zonedSchedule(
+          id: notificationId,
+          title: reminder.title,
+          body: "Time for your medication: ${reminder.title}",
+          scheduledDate: scheduledDate,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              'alarm_channel',
+              'Alarm Notifications',
+              channelDescription: 'Emergency/Medical Alarms',
+              importance: Importance.max,
+              priority: Priority.high,
+              fullScreenIntent: true,
+              category: AndroidNotificationCategory.alarm,
+              playSound: true,
+              sound: const RawResourceAndroidNotificationSound('alarm'),
+              vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
+              enableVibration: true,
+              visibility: NotificationVisibility.public,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentSound: true,
+              presentAlert: true,
+              presentBadge: true,
+              sound: 'alarm.mp3',
+              interruptionLevel: InterruptionLevel.critical,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: matchComponents,
+          payload: reminder.id,
+        );
+      } else {
+        // Normal Notification
+        await _notificationsPlugin.zonedSchedule(
           id: notificationId,
           title: reminder.title,
           body: "It's time for your reminder",
           scheduledDate: scheduledDate,
-          matchComponents: matchComponents,
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'reminder_channel',
+              'Reminders',
+              channelDescription: 'Standard reminders',
+              importance: Importance.defaultImportance,
+              priority: Priority.high,
+              playSound: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentSound: true,
+              presentAlert: true,
+              presentBadge: true,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: matchComponents,
           payload: reminder.id,
-          useCustomSound: false, // Fallback to default sound
-          androidScheduleMode: scheduleMode,
         );
-        print(
-            '✅ Scheduled notification for ${reminder.title} at $scheduledDate');
-        print(
-            'Scheduled (${scheduleMode.name}+DefaultSound) for ${reminder.title} at $scheduledDate');
-      } catch (e2) {
-        print('CRITICAL: All schedule attempts failed. Last error: $e2');
       }
+      print(
+          '✅ Scheduled ${reminder.alarmEnabled ? 'ALARM' : 'Notification'} for ${reminder.title} at $scheduledDate');
+    } catch (e) {
+      print('CRITICAL: All schedule attempts failed. Last error: $e');
     }
-  }
-
-  /// Internal helper to schedule with options
-  Future<void> _scheduleNotification({
-    required int id,
-    required String title,
-    required String body,
-    required tz.TZDateTime scheduledDate,
-    required DateTimeComponents? matchComponents,
-    required String payload,
-    required bool useCustomSound,
-    required AndroidScheduleMode androidScheduleMode,
-  }) async {
-    // Android Details
-    final androidDetails = AndroidNotificationDetails(
-      'reminder_channel',
-      'Reminders',
-      channelDescription: 'High priority alerts for reminders',
-      importance: Importance.max,
-      priority: Priority.high,
-      fullScreenIntent: true,
-      styleInformation: const BigTextStyleInformation(''),
-      playSound: true,
-      visibility: NotificationVisibility.public,
-    );
-
-    // iOS Details
-    final iosDetails = DarwinNotificationDetails(
-      presentSound: true,
-      presentAlert: true,
-      presentBadge: true,
-      interruptionLevel: InterruptionLevel.timeSensitive,
-    );
-
-    final notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    // Using zonedSchedule for precise timing vs `show`
-    await _notificationsPlugin.zonedSchedule(
-      id: id,
-      title: title,
-      body: body,
-      scheduledDate: scheduledDate,
-      notificationDetails: notificationDetails,
-      androidScheduleMode: androidScheduleMode,
-      matchDateTimeComponents: matchComponents,
-      payload: payload,
-      // Removed uiLocalNotificationDateInterpretation as it's deprecated/removed in v20
-    );
   }
 
   /// Calculate next instance for repeating reminders if start time is past

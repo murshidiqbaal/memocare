@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/data/models/user/patient_profile.dart';
+import 'package:memocare/data/models/user/patient_profile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

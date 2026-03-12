@@ -1,6 +1,6 @@
-import 'package:dementia_care_app/data/models/memory.dart';
-import 'package:dementia_care_app/data/repositories/memory_repository.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
+import 'package:memocare/data/models/memory.dart';
+import 'package:memocare/data/repositories/memory_repository.dart';
+import 'package:memocare/providers/service_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // import '../../../../data/repositories/memory_repository.dart';

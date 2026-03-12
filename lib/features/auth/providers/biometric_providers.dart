@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/features/auth/services/biometric_service.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/features/auth/services/biometric_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 

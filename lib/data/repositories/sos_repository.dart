@@ -3,10 +3,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:dementia_care_app/core/errors/failures.dart';
-import 'package:dementia_care_app/core/providers/supabase_provider.dart';
-import 'package:dementia_care_app/data/models/sos_alert.dart';
-import 'package:dementia_care_app/features/safety/data/models/live_location.dart';
+import 'package:memocare/core/errors/failures.dart';
+import 'package:memocare/core/providers/supabase_provider.dart';
+import 'package:memocare/data/models/sos_alert.dart';
+import 'package:memocare/features/safety/data/models/live_location.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -49,16 +49,32 @@ class SosRepository {
     }
     _isSending = true;
 
+    String patientId = '';
     try {
-      final patientId = _supabase.auth.currentUser?.id;
-      if (patientId == null) {
+      final authId = _supabase.auth.currentUser?.id;
+      if (authId == null) {
         return const SosTriggerResult(
             sent: 0, queued: false, error: 'Not authenticated');
       }
 
+      // Resolve internal patient ID (patients.id)
+      final patientRow = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', authId)
+          .maybeSingle();
+
+      if (patientRow == null) {
+        return const SosTriggerResult(
+            sent: 0, queued: false, error: 'Patient profile not found');
+      }
+      patientId = patientRow['id'] as String;
+
       final (lat, lng) = await _safeLocation();
       final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
       final now = DateTime.now().toIso8601String();
+
+      print('Triggering SOS for Internal Patient ID: $patientId (Auth: $authId)');
 
       // Validate patient and caregiver UUIDs
       if (!isValidUuid(patientId)) {
@@ -87,7 +103,7 @@ class SosRepository {
     } catch (e) {
       if (kDebugMode) print('[SosRepo] triggerSOS Error: $e');
       await _enqueueOffline(
-        patientId: _supabase.auth.currentUser?.id ?? '',
+        patientId: patientId, // Already resolved if we reached here, or handle elsewhere
         message: message,
       );
       return SosTriggerResult(sent: 0, queued: true, error: e.toString());
@@ -127,14 +143,24 @@ class SosRepository {
 
   Future<Either<Failure, SosAlert>> sendEmergencyAlert() async {
     try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return const Left(AuthFailure('No user'));
+      final authId = _supabase.auth.currentUser?.id;
+      if (authId == null) return const Left(AuthFailure('No user'));
+
+      // Resolve internal patient ID
+      final patientRow = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', authId)
+          .maybeSingle();
+
+      if (patientRow == null) return const Left(ServerFailure('Patient profile missing'));
+      final String patientId = patientRow['id'];
 
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 3));
 
-      final alert = await createSosAlert(user.id, pos.latitude, pos.longitude);
+      final alert = await createSosAlert(patientId, pos.latitude, pos.longitude);
       return Right(alert);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -180,11 +206,24 @@ class SosRepository {
   // ── STREAMS ────────────────────────────────────────────────────────────────
 
   Stream<List<SosAlert>> watchAlertsForCaregiver() async* {
-    final caregiverId = _supabase.auth.currentUser?.id;
-    if (caregiverId == null) {
+    final authId = _supabase.auth.currentUser?.id;
+    if (authId == null) {
       yield [];
       return;
     }
+
+    // Resolve internal caregiver ID
+    final caregiverRow = await _supabase
+        .from('caregiver_profiles')
+        .select('id')
+        .eq('user_id', authId)
+        .maybeSingle();
+
+    if (caregiverRow == null) {
+      yield [];
+      return;
+    }
+    final String caregiverId = caregiverRow['id'];
 
     yield await fetchActiveAlertsForCaregiver(caregiverId);
 

@@ -1,6 +1,8 @@
-import 'package:dementia_care_app/providers/caregiver_patients_provider.dart';
+import 'package:memocare/providers/caregiver_patients_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:memocare/data/models/patient.dart';
 
 // import '../../../providers/caregiver_patients_provider.dart';
 
@@ -14,7 +16,9 @@ class ConnectPatientScreen extends ConsumerStatefulWidget {
 
 class _ConnectPatientScreenState extends ConsumerState<ConnectPatientScreen> {
   final _codeController = TextEditingController();
-  bool _isConnecting = false;
+  bool _isProcessing = false;
+  Patient? _foundPatient;
+  String? _error;
 
   @override
   void dispose() {
@@ -22,41 +26,72 @@ class _ConnectPatientScreenState extends ConsumerState<ConnectPatientScreen> {
     super.dispose();
   }
 
-  Future<void> _handleConnect() async {
+  Future<void> _handleValidate() async {
     final code = _codeController.text.trim();
     if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an invite code')),
-      );
+      _showSnackBar('Please enter an invite code');
       return;
     }
 
-    setState(() => _isConnecting = true);
+    setState(() {
+      _isProcessing = true;
+      _error = null;
+      _foundPatient = null;
+    });
+
+    try {
+      final patient = await ref
+          .read(caregiverConnectionControllerProvider.notifier)
+          .validateInviteCode(code);
+
+      if (mounted) {
+        setState(() {
+          _foundPatient = patient;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _handleConnect() async {
+    if (_foundPatient == null) return;
+
+    setState(() => _isProcessing = true);
     try {
       await ref
           .read(caregiverConnectionControllerProvider.notifier)
-          .connectUsingInviteCode(code);
+          .connectUsingInviteCode(_codeController.text);
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Successfully connected to patient!'),
-              backgroundColor: Colors.teal),
-        );
+        _showSnackBar('Successfully connected to ${_foundPatient!.fullName}!',
+            isSuccess: true);
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to connect: $e'),
-              backgroundColor: Colors.red),
-        );
+        _showSnackBar('Failed to connect: $e');
       }
     } finally {
       if (mounted) {
-        setState(() => _isConnecting = false);
+        setState(() => _isProcessing = false);
       }
     }
+  }
+
+  void _showSnackBar(String message, {bool isSuccess = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.teal : Colors.red,
+      ),
+    );
   }
 
   @override
@@ -84,7 +119,7 @@ class _ConnectPatientScreenState extends ConsumerState<ConnectPatientScreen> {
             ),
             SizedBox(height: 12 * scale),
             Text(
-              'Ask your patient or their family to generate an invite code and enter it here.',
+              'Ask your patient to generate an invite code in their settings and enter it here.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
             ),
@@ -94,14 +129,17 @@ class _ConnectPatientScreenState extends ConsumerState<ConnectPatientScreen> {
             TextField(
               controller: _codeController,
               textAlign: TextAlign.center,
+              enabled: !_isProcessing && _foundPatient == null,
               style: TextStyle(
                   fontSize: 24 * scale,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 4),
+              onChanged: (_) => setState(() => _error = null),
               decoration: InputDecoration(
                 hintText: 'ABCD-1234',
                 hintStyle: TextStyle(
                     color: Colors.grey.shade300, fontSize: 24 * scale),
+                errorText: _error,
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                 focusedBorder: OutlineInputBorder(
@@ -112,13 +150,58 @@ class _ConnectPatientScreenState extends ConsumerState<ConnectPatientScreen> {
               ),
               textCapitalization: TextCapitalization.characters,
             ),
+
+            if (_foundPatient != null) ...[
+              SizedBox(height: 32 * scale),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.teal.shade200),
+                ),
+                child: Column(
+                  children: [
+                    const Text('Patient Found:',
+                        style: TextStyle(color: Colors.teal)),
+                    const SizedBox(height: 8),
+                    Text(
+                      _foundPatient!.fullName,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    if (_foundPatient!.age != null)
+                      Text('Age: ${_foundPatient!.age}',
+                          style: const TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Confirm you want to link with this patient.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16 * scale),
+              TextButton(
+                onPressed: _isProcessing
+                    ? null
+                    : () => setState(() => _foundPatient = null),
+                child: const Text('Use a different code'),
+              ),
+            ],
+
             SizedBox(height: 40 * scale),
 
-            // Connect Button
+            // Action Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isConnecting ? null : _handleConnect,
+                onPressed: _isProcessing
+                    ? null
+                    : (_foundPatient == null
+                        ? _handleValidate
+                        : _handleConnect),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.teal,
                   foregroundColor: Colors.white,
@@ -127,14 +210,17 @@ class _ConnectPatientScreenState extends ConsumerState<ConnectPatientScreen> {
                       borderRadius: BorderRadius.circular(16)),
                   elevation: 2,
                 ),
-                child: _isConnecting
+                child: _isProcessing
                     ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2))
-                    : const Text('CONNECT TO PATIENT',
-                        style: TextStyle(
+                    : Text(
+                        _foundPatient == null
+                            ? 'VALIDATE CODE'
+                            : 'CONFIRM CONNECTION',
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),

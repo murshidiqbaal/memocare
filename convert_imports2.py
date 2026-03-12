@@ -2,7 +2,7 @@ import os
 import re
 
 lib_dir = os.path.normcase(os.path.abspath(r"d:\vscode\memocare\memocare\lib"))
-package_name = "dementia_care_app"
+package_name = "memocare"
 
 def resolve_import(file_path, import_str):
     if import_str.startswith('package:') or import_str.startswith('dart:') or import_str.startswith('http'):

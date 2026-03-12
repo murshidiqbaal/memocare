@@ -1,22 +1,22 @@
-import 'package:dementia_care_app/features/admin/presentation/screens/admin_dashboard_screen.dart';
-import 'package:dementia_care_app/features/auth/presentation/screens/biometric_login_screen.dart';
-import 'package:dementia_care_app/features/auth/presentation/screens/flutter_login_screen.dart';
-import 'package:dementia_care_app/features/auth/presentation/screens/register_screen.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/connections/caregiver_connections_screen.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/dashboard/caregiver_dashboard_screen.dart';
-import 'package:dementia_care_app/features/location/presentation/screens/caregiver_location_requests_screen.dart';
-import 'package:dementia_care_app/features/location/presentation/screens/caregiver_patient_map_screen.dart';
-import 'package:dementia_care_app/features/location/presentation/screens/patient_home_location_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/connections/patient_connections_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/games/games_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/games/mini_games/memory_match_game_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/games/mini_games/reaction_tap_game_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/patient_main_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/reminders/reminder_alert_screen.dart';
-import 'package:dementia_care_app/features/shared/presentation/screens/notification_test_screen.dart';
-import 'package:dementia_care_app/features/shared/presentation/screens/splash_screen.dart';
-import 'package:dementia_care_app/widgets/realtime_initializer.dart';
+import 'package:memocare/features/admin/presentation/screens/admin_dashboard_screen.dart';
+import 'package:memocare/features/auth/presentation/screens/biometric_login_screen.dart';
+import 'package:memocare/features/auth/presentation/screens/flutter_login_screen.dart';
+import 'package:memocare/features/auth/presentation/screens/register_screen.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/features/caregiver/presentation/screens/connections/caregiver_connections_screen.dart';
+import 'package:memocare/features/caregiver/presentation/screens/dashboard/caregiver_dashboard_screen.dart';
+import 'package:memocare/features/location/presentation/screens/caregiver_location_requests_screen.dart';
+import 'package:memocare/features/location/presentation/screens/caregiver_patient_map_screen.dart';
+import 'package:memocare/features/location/presentation/screens/patient_home_location_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/connections/patient_connections_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/games/games_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/games/mini_games/memory_match_game_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/games/mini_games/reaction_tap_game_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/patient_main_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/reminders/alarm_screen.dart';
+import 'package:memocare/features/shared/presentation/screens/notification_test_screen.dart';
+import 'package:memocare/features/shared/presentation/screens/splash_screen.dart';
+import 'package:memocare/widgets/realtime_initializer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -142,7 +142,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           path: '/alert/:id',
           builder: (context, state) {
             final id = state.pathParameters['id'] ?? '';
-            return ReminderAlertScreen(reminderId: id);
+            // For now, always use AlarmScreen for alerts as requested
+            return AlarmScreen(reminderId: id);
           },
         ),
       ],

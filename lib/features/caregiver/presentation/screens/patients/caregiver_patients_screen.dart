@@ -1,8 +1,8 @@
-import 'package:dementia_care_app/data/models/patient.dart';
-import 'package:dementia_care_app/data/models/sos_messages.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/patient_profile_screen.dart';
-import 'package:dementia_care_app/providers/caregiver_patients_provider.dart';
-import 'package:dementia_care_app/providers/sos_messages_provider.dart';
+import 'package:memocare/data/models/patient.dart';
+import 'package:memocare/data/models/sos_messages.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/patient_profile_screen.dart';
+import 'package:memocare/providers/caregiver_patients_provider.dart';
+import 'package:memocare/providers/sos_messages_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

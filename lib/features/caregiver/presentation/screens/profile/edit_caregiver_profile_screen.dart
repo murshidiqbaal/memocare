@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:dementia_care_app/data/models/caregiver.dart';
-import 'package:dementia_care_app/providers/caregiver_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:memocare/data/models/caregiver.dart';
+import 'package:memocare/providers/caregiver_profile_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────

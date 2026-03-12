@@ -1,6 +1,6 @@
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/reminders/reminder_detail_screen.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/reminders/reminder_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';

@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:dementia_care_app/core/services/notification/reminder_notification_service.dart';
-import 'package:dementia_care_app/core/services/voice_service.dart';
-import 'package:dementia_care_app/data/datasources/local/local_reminder_datasource.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
+import 'package:memocare/services/reminder_notification_service.dart';
+import 'package:memocare/core/services/voice_service.dart';
+import 'package:memocare/data/datasources/local/local_reminder_datasource.dart';
+import 'package:memocare/data/models/reminder.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';

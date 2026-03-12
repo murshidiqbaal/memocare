@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/core/theme/emotional_theme_extension.dart';
+import 'package:memocare/core/theme/emotional_theme_extension.dart';
 import 'package:flutter/material.dart';
 // import '../../../../core/theme/emotional_theme_extension.dart';
 

@@ -1,7 +1,7 @@
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/data/repositories/reminder_repository.dart';
-import 'package:dementia_care_app/data/repositories/sos_repository.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/data/repositories/reminder_repository.dart';
+import 'package:memocare/data/repositories/sos_repository.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../../providers/reminder_providers_enhanced.dart';

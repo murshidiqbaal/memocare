@@ -1,6 +1,6 @@
-import 'package:dementia_care_app/core/services/hive_service.dart';
-import 'package:dementia_care_app/data/models/reminder.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:memocare/core/services/hive_service.dart';
+import 'package:memocare/data/models/reminder.dart';
 
 class LocalReminderDatasource {
   Future<Box<Reminder>> get _box async => HiveService.openReminderBox();

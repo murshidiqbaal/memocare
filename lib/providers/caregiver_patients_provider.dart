@@ -34,6 +34,22 @@ class CaregiverConnectionController extends AsyncNotifier<void> {
     return null;
   }
 
+  /// Validates a code and returns the patient (to be used in UI for confirmation)
+  Future<Patient?> validateInviteCode(String code) async {
+    state = const AsyncLoading();
+    
+    try {
+      final patient = await ref
+          .read(patientConnectionRepositoryProvider)
+          .getPatientByInviteCode(code);
+      state = const AsyncData(null);
+      return patient;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
+
   /// Connect caregiver using patient invite code
   Future<void> connectUsingInviteCode(String code) async {
     state = const AsyncLoading();
@@ -41,7 +57,10 @@ class CaregiverConnectionController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await ref
           .read(patientConnectionRepositoryProvider)
-          .connectUsingInviteCode(code);
+          .connectUsingInviteCode(code.trim().toUpperCase());
+      
+      // Refresh the list of patients
+      ref.invalidate(linkedPatientsProvider);
     });
   }
 

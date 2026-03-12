@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dementia_care_app/core/theme/emotional_theme_extension.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/providers/memory_providers.dart';
+import 'package:memocare/core/theme/emotional_theme_extension.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/providers/memory_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';

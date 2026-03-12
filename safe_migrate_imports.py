@@ -1,7 +1,7 @@
 import os
 import re
 
-package_name = "dementia_care_app"
+package_name = "memocare"
 lib_dir = os.path.abspath("lib")
 
 def absolute_to_package(file_path, import_path):

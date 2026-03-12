@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/data/models/game_analytics_summary.dart';
+import 'package:memocare/data/models/game_analytics_summary.dart';
 import 'package:flutter/material.dart';
 
 // import '../../../../../data/models/game_analytics_summary.dart';

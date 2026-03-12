@@ -138,7 +138,7 @@ await notifier.updateProfileImage(imageFile);
 
 ### 5. Check Profile Completion
 ```dart
-import 'package:dementia_care_app/core/utils/profile_completion_helper.dart';
+import 'package:memocare/core/utils/profile_completion_helper.dart';
 
 final completion = ProfileCompletionHelper.calculateCompletion(profile);
 final message = ProfileCompletionHelper.getCompletionMessage(completion);

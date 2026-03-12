@@ -1,5 +1,5 @@
-import 'package:dementia_care_app/data/models/patient_live_location.dart';
-import 'package:dementia_care_app/providers/location_providers.dart';
+import 'package:memocare/data/models/patient_live_location.dart';
+import 'package:memocare/providers/location_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/sos_alert.dart';
-import 'package:dementia_care_app/data/repositories/sos_repository.dart';
-import 'package:dementia_care_app/features/safety/data/models/live_location.dart';
-import 'package:dementia_care_app/providers/auth_provider.dart';
+import 'package:memocare/data/models/sos_alert.dart';
+import 'package:memocare/data/repositories/sos_repository.dart';
+import 'package:memocare/features/safety/data/models/live_location.dart';
+import 'package:memocare/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 

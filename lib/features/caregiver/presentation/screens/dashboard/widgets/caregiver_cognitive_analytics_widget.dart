@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/features/games/providers/game_analytics_provider.dart';
+import 'package:memocare/features/games/providers/game_analytics_provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

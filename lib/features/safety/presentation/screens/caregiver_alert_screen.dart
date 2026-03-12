@@ -1,7 +1,7 @@
-import 'package:dementia_care_app/data/models/sos_alert.dart';
-import 'package:dementia_care_app/features/safety/presentation/controllers/sos_controller.dart';
-import 'package:dementia_care_app/features/safety/presentation/screens/live_map_screen.dart';
-import 'package:dementia_care_app/providers/providers.dart';
+import 'package:memocare/data/models/sos_alert.dart';
+import 'package:memocare/features/safety/presentation/controllers/sos_controller.dart';
+import 'package:memocare/features/safety/presentation/screens/live_map_screen.dart';
+import 'package:memocare/providers/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';

@@ -1,11 +1,11 @@
-import 'package:dementia_care_app/data/models/location_log.dart';
-import 'package:dementia_care_app/data/models/safe_zone.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/safety/safe_zone_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:memocare/data/models/location_log.dart';
+import 'package:memocare/data/models/safe_zone.dart';
+import 'package:memocare/features/caregiver/presentation/screens/safety/safe_zone_setup_screen.dart';
 
 import 'viewmodels/safety_viewmodel.dart';
 

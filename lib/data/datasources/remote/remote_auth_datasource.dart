@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/user/profile.dart';
+import 'package:memocare/data/models/user/profile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

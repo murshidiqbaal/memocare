@@ -1,10 +1,9 @@
 import 'dart:io';
 
-import 'package:dementia_care_app/data/models/person.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/reminders/widgets/voice_recorder_widget.dart';
-// import 'package:dementia_care_app/screens/patient/reminders/widgets/voice_recorder_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:memocare/data/models/person.dart';
+import 'package:memocare/features/patient/presentation/screens/reminders/widgets/voice_recorder_widget.dart';
 
 // import '../../../../data/models/person.dart';
 // import '../../../../screens/patient/reminders/widgets/voice_recorder_widget.dart';

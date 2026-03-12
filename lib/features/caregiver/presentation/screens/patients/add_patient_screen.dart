@@ -1,8 +1,8 @@
-// import 'package:dementia_care_app/features/caregiver/presentation/patient/profile/patient_profile_screen.dart';
-// import 'package:dementia_care_app/features/caregiver/presentation/controllers/caregiver_connection_controller.dart';
-// import 'package:dementia_care_app/features/caregiver/presentation/controllers/caregiver_patients_provider.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/patient_profile_screen.dart';
-import 'package:dementia_care_app/providers/caregiver_patients_provider.dart';
+// import 'package:memocare/features/caregiver/presentation/patient/profile/patient_profile_screen.dart';
+// import 'package:memocare/features/caregiver/presentation/controllers/caregiver_connection_controller.dart';
+// import 'package:memocare/features/caregiver/presentation/controllers/caregiver_patients_provider.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/patient_profile_screen.dart';
+import 'package:memocare/providers/caregiver_patients_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

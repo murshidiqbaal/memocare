@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/data/repositories/game_repository.dart';
+import 'package:memocare/data/repositories/game_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 

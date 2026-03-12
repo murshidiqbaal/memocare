@@ -1,11 +1,11 @@
 import 'package:curved_nav_bar/curved_bar/curved_action_bar.dart';
 import 'package:curved_nav_bar/fab_bar/fab_bottom_app_bar_item.dart';
 import 'package:curved_nav_bar/flutter_curved_bottom_nav_bar.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/games/games_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/home/patient_dashboard_tab.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/memories/memories_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/patient_profile_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/games/games_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/home/patient_dashboard_tab.dart';
+import 'package:memocare/features/patient/presentation/screens/memories/memories_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/patient_profile_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

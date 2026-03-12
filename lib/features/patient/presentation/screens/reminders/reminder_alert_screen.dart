@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/reminder.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/providers/service_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';

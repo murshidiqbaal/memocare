@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:dementia_care_app/core/services/voice_service.dart';
-import 'package:dementia_care_app/data/models/memory.dart';
-// import 'package:dementia_care_app/services/voice_service.dart';
+import 'package:memocare/core/services/voice_service.dart';
+import 'package:memocare/data/models/memory.dart';
+// import 'package:memocare/services/voice_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MemoryRepository {

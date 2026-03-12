@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dementia_care_app/core/services/medicine_ocr_service.dart';
-import 'package:dementia_care_app/core/utils/medicine_name_parser.dart';
+import 'package:memocare/core/services/medicine_ocr_service.dart';
+import 'package:memocare/core/utils/medicine_name_parser.dart';
 
 import '../data/models/medicine_model.dart';
 
@@ -35,13 +35,13 @@ class MedicineScanNotifier extends StateNotifier<MedicineScanState> {
     try {
       final rawText = await _ocrService.extractText(imageFile);
       final parsed = MedicineNameParser.parse(rawText);
-      
+
       final result = MedicineInfo(
         name: parsed['name']!,
         dosage: parsed['dosage']!,
         isRecognized: parsed['name'] != 'Unknown Medicine',
-        confidence: parsed['name'] != 'Unknown Medicine' 
-            ? RecognitionConfidence.high 
+        confidence: parsed['name'] != 'Unknown Medicine'
+            ? RecognitionConfidence.high
             : RecognitionConfidence.low,
       );
 

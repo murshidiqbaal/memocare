@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/providers/sos_provider.dart';
+import 'package:memocare/providers/sos_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

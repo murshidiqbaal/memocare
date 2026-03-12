@@ -1,15 +1,16 @@
 import 'dart:async';
 
-import 'package:dementia_care_app/data/models/location_alert.dart';
-import 'package:dementia_care_app/data/models/patient_home_location.dart';
-import 'package:dementia_care_app/data/repositories/location_repository.dart';
-import 'package:dementia_care_app/providers/service_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:memocare/data/models/location_alert.dart';
+import 'package:memocare/data/models/patient_home_location.dart';
+import 'package:memocare/data/repositories/location_repository.dart';
+import 'package:memocare/providers/service_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/models/user/profile.dart';
 import '../../features/auth/providers/auth_provider.dart';
-import '../services/notification/reminder_notification_service.dart';
+import '../../services/reminder_notification_service.dart';
 
 // Provide the LocationRepository
 final locationRepositoryProvider = Provider<LocationRepository>((ref) {
@@ -201,7 +202,7 @@ final safetyStatusProvider = StreamProvider<int>((ref) {
   final service = ref.watch(locationTrackingServiceProvider);
   final profileAsync = ref.watch(userProfileProvider);
 
-  profileAsync.whenData((profile) {
+  profileAsync.whenData((Profile? profile) {
     if (profile != null && profile.role == 'patient') {
       service.startTracking(profile.id);
     }

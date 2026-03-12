@@ -6,8 +6,8 @@
 
 import 'dart:math' as math;
 
-import 'package:dementia_care_app/features/caregiver/presentation/screens/analytics/models/analytics_stats.dart';
-import 'package:dementia_care_app/features/caregiver/presentation/screens/analytics/viewmodels/analytics_viewmodel.dart';
+import 'package:memocare/features/caregiver/presentation/screens/analytics/models/analytics_stats.dart';
+import 'package:memocare/features/caregiver/presentation/screens/analytics/viewmodels/analytics_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

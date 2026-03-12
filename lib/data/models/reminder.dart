@@ -56,9 +56,9 @@ class Reminder {
   final ReminderStatus status;
   @HiveField(9)
   final DateTime createdAt;
-  @HiveField(10)
+  @HiveField(10, defaultValue: [])
   final List<DateTime> completionHistory;
-  @HiveField(11)
+  @HiveField(11, defaultValue: false)
   final bool isSnoozed;
   @HiveField(12)
   final int? snoozeDurationMinutes;
@@ -75,6 +75,9 @@ class Reminder {
   @HiveField(16)
   final String? voiceAudioUrl;
 
+  @HiveField(17, defaultValue: false)
+  final bool alarmEnabled;
+
   Reminder({
     required this.id,
     required this.patientId,
@@ -86,14 +89,17 @@ class Reminder {
     this.description,
     this.repeatRule = ReminderFrequency.once,
     this.status = ReminderStatus.pending,
-    this.completionHistory = const [],
-    this.isSnoozed = false,
+    List<DateTime>? completionHistory,
+    bool? isSnoozed,
     this.snoozeDurationMinutes,
     this.lastSnoozedAt,
     this.localAudioPath,
     this.notificationId,
     this.voiceAudioUrl,
-  });
+    bool? alarmEnabled,
+  })  : completionHistory = completionHistory ?? const [],
+        isSnoozed = isSnoozed ?? false,
+        alarmEnabled = alarmEnabled ?? false;
 
   factory Reminder.fromJson(Map<String, dynamic> json) {
     return Reminder(
@@ -130,6 +136,7 @@ class Reminder {
       notificationId:
           json['notification_id'] as int? ?? json['notificationId'] as int?,
       voiceAudioUrl: json['voice_audio_url'] as String?,
+      alarmEnabled: json['alarm_enabled'] as bool? ?? false,
     );
   }
 
@@ -152,6 +159,7 @@ class Reminder {
       'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
       'voice_audio_url': voiceAudioUrl,
       'notification_id': notificationId,
+      'alarm_enabled': alarmEnabled,
       // 'local_audio_path': localAudioPath,
     };
   }
@@ -174,6 +182,7 @@ class Reminder {
     String? localAudioPath,
     int? notificationId,
     String? voiceAudioUrl,
+    bool? alarmEnabled,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -194,6 +203,7 @@ class Reminder {
       localAudioPath: localAudioPath ?? this.localAudioPath,
       notificationId: notificationId ?? this.notificationId,
       voiceAudioUrl: voiceAudioUrl ?? this.voiceAudioUrl,
+      alarmEnabled: alarmEnabled ?? this.alarmEnabled,
     );
   }
 

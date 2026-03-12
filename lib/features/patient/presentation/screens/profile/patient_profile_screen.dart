@@ -1,15 +1,15 @@
 import 'dart:math';
 
-import 'package:dementia_care_app/core/utils/profile_completion_helper.dart';
-import 'package:dementia_care_app/data/models/patient_profile.dart';
-import 'package:dementia_care_app/data/models/safe_zone.dart';
-import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
-import 'package:dementia_care_app/features/linking/presentation/controllers/link_controller.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/edit_patient_profile_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/safe_zone_picker_screen.dart';
-import 'package:dementia_care_app/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
-import 'package:dementia_care_app/providers/profile_photo_provider.dart';
-import 'package:dementia_care_app/widgets/editable_avatar.dart';
+import 'package:memocare/core/utils/profile_completion_helper.dart';
+import 'package:memocare/data/models/patient_profile.dart';
+import 'package:memocare/data/models/safe_zone.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/features/linking/presentation/controllers/link_controller.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/edit_patient_profile_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/safe_zone_picker_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
+import 'package:memocare/providers/profile_photo_provider.dart';
+import 'package:memocare/widgets/editable_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

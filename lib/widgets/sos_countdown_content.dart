@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/features/patient/presentation/screens/sos/patient_sos_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/sos/patient_sos_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

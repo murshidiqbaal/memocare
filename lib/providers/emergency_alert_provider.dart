@@ -1,4 +1,4 @@
-import 'package:dementia_care_app/data/models/sos_alert.dart';
+import 'package:memocare/data/models/sos_alert.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/sos_repository.dart';

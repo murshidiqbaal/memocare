@@ -4,7 +4,7 @@ import 'dart:io';
 void main() {
   test('convert relative imports to absolute', () async {
     final libDir = Directory('lib');
-    final packagePrefix = 'package:dementia_care_app/';
+    final packagePrefix = 'package:memocare/';
     int changedCount = 0;
 
     await for (var entity in libDir.list(recursive: true, followLinks: false)) {
