@@ -26,7 +26,7 @@ class PatientProfileRepository {
       final profileResponse = await _supabase
           .from('profiles')
           .select('full_name, phone_number, avatar_url, profile_photo_url')
-          .eq('id', userId)
+          .eq('user_id', userId)
           .maybeSingle();
 
       if (profileResponse == null) return null;
@@ -127,7 +127,7 @@ class PatientProfileRepository {
 
       // ── profiles table (base auth row) ────────────────────────────────────
       final profileData = <String, dynamic>{
-        'id': profile.userId ?? profile.id, // Auth id
+        'user_id': profile.userId ?? profile.id, // Auth id
         'full_name': profile.fullName,
         'phone_number': profile.phoneNumber,
       };
@@ -157,7 +157,7 @@ class PatientProfileRepository {
       await _supabase
           .from('profiles')
           .update(profileData)
-          .eq('id', profile.userId ?? profile.id);
+          .eq('user_id', profile.userId ?? profile.id);
 
       _cachedProfile = profile;
     } catch (e) {

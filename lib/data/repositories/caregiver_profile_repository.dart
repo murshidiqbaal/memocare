@@ -61,7 +61,7 @@ class CaregiverProfileRepository {
       final response = await _supabase
           .from('profiles')
           .update(profile.toJson())
-          .eq('id', profile.id)
+          .eq('user_id', profile.userId)
           .eq('role', 'caregiver')
           .select()
           .single();

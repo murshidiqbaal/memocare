@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memocare/data/models/patient.dart';
 import 'package:memocare/data/models/reminder.dart';
 import 'package:memocare/features/caregiver/presentation/screens/analytics/analytics_dashboard_screen.dart';
@@ -16,9 +19,6 @@ import 'package:memocare/features/location/providers/safezone_providers.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:memocare/providers/active_patient_provider.dart';
 import 'package:memocare/providers/game_analytics_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
@@ -667,7 +667,7 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                         Text('MemoCare',
                             style: TextStyle(
                                 color: _DS.ink900,
-                                fontSize: 17,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.3)),
                         SizedBox(height: 1),
@@ -689,7 +689,7 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                         Text('MemoCare',
                             style: TextStyle(
                                 color: _DS.ink900,
-                                fontSize: 17,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.3)),
                         SizedBox(height: 1),
@@ -724,7 +724,7 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                               'MemoCare',
                               style: TextStyle(
                                 color: _DS.ink900,
-                                fontSize: 17,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.3,
                               ),
@@ -755,11 +755,11 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                                     patientName,
                                     style: const TextStyle(
                                       color: _DS.teal900,
-                                      fontSize: 13,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  // const SizedBox(width: 4),
                                   const Icon(Icons.keyboard_arrow_down_rounded,
                                       color: _DS.teal700, size: 16),
                                 ],

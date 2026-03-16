@@ -1,11 +1,12 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:memocare/data/models/reminder.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/reminder_detail_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:just_audio/just_audio.dart';
 
-class ReminderCard extends StatefulWidget {
+class ReminderCard extends ConsumerStatefulWidget {
   final Reminder reminder;
   final VoidCallback onToggle;
   final VoidCallback? onDelete;
@@ -18,10 +19,10 @@ class ReminderCard extends StatefulWidget {
   });
 
   @override
-  State<ReminderCard> createState() => _ReminderCardState();
+  ConsumerState<ReminderCard> createState() => _ReminderCardState();
 }
 
-class _ReminderCardState extends State<ReminderCard> {
+class _ReminderCardState extends ConsumerState<ReminderCard> {
   late AudioPlayer _player;
   bool _isPlaying = false;
   bool _isLoadingAudio = false;
@@ -145,6 +146,10 @@ class _ReminderCardState extends State<ReminderCard> {
     final isOverdue =
         !reminder.isCompleted && reminder.reminderTime.isBefore(DateTime.now());
 
+    // 4. Resolve Creator Label (Part 3)
+    final String? creatorLabel =
+        reminder.createdRole == 'caregiver' ? "Added by caregiver" : null;
+
     return InkWell(
       onTap: () => _navigateToDetails(context),
       borderRadius: BorderRadius.circular(20 * scale),
@@ -204,38 +209,37 @@ class _ReminderCardState extends State<ReminderCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Caregiver Badge
-                  if (reminder.caregiverId.isNotEmpty &&
-                      reminder.caregiverId != reminder.patientId)
+                  // Attribution Badge
+                  if (creatorLabel != null && creatorLabel.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Container(
-                      margin: EdgeInsets.only(bottom: 6 * scale),
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 8 * scale, vertical: 4 * scale),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.shade50,
-                        borderRadius: BorderRadius.circular(6 * scale),
-                        border: Border.all(color: Colors.indigo.shade100),
+                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.volunteer_activism,
-                              size: 12 * scale, color: Colors.indigo.shade700),
-                          SizedBox(width: 4 * scale),
-                          Flexible(
-                            child: Text(
-                              'Added by Caregiver',
-                              style: TextStyle(
-                                fontSize: 11 * scale,
-                                color: Colors.indigo.shade700,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          const Icon(
+                            Icons.person_add_outlined,
+                            size: 14,
+                            color: Color(0xFF6C63FF),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            creatorLabel,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6C63FF),
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ],
 
                   // Title
                   Text(

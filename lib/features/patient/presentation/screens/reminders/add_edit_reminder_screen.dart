@@ -138,22 +138,27 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
 
       final currentUser = ref.read(currentUserProvider);
       if (currentUser == null) {
-        throw Exception('User not authenticated');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Not authenticated. Please log in again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
-
-      final supabase = Supabase.instance.client;
 
       // 1. Resolve Caregiver Profile ID (caregiver_profiles.id)
-      final caregiverRes = await supabase
-          .from('caregiver_profiles')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
-
-      if (caregiverRes == null) {
-        throw Exception('Caregiver profile not found');
+      String resolvedCaregiverId = widget.existingReminder?.caregiverId ?? '';
+      
+      if (resolvedCaregiverId.isEmpty) {
+        // If we don't have a caregiverId yet, we need to find one.
+        // For caregivers, it's their own profile.
+        // For patients, it's their linked caregiver's profile.
+        final caregiverRepo = ref.read(caregiverRepositoryProvider);
+        resolvedCaregiverId = await caregiverRepo.getOrCreateCaregiverProfile(currentUser.id);
       }
-      final String resolvedCaregiverId = caregiverRes['id'];
 
       // 2. Resolve Patient ID (patients.id)
       String resolvedPatientId;
@@ -163,16 +168,9 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         resolvedPatientId = widget.existingReminder!.patientId;
       } else {
         // Fallback for patient-owned reminders
-        final patientRes = await supabase
-            .from('patients')
-            .select('id')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
-
-        if (patientRes == null) {
-          throw Exception('Patient profile not found');
-        }
-        resolvedPatientId = patientRes['id'];
+        final patientRepo = ref.read(patientRepositoryProvider);
+        resolvedPatientId =
+            await patientRepo.getOrCreatePatientProfile(currentUser.id);
       }
 
       print(
@@ -232,15 +230,15 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         reminderTime: finalDateTime,
         repeatRule: _frequency,
         type: _type,
-        localAudioPath:
-            _localRecordingPath, // keep local path for offline playback
-        voiceAudioUrl: remoteVoiceUrl, // synced remote URL
+        localAudioPath: _localRecordingPath,
+        voiceAudioUrl: remoteVoiceUrl,
         patientId: resolvedPatientId,
         caregiverId: resolvedCaregiverId,
         createdAt: widget.existingReminder?.createdAt ?? DateTime.now(),
         status: widget.existingReminder?.status ?? ReminderStatus.pending,
         notificationId: stableNotificationId,
         alarmEnabled: _alarmEnabled,
+        createdBy: widget.existingReminder?.createdBy ?? currentUser.id,
       );
 
       try {

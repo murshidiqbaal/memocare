@@ -1,8 +1,9 @@
 import 'package:memocare/data/models/reminder.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-class CaregiverReminderCard extends StatelessWidget {
+class CaregiverReminderCard extends ConsumerWidget {
   final Reminder reminder;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -17,7 +18,7 @@ class CaregiverReminderCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.access_time;
     String statusText = 'Pending';
@@ -33,6 +34,10 @@ class CaregiverReminderCard extends StatelessWidget {
       statusIcon = Icons.warning;
       statusText = 'Missed';
     }
+
+    // 4. Resolve Creator Label (Part 3)
+    final String? creatorLabel =
+        reminder.createdRole == 'caregiver' ? "Added by caregiver" : null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -61,6 +66,37 @@ class CaregiverReminderCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Attribution Badge
+                      if (creatorLabel != null && creatorLabel.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.indigo.shade100),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.volunteer_activism,
+                                  size: 12, color: Colors.indigo.shade700),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  creatorLabel,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.indigo.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Text(
                         reminder.title,
                         style: const TextStyle(
@@ -152,3 +188,4 @@ class CaregiverReminderCard extends StatelessWidget {
     );
   }
 }
+

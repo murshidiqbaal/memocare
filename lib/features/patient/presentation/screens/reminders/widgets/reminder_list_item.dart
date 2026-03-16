@@ -1,10 +1,11 @@
 import 'package:memocare/data/models/reminder.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 // import '../../../../data/models/reminder.dart';
 
-class ReminderListItem extends StatelessWidget {
+class ReminderListItem extends ConsumerWidget {
   final Reminder reminder;
   final VoidCallback onTap;
   final VoidCallback onToggle;
@@ -17,7 +18,7 @@ class ReminderListItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Styling based on state
     final isCompleted = reminder.status == ReminderStatus.completed;
     final isMissed = reminder.status == ReminderStatus.missed ||
@@ -43,6 +44,10 @@ class ReminderListItem extends StatelessWidget {
         cardColor = Colors.red.shade50;
       }
     }
+
+    // 4. Resolve Creator Label (Part 3)
+    final String? creatorLabel =
+        reminder.createdRole == 'caregiver' ? "Added by caregiver" : null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -92,6 +97,34 @@ class ReminderListItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Attribution Badge
+                    if (creatorLabel != null && creatorLabel.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.indigo.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.indigo.shade100),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.volunteer_activism,
+                                size: 10, color: Colors.indigo.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              creatorLabel,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.indigo.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     Text(
                       reminder.title,
                       style: TextStyle(
@@ -156,3 +189,4 @@ class ReminderListItem extends StatelessWidget {
     );
   }
 }
+

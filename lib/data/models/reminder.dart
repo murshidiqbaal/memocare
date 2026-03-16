@@ -78,6 +78,12 @@ class Reminder {
   @HiveField(17, defaultValue: false)
   final bool alarmEnabled;
 
+  @HiveField(18, defaultValue: '')
+  final String createdBy;
+
+  @HiveField(19, defaultValue: 'patient')
+  final String createdRole;
+
   Reminder({
     required this.id,
     required this.patientId,
@@ -97,6 +103,8 @@ class Reminder {
     this.notificationId,
     this.voiceAudioUrl,
     bool? alarmEnabled,
+    this.createdBy = '',
+    this.createdRole = 'patient',
   })  : completionHistory = completionHistory ?? const [],
         isSnoozed = isSnoozed ?? false,
         alarmEnabled = alarmEnabled ?? false;
@@ -137,6 +145,8 @@ class Reminder {
           json['notification_id'] as int? ?? json['notificationId'] as int?,
       voiceAudioUrl: json['voice_audio_url'] as String?,
       alarmEnabled: json['alarm_enabled'] as bool? ?? false,
+      createdBy: json['created_by'] as String? ?? '',
+      createdRole: json['created_role'] as String? ?? 'patient',
     );
   }
 
@@ -158,9 +168,11 @@ class Reminder {
       'snooze_duration_minutes': snoozeDurationMinutes,
       'last_snoozed_at': lastSnoozedAt?.toUtc().toIso8601String(),
       'voice_audio_url': voiceAudioUrl,
-      'notification_id': notificationId,
+      'created_by': createdBy,
+      'created_role': createdRole,
       'alarm_enabled': alarmEnabled,
-      // 'local_audio_path': localAudioPath,
+      'notification_enabled': true,
+      'notification_id': notificationId,
     };
   }
 
@@ -183,6 +195,8 @@ class Reminder {
     int? notificationId,
     String? voiceAudioUrl,
     bool? alarmEnabled,
+    String? createdBy,
+    String? createdRole,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -204,6 +218,8 @@ class Reminder {
       notificationId: notificationId ?? this.notificationId,
       voiceAudioUrl: voiceAudioUrl ?? this.voiceAudioUrl,
       alarmEnabled: alarmEnabled ?? this.alarmEnabled,
+      createdBy: createdBy ?? this.createdBy,
+      createdRole: createdRole ?? this.createdRole,
     );
   }
 
@@ -228,3 +244,4 @@ class Reminder {
   DateTime? get completedAt =>
       completionHistory.isNotEmpty ? completionHistory.last : null;
 }
+

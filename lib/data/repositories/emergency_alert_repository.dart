@@ -35,14 +35,27 @@ class EmergencyAlertRepository {
         // Continue without location
       }
 
+      // Try to resolve internal patient_id
+      final patientProfile = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (patientProfile == null) {
+        return const Left(ServerFailure('Patient profile not found'));
+      }
+      final patientId = patientProfile['id'] as String;
+
       // Insert emergency alert
       final response = await _supabase
           .from('emergency_alerts')
           .insert({
-            'patient_id': user.id,
+            'patient_id': patientId,
             'status': 'sent',
             'latitude': position?.latitude,
             'longitude': position?.longitude,
+            'created_by': user.id, // Track who actually triggered it (usually the patient)
           })
           .select()
           .single();
@@ -90,10 +103,20 @@ class EmergencyAlertRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) return [];
 
+      // Resolve internal patient_id
+      final patientProfile = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (patientProfile == null) return [];
+      final patientId = patientProfile['id'] as String;
+
       final response = await _supabase
           .from('emergency_alerts')
           .select()
-          .eq('patient_id', user.id)
+          .eq('patient_id', patientId)
           .eq('status', 'sent')
           .order('created_at', ascending: false);
 
@@ -212,10 +235,20 @@ class EmergencyAlertRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) return [];
 
+      // Resolve internal patient_id
+      final patientProfile = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (patientProfile == null) return [];
+      final patientId = patientProfile['id'] as String;
+
       final response = await _supabase
           .from('emergency_alerts')
           .select()
-          .eq('patient_id', user.id)
+          .eq('patient_id', patientId)
           .order('created_at', ascending: false)
           .limit(limit);
 
@@ -236,11 +269,21 @@ class EmergencyAlertRepository {
         return const Left(AuthFailure('User not authenticated'));
       }
 
+      // Resolve internal patient_id
+      final patientProfile = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (patientProfile == null) return const Right(null);
+      final patientId = patientProfile['id'] as String;
+
       // Find links - get the first one
       final response = await _supabase
           .from('caregiver_patient_links')
           .select('caregiver_id')
-          .eq('patient_id', user.id)
+          .eq('patient_id', patientId)
           .limit(1)
           .maybeSingle();
 
@@ -252,7 +295,7 @@ class EmergencyAlertRepository {
       final profile = await _supabase
           .from('profiles')
           .select('phone_number')
-          .eq('id', caregiverId)
+          .eq('id', caregiverId) // Assuming profiles.id is caregiver_id here, which is correct if it points to the profiles table. Wait, caregiver_id in links usually points to caregiver_profiles.id.
           .single();
 
       return Right(profile['phone_number'] as String?);

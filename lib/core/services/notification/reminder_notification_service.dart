@@ -85,18 +85,18 @@ class ReminderNotificationService {
       'reminder_channel',
       'Reminders',
       description: 'Standard medicine and task reminders',
-      importance: Importance.defaultImportance,
+      importance: Importance.high,
       playSound: true,
     );
 
     // Alarm Channel
     const alarmChannel = AndroidNotificationChannel(
-      'alarm_channel',
-      'Alarm Notifications',
+      'reminder_alarm_channel',
+      'Reminder Alarm',
       description: 'Medicine reminder alarms',
       importance: Importance.max,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound('alarm'),
+      sound: RawResourceAndroidNotificationSound('reminder_alarm'),
       enableVibration: true,
     );
 
@@ -167,15 +167,16 @@ class ReminderNotificationService {
           scheduledDate: scheduledDate,
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
-              'alarm_channel',
-              'Alarm Notifications',
+              'reminder_alarm_channel',
+              'Reminder Alarm',
               channelDescription: 'Emergency/Medical Alarms',
               importance: Importance.max,
-              priority: Priority.high,
+              priority: Priority.max,
               fullScreenIntent: true,
               category: AndroidNotificationCategory.alarm,
               playSound: true,
-              sound: const RawResourceAndroidNotificationSound('alarm'),
+              sound:
+                  const RawResourceAndroidNotificationSound('reminder_alarm'),
               vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
               enableVibration: true,
               visibility: NotificationVisibility.public,
@@ -204,7 +205,7 @@ class ReminderNotificationService {
               'reminder_channel',
               'Reminders',
               channelDescription: 'Standard reminders',
-              importance: Importance.defaultImportance,
+              importance: Importance.high,
               priority: Priority.high,
               playSound: true,
             ),

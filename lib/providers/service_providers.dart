@@ -22,10 +22,12 @@ import 'package:memocare/data/repositories/reminder_repository.dart';
 import 'package:memocare/data/repositories/sos_repository.dart';
 import 'package:memocare/data/repositories/voice_assistant_repository.dart';
 import 'package:memocare/providers/supabase_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:memocare/data/datasources/local/local_reminder_datasource.dart';
+
 
 export 'supabase_provider.dart';
 
@@ -63,7 +65,7 @@ final notificationTriggerProvider = Provider<NotificationTriggerService>((ref) {
 // Reminder Repository Provider
 final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
-  final voiceService = ref.watch(voiceServiceProvider);
+  final voiceService = ref.watch(voiceStorageServiceProvider);
   final notificationService = ref.watch(reminderNotificationServiceProvider);
   final localDatasource = ref.watch(localReminderDatasourceProvider);
   return ReminderRepository(
@@ -98,6 +100,87 @@ final voiceServiceProvider = Provider<VoiceService>((ref) {
 final caregiverRepositoryProvider = Provider<CaregiverRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   return CaregiverRepository(supabase);
+});
+
+// ---------------------------------------------------------------------------
+// caregiverIdProvider
+// ---------------------------------------------------------------------------
+// Session-cached provider that resolves caregiver_profiles.id for the current
+// auth user.  This is the SINGLE SOURCE OF TRUTH for the FK value that must
+// be used in `reminders.caregiver_id`.
+//
+// NEVER use `supabase.auth.currentUser!.id` directly as caregiver_id —
+// that is auth.users.id, which references the wrong table.
+//
+// Usage:
+//   final caregiverId = await ref.read(caregiverIdProvider.future);
+// ---------------------------------------------------------------------------
+final caregiverIdProvider = FutureProvider<String>((ref) async {
+  ref.keepAlive(); // Cache result for the session — avoids repeated DB round-trips
+
+  final supabase = ref.watch(supabaseClientProvider);
+  final user = supabase.auth.currentUser;
+
+  if (user == null) {
+    throw Exception('[caregiverIdProvider] No authenticated user found.');
+  }
+
+  // Always resolve from caregiver_profiles.user_id — never use user.id directly.
+  final row = await supabase
+      .from('caregiver_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+  if (row != null) {
+    final id = row['id'] as String;
+    debugPrint('[caregiverIdProvider] ✅ Resolved caregiver_profiles.id = $id '
+        '(auth.uid = ${user.id})');
+    return id;
+  }
+
+  // Auto-create the profile row if it is missing (first-time login edge case).
+  debugPrint('[caregiverIdProvider] ⚠️ No caregiver_profiles row found for '
+      'auth.uid=${user.id} — auto-creating...');
+  final fullName = user.userMetadata?['full_name'] as String? ?? 'Caregiver';
+  final inserted = await supabase
+      .from('caregiver_profiles')
+      .insert({'user_id': user.id, 'full_name': fullName})
+      .select('id')
+      .single();
+
+  final newId = inserted['id'] as String;
+  debugPrint('[caregiverIdProvider] ✅ Created caregiver_profiles.id = $newId');
+  return newId;
+});
+
+// ---------------------------------------------------------------------------
+// patientIdProvider
+// ---------------------------------------------------------------------------
+// Session-cached provider that resolves patients.id for the current auth user.
+// Used when the patient is also the logged-in user (self-managed reminders).
+//
+// Usage:
+//   final patientId = await ref.read(patientIdProvider.future);
+// ---------------------------------------------------------------------------
+final patientIdProvider = FutureProvider<String?>((ref) async {
+  ref.keepAlive();
+
+  final supabase = ref.watch(supabaseClientProvider);
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
+
+  final row = await supabase
+      .from('patients')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+  if (row == null) return null;
+  final id = row['id'] as String;
+  debugPrint('[patientIdProvider] ✅ Resolved patients.id = $id '
+      '(auth.uid = ${user.id})');
+  return id;
 });
 
 // Voice Assistant Repository Provider
@@ -187,4 +270,30 @@ final batteryOptimizationServiceProvider =
 final reminderReliabilityServiceProvider =
     Provider<ReminderReliabilityService>((ref) {
   return ReminderReliabilityService();
+});
+
+// caregiverUserIdProvider(patientId)
+// Fetches and caches the auth user ID (auth.users.id) of the caregiver linked to a patient.
+final caregiverUserIdProvider =
+    FutureProvider.family<String?, String>((ref, patientId) async {
+  final patientRepo = ref.watch(patientRepositoryProvider);
+  return await patientRepo.getCaregiverUserId(patientId);
+});
+
+/// patientUserIdProvider(patientId)
+/// Returns the patient's own auth user ID (auth.users.id) for a given patient record.
+final patientUserIdProvider =
+    FutureProvider.family<String?, String>((ref, patientId) async {
+  final supabase = Supabase.instance.client;
+  try {
+    final res = await supabase
+        .from('patients')
+        .select('user_id')
+        .eq('id', patientId)
+        .maybeSingle();
+    return res?['user_id'] as String?;
+  } catch (e) {
+    debugPrint('[patientUserIdProvider] Error: $e');
+    return null;
+  }
 });

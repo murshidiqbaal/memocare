@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/patient.dart';
@@ -41,6 +42,43 @@ class PatientRepository {
             'Schema violation: Ensure profile exists before patient creation. $e');
       }
       throw Exception('Failed to create patient: $e');
+    }
+  }
+
+  /// Get or auto-create a patient profile for [userId].
+  ///
+  /// Queries `patients` by `user_id`. If no row is found, inserts one and
+  /// returns the generated id. Prevents FK crashes when the row is missing.
+  Future<String> getOrCreatePatientProfile(String userId) async {
+    try {
+      final existing = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (existing != null) return existing['id'] as String;
+
+      // Row missing — auto-create.
+      final user = _supabase.auth.currentUser;
+      final fullName =
+          user?.userMetadata?['full_name'] as String? ?? 'Patient';
+      debugPrint('[PatientRepo] Auto-creating patients row for $userId');
+      final response = await _supabase
+          .from('patients')
+          .insert({
+            'user_id': userId,
+            'full_name': fullName,
+            'created_at': DateTime.now().toIso8601String(),
+          })
+          .select('id')
+          .single();
+
+      final newId = response['id'] as String;
+      debugPrint('[PatientRepo] Created patients id=$newId for $userId');
+      return newId;
+    } catch (e) {
+      throw Exception('Failed to get/create patient profile: $e');
     }
   }
 
@@ -180,6 +218,28 @@ class PatientRepository {
       }).toList();
     } catch (e) {
       throw Exception('Failed to fetch dashboard patients: $e');
+    }
+  }
+
+  /// Fetches the auth user ID of the caregiver linked to a patient.
+  Future<String?> getCaregiverUserId(String patientId) async {
+    try {
+      // 1. Get the caregiver(s) linked to this patient via the junction table
+      final response = await _supabase
+          .from('caregiver_patient_links')
+          .select('caregiver_id(user_id)')
+          .eq('patient_id', patientId)
+          .maybeSingle();
+
+      if (response == null || response['caregiver_id'] == null) {
+        return null;
+      }
+
+      final profile = response['caregiver_id'] as Map<String, dynamic>;
+      return profile['user_id'] as String?;
+    } catch (e) {
+      debugPrint('[PatientRepo] Error fetching caregiver user ID: $e');
+      return null;
     }
   }
 }

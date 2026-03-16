@@ -44,10 +44,12 @@ class ProfilePhotoRepository {
       // 4. Update Database based on role
       if (role == 'patient') {
         // Update patients table
-        await _supabase.from('patients').upsert({
-          'id': userId,
-          'profile_photo_url': publicUrl,
-        });
+        await _supabase
+            .from('patients')
+            .update({
+              'profile_photo_url': publicUrl,
+            })
+            .eq('user_id', userId);
       } else if (role == 'caregiver') {
         // Update profiles table
         await _supabase

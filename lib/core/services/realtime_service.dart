@@ -61,13 +61,21 @@ class RealtimeService {
     final profile = await _supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
     final role = profile?['role'] as String?;
 
     if (role == 'patient') {
-      _subscribeAsPatient(user.id);
+      // Resolve internal patientId
+      final patientProfile = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      if (patientProfile != null) {
+        _subscribeAsPatient(patientProfile['id'] as String);
+      }
     } else if (role == 'caregiver') {
       await _subscribeAsCaregiver(user.id);
     }

@@ -56,7 +56,7 @@ class RemoteAuthDatasource {
       final data = await _supabase
           .from('profiles')
           .select()
-          .eq('id', userId)
+          .eq('user_id', userId)
           .maybeSingle();
 
       if (data != null) {
@@ -100,11 +100,11 @@ class RemoteAuthDatasource {
     debugPrint(
         '[Auth] creating/updating profile in profiles for userId=$userId with role=$role');
     await _supabase.from('profiles').upsert({
-      'id': userId,
+      'user_id': userId,
       'full_name': fullName,
       'role': role,
       'email': email,
-    });
+    }, onConflict: 'user_id');
   }
 
   Future<void> createProfileLegacy({
@@ -115,8 +115,8 @@ class RemoteAuthDatasource {
     debugPrint(
         '[Auth] creating/updating legacy extension in $table for userId=$userId');
     await _supabase.from(table).upsert({
-      'id': userId,
+      'user_id': userId,
       'full_name': fullName,
-    });
+    }, onConflict: 'user_id');
   }
 }

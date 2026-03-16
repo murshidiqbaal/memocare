@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/caregiver.dart';
@@ -57,6 +58,8 @@ class CaregiverRepository {
       // 2. Automatically create a profile row if missing
       final fullName =
           user.userMetadata?['full_name'] as String? ?? 'Caregiver';
+      debugPrint(
+          '[CaregiverRepo] Auto-creating caregiver_profiles for ${user.id}');
       final response = await _supabase
           .from('caregiver_profiles')
           .insert({
@@ -66,9 +69,47 @@ class CaregiverRepository {
           .select('id')
           .single();
 
-      return response['id'] as String;
+      final newId = response['id'] as String;
+      debugPrint('[CaregiverRepo] Created caregiver_profiles id=$newId');
+      return newId;
     } catch (e) {
       throw Exception('Failed to ensure caregiver profile: $e');
+    }
+  }
+
+  /// Get or auto-create a caregiver profile for [userId].
+  ///
+  /// Safe to call anytime — if the row is missing it is automatically
+  /// inserted and the generated id returned. This prevents any caller
+  /// from crashing when the profile row has not been created yet.
+  Future<String> getOrCreateCaregiverProfile(String userId) async {
+    try {
+      final existing = await _supabase
+          .from('caregiver_profiles')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (existing != null) return existing['id'] as String;
+
+      // Row missing — auto-create.
+      final user = _supabase.auth.currentUser;
+      final fullName =
+          user?.userMetadata?['full_name'] as String? ?? 'Caregiver';
+      debugPrint(
+          '[CaregiverRepo] Auto-creating caregiver_profiles for $userId');
+      final response = await _supabase
+          .from('caregiver_profiles')
+          .insert({'user_id': userId, 'full_name': fullName})
+          .select('id')
+          .single();
+
+      final newId = response['id'] as String;
+      debugPrint(
+          '[CaregiverRepo] Created caregiver_profiles id=$newId for $userId');
+      return newId;
+    } catch (e) {
+      throw Exception('Failed to get/create caregiver profile: $e');
     }
   }
 
