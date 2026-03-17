@@ -119,4 +119,29 @@ class RemoteAuthDatasource {
       'full_name': fullName,
     }, onConflict: 'user_id');
   }
+
+  // ─── Biometric Enrollment ───
+
+  Future<void> enableBiometricEnrollment({
+    required String userId,
+    required String deviceId,
+  }) async {
+    debugPrint('[Auth] Enabling biometric enrollment for userId=$userId on deviceId=$deviceId');
+    await _supabase.from('biometric_enrollment').upsert({
+      'user_id': userId,
+      'device_id': deviceId,
+      'enabled': true,
+      'created_at': DateTime.now().toIso8601String(),
+    }, onConflict: 'user_id,device_id');
+  }
+
+  Future<Map<String, dynamic>?> getBiometricEnrollment(String deviceId) async {
+    debugPrint('[Auth] Fetching biometric enrollment for deviceId=$deviceId');
+    return await _supabase
+        .from('biometric_enrollment')
+        .select()
+        .eq('device_id', deviceId)
+        .eq('enabled', true)
+        .maybeSingle();
+  }
 }

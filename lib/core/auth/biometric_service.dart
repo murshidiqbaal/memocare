@@ -18,8 +18,8 @@ class BiometricService {
     try {
       return await _auth.authenticate(
         localizedReason: 'Scan your fingerprint to log into MemoCare securely.',
-        persistAcrossBackgrounding: true,
-        sensitiveTransaction: true,
+        biometricOnly: true,
+        //stickyAuth: true,
       );
     } on PlatformException catch (e) {
       switch (e.code) {

@@ -1,7 +1,8 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:memocare/features/patient/presentation/screens/games/games_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/home/viewmodels/home_viewmodel.dart';
-import 'package:memocare/features/patient/presentation/screens/home/widgets/caregiver_dash_card.dart';
 import 'package:memocare/features/patient/presentation/screens/home/widgets/memory_highlight_widget.dart';
 import 'package:memocare/features/patient/presentation/screens/home/widgets/offline_status_widget.dart';
 import 'package:memocare/features/patient/presentation/screens/home/widgets/patient_app_bar_widget.dart';
@@ -13,8 +14,6 @@ import 'package:memocare/features/patient/presentation/screens/memories/memories
 import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/reminder_list_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/sos/patient_sos_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Patient Dashboard Tab - Healthcare-grade dementia-friendly UI
 ///
@@ -82,7 +81,7 @@ class PatientDashboardTab extends ConsumerWidget {
                         ],
 
                         // Caregiver Card (Top of Dashboard)
-                        const CaregiverDashCard(), // Added widget
+                        // const CaregiverDashCard(), // Added widget
 
                         // Safety Status Card
                         if (profileAsync.value != null) ...[

@@ -1,6 +1,9 @@
+// import 'package:dementia_care_app/features/auth/providers/auth_provider.dart';
+// import 'package:dementia_care_app/features/auth/providers/biometric_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:memocare/features/auth/providers/biometric_providers.dart';
 
 /// Full-screen biometric authentication screen.
@@ -8,7 +11,7 @@ import 'package:memocare/features/auth/providers/biometric_providers.dart';
 /// Flow:
 ///   1. Automatically tries to authenticate on first mount.
 ///   2. Shows animated fingerprint icon during loading.
-///   3. On success → directly navigate to home (more reliable than redirect).
+///   3. On success → GoRouter redirect handles navigation (auth state updated).
 ///   4. On failure → shows error message + retry button.
 class BiometricLoginScreen extends ConsumerStatefulWidget {
   const BiometricLoginScreen({super.key});
@@ -22,7 +25,6 @@ class _BiometricLoginScreenState extends ConsumerState<BiometricLoginScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
   late final Animation<double> _pulseAnimation;
-  bool _hasNavigated = false; // Prevent multiple navigations
 
   @override
   void initState() {
@@ -53,23 +55,19 @@ class _BiometricLoginScreenState extends ConsumerState<BiometricLoginScreen>
     ref.read(biometricLoginProvider.notifier).login();
   }
 
-  void _navigateToHome() {
-    if (_hasNavigated || !mounted) return;
-    _hasNavigated = true;
-
-    // Direct navigation is more reliable than relying on GoRouter redirects
-    context.go('/home'); // Adjust path to your home route
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(biometricLoginProvider);
 
-    // Handle success - explicit navigation
+    // Navigate once success + auth state is propagated
     ref.listen(biometricLoginProvider, (_, next) {
       if (next.isSuccess) {
-        // Give auth state time to propagate
-        Future.delayed(const Duration(milliseconds: 500), _navigateToHome);
+        // Small delay so the Supabase auth stream has time to emit
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          // Invalidate profile so GoRouter re-evaluates redirect
+          ref.invalidate(userProfileProvider);
+        });
       }
     });
 
@@ -174,10 +172,10 @@ class _BiometricLoginScreenState extends ConsumerState<BiometricLoginScreen>
     final message = state.isLoading
         ? 'Authenticating…'
         : state.isSuccess
-            ? 'Authenticated! Redirecting…'
+            ? 'Authenticated!'
             : state.isFailure
                 ? (state.errorMessage ?? 'Authentication failed.')
-                : 'Touch fingerprint to authenticate';
+                : 'Authenticate to continue';
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -197,14 +195,12 @@ class _BiometricLoginScreenState extends ConsumerState<BiometricLoginScreen>
   }
 
   List<Widget> _buildActions(BuildContext context, BiometricLoginState state) {
-    // Don't show actions during loading or success
     if (state.isLoading || state.isSuccess) return [];
 
     return [
       if (state.isFailure) ...[
         FilledButton.icon(
           onPressed: () {
-            _hasNavigated = false; // Reset flag
             ref.read(biometricLoginProvider.notifier).reset();
             _triggerLogin();
           },
@@ -224,7 +220,7 @@ class _BiometricLoginScreenState extends ConsumerState<BiometricLoginScreen>
       TextButton(
         onPressed: () {
           ref.read(biometricLoginProvider.notifier).reset();
-          context.go('/login'); // Use password login instead
+          context.go('/login');
         },
         child: Text(
           'Use password instead',

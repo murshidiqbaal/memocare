@@ -34,24 +34,21 @@ class BiometricService {
   Future<BiometricAuthResult> authenticate() async {
     try {
       final didAuthenticate = await _auth.authenticate(
-        localizedReason: 'Scan your fingerprint to log into MemoCare.',
-        persistAcrossBackgrounding: true,
-        biometricOnly: false, // allow PIN fallback
+        localizedReason: 'Please authenticate',
+        biometricOnly: true,
+        //stickyAuth: true,
       );
       return didAuthenticate
           ? BiometricAuthResult.success
           : BiometricAuthResult.cancelled;
-    } on LocalAuthException catch (e) {
+    } on PlatformException catch (e) {
       final code = e.code.toString();
-      if (code.contains('notAvailable'))
-        return BiometricAuthResult.notAvailable;
-      if (code.contains('notEnrolled')) return BiometricAuthResult.notEnrolled;
-      if (code.contains('lockedOut')) return BiometricAuthResult.lockedOut;
-      if (code.contains('permanentlyLockedOut'))
+      if (code == 'NotAvailable') return BiometricAuthResult.notAvailable;
+      if (code == 'NotEnrolled') return BiometricAuthResult.notEnrolled;
+      if (code == 'LockedOut') return BiometricAuthResult.lockedOut;
+      if (code == 'PermanentlyLockedOut')
         return BiometricAuthResult.permanentlyLockedOut;
-      if (code.contains('userCancelled')) return BiometricAuthResult.cancelled;
-      return BiometricAuthResult.failure;
-    } on PlatformException catch (_) {
+      if (code == 'userCancelled') return BiometricAuthResult.cancelled;
       return BiometricAuthResult.failure;
     } catch (_) {
       return BiometricAuthResult.failure;

@@ -120,4 +120,31 @@ class AuthRepository {
       return Left(AuthFailure(e.toString()));
     }
   }
+
+  // ─── Biometric Enrollment ───
+
+  Future<Either<Failure, void>> enableBiometricEnrollment({
+    required String userId,
+    required String deviceId,
+  }) async {
+    try {
+      await _remoteDatasource.enableBiometricEnrollment(
+        userId: userId,
+        deviceId: deviceId,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  Future<Either<Failure, Map<String, dynamic>?>> getBiometricEnrollment(
+      String deviceId) async {
+    try {
+      final enrollment = await _remoteDatasource.getBiometricEnrollment(deviceId);
+      return Right(enrollment);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

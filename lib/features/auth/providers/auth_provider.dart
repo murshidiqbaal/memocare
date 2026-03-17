@@ -1,11 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:memocare/data/datasources/remote/remote_auth_datasource.dart';
 import 'package:memocare/data/models/user/profile.dart';
 import 'package:memocare/data/repositories/auth_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// import 'package:memocare/models/user/profile.dart';
 
 final remoteAuthDatasourceProvider = Provider<RemoteAuthDatasource>((ref) {
   return RemoteAuthDatasource(Supabase.instance.client);

@@ -1,10 +1,9 @@
-import 'package:memocare/features/auth/providers/biometric_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-import '../../providers/auth_provider.dart';
+import 'package:memocare/features/auth/providers/auth_provider.dart';
+import 'package:memocare/features/auth/providers/biometric_providers.dart';
 
 /// Login screen with biometric-enable flow.
 ///
@@ -15,7 +14,7 @@ import '../../providers/auth_provider.dart';
 class FlutterLoginScreen extends ConsumerWidget {
   const FlutterLoginScreen({super.key});
 
-  /// Email + password login.
+  /// Email + password login — also saves credentials for biometric reuse.
   Future<String?> _authUser(WidgetRef ref, LoginData data) async {
     final result = await ref.read(authRepositoryProvider).signIn(
           email: data.name,
@@ -25,36 +24,37 @@ class FlutterLoginScreen extends ConsumerWidget {
     return result.fold(
       (failure) => failure.message,
       (_) async {
+        // ✅ Persist credentials securely for future biometric logins
         final storage = ref.read(secureStorageProvider);
         await saveCredentials(
           storage,
           email: data.name,
           password: data.password,
         );
-        return null;
+        return null; // null = success
       },
     );
   }
 
   /// Signup
   Future<String?> _signupUser(WidgetRef ref, SignupData data) async {
-    final role =
-        (data.additionalSignupData?['role'] ?? 'patient').toLowerCase().trim();
+    final role = data.additionalSignupData?['role']?.toLowerCase() ?? 'patient';
+    const validRoles = ['patient', 'caregiver'];
 
-    final email = data.name ?? '';
-    final password = data.password ?? '';
-    final fullName = data.additionalSignupData?['fullName'] ?? '';
+    if (!validRoles.contains(role)) {
+      return 'Role must be either "patient" or "caregiver"';
+    }
 
     final result = await ref.read(authRepositoryProvider).signUp(
-          email: email,
-          password: password,
+          email: data.name ?? '',
+          password: data.password ?? '',
           role: role,
-          fullName: fullName,
+          fullName: data.additionalSignupData?['fullName'] ?? '',
         );
 
     return result.fold(
       (failure) => failure.message,
-      (_) => null, // GoRouter redirect will handle navigation
+      (_) => null,
     );
   }
 
@@ -105,7 +105,7 @@ class FlutterLoginScreen extends ConsumerWidget {
           ],
           messages: LoginMessages(
             additionalSignUpFormDescription:
-                'Please enter your full name and select your role: "patient" or "caregiver".',
+                'Enter your details. For Role, type "patient" or "caregiver".',
           ),
           userValidator: (value) {
             if (value == null || value.isEmpty) return 'Email is required';
@@ -128,10 +128,7 @@ class FlutterLoginScreen extends ConsumerWidget {
             right: 0,
             child: Center(
               child: GestureDetector(
-                onTap: () {
-                  print("Fingerprint tapped");
-                  context.go('/biometric-login');
-                },
+                onTap: () => context.go('/biometric-login'),
                 child: const _FingerprintHint(),
               ),
             ),
@@ -155,14 +152,14 @@ class _FingerprintHint extends StatelessWidget {
           height: 68,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             border: Border.all(
-              color: Colors.white.withOpacity(0.4),
+              color: Colors.white.withValues(alpha: 0.4),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.teal.withOpacity(0.25),
+                color: Colors.teal.withValues(alpha: 0.25),
                 blurRadius: 18,
                 spreadRadius: 2,
               ),
@@ -171,7 +168,7 @@ class _FingerprintHint extends StatelessWidget {
           child: Icon(
             Icons.fingerprint,
             size: 40,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -179,7 +176,7 @@ class _FingerprintHint extends StatelessWidget {
           'Use fingerprint login',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.65),
+            color: Colors.white.withValues(alpha: 0.65),
             letterSpacing: 0.3,
           ),
         ),
