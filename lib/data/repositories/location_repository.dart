@@ -10,17 +10,9 @@ class LocationRepository {
   LocationRepository(this._supabase);
 
   Future<void> upsertPatientHomeLocation(PatientHomeLocation location) async {
-    // Resolve internal patient ID
-    final patientRow = await _supabase
-        .from('patients')
-        .select('id')
-        .eq('user_id', location.patientId)
-        .maybeSingle();
-    final String resolvedId = patientRow?['id'] ?? location.patientId;
-
     await _supabase.from('patient_home_locations').upsert(
       {
-        'patient_id': resolvedId,
+        'patient_id': location.patientId,
         'latitude': location.latitude,
         'longitude': location.longitude,
         'radius_meters': location.radiusMeters,
@@ -46,16 +38,8 @@ class LocationRepository {
     required double latitude,
     required double longitude,
   }) async {
-    // Resolve internal patient ID
-    final patientRow = await _supabase
-        .from('patients')
-        .select('id')
-        .eq('user_id', patientId)
-        .maybeSingle();
-    final String resolvedId = patientRow?['id'] ?? patientId;
-
     await _supabase.from('patient_live_locations').upsert({
-      'patient_id': resolvedId,
+      'patient_id': patientId,
       'latitude': latitude,
       'longitude': longitude,
       'updated_at': DateTime.now().toIso8601String(),
@@ -90,27 +74,9 @@ class LocationRepository {
     required double longitude,
     required double distanceMeters,
   }) async {
-    // Resolve internal IDs
-    final patientRow = await _supabase
-        .from('patients')
-        .select('id')
-        .eq('user_id', patientId)
-        .maybeSingle();
-    final String resolvedPatientId = patientRow?['id'] ?? patientId;
-
-    final caregiverRow = await _supabase
-        .from('caregiver_profiles')
-        .select('id')
-        .eq('user_id', caregiverId)
-        .maybeSingle();
-    final String resolvedCaregiverId = caregiverRow?['id'] ?? caregiverId;
-
-    print(
-        'Inserting Location Alert: Patient=$resolvedPatientId, Caregiver=$resolvedCaregiverId');
-
     await _supabase.from('location_alerts').insert({
-      'patient_id': resolvedPatientId,
-      'caregiver_id': resolvedCaregiverId,
+      'patient_id': patientId,
+      'caregiver_id': caregiverId,
       'latitude': latitude,
       'longitude': longitude,
       'distance_meters': distanceMeters,

@@ -1,202 +1,296 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../application/sos_alert_controller.dart';
-
-class PatientEmergencyAlertScreen extends ConsumerStatefulWidget {
+class PatientEmergencyAlertScreen extends StatefulWidget {
   const PatientEmergencyAlertScreen({super.key});
 
   @override
-  ConsumerState<PatientEmergencyAlertScreen> createState() =>
+  State<PatientEmergencyAlertScreen> createState() =>
       _PatientEmergencyAlertScreenState();
 }
 
 class _PatientEmergencyAlertScreenState
-    extends ConsumerState<PatientEmergencyAlertScreen> {
-  final TextEditingController _noteController = TextEditingController();
+    extends State<PatientEmergencyAlertScreen> with TickerProviderStateMixin {
+  int countdown = 5;
+  Timer? countdownTimer;
+  bool isSending = false;
+  late AnimationController pulseController;
+  late AnimationController scaleController;
 
   @override
   void initState() {
     super.initState();
-    // Start countdown automatically when the screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(sosAlertControllerProvider.notifier).startCountdown();
-    });
+    _initializeAnimations();
+    _startCountdown();
+    // Haptic feedback on screen open
+    HapticFeedback.heavyImpact();
+  }
+
+  void _initializeAnimations() {
+    // Pulsing animation for the countdown number
+    pulseController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // Scale animation for warning icon
+    scaleController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _noteController.dispose();
+    countdownTimer?.cancel();
+    pulseController.dispose();
+    scaleController.dispose();
     super.dispose();
   }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('SOS Sent'),
-        content: const Text('Your caregiver has been notified.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Close screen
-            },
-            child: const Text('OK'),
+  void _startCountdown() {
+    countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (mounted) {
+        setState(() {
+          if (countdown > 0) {
+            countdown--;
+            // Vibrate on each second
+            HapticFeedback.mediumImpact();
+          }
+        });
+
+        if (countdown == 0) {
+          t.cancel();
+          _sendSOS();
+        }
+      }
+    });
+  }
+
+  Future<void> _sendSOS() async {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) {
+      debugPrint('Error: No authenticated user found');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Not authenticated. Please log in again.'),
+            backgroundColor: Colors.red,
           ),
-        ],
-      ),
-    );
+        );
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      isSending = true;
+    });
+
+    try {
+      // Strong haptic feedback when sending
+      HapticFeedback.heavyImpact();
+
+      final response =
+          await Supabase.instance.client.from('sos_messages').insert({
+        'patient_id': user.id,
+        'message_text': 'Emergency SOS Alert',
+        'message_type': 'EMERGENCY',
+        'status': 'pending',
+      });
+
+      debugPrint('SOS sent successfully: $response');
+
+      if (mounted) {
+        // Show success feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🚨 Emergency alert sent to caregivers'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Close after brief delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    } on PostgrestException catch (e) {
+      debugPrint('Postgres error sending SOS: ${e.message}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sending SOS: ${e.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      debugPrint('Unexpected error sending SOS: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error sending SOS. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  void _cancelSOS() {
+    // Soft haptic on cancel
+    HapticFeedback.lightImpact();
+    countdownTimer?.cancel();
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final sosState = ref.watch(sosAlertControllerProvider);
-    final controller = ref.read(sosAlertControllerProvider.notifier);
-
-    // Listen for success state to show dialog
-    ref.listen<SosAlertState>(sosAlertControllerProvider, (previous, next) {
-      if (next.isSuccess && !(previous?.isSuccess ?? false)) {
-        _showSuccessDialog();
-      }
-      if (next.errorMessage != null &&
-          next.errorMessage != previous?.errorMessage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${next.errorMessage}')),
-        );
-      }
-    });
-
-    return Scaffold(
-      backgroundColor: Colors.red.shade900,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Large warning icon
-              const Icon(
-                Icons.warning_amber_rounded,
-                size: 100,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 24),
-
-              // Title
-              const Text(
-                'Emergency Alert',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Description
-              Text(
-                'A message will be sent to your caregiver in ${sosState.countdownSeconds} seconds',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 48),
-
-              // Countdown Display
-              if (sosState.countdownSeconds > 0 && !sosState.isSending)
-                Container(
-                  width: 120,
-                  height: 120,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                  ),
-                  child: Text(
-                    '${sosState.countdownSeconds}',
-                    style: const TextStyle(
-                      fontSize: 64,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-
-              if (sosState.isSending)
-                const CircularProgressIndicator(color: Colors.white),
-
-              const SizedBox(height: 48),
-
-              // Note field
-              TextField(
-                controller: _noteController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Add a note (optional)',
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.1),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Send SOS Button
-              GestureDetector(
-                onTap: sosState.isSending
-                    ? null
-                    : () => controller.sendSOSAlert(note: _noteController.text),
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: sosState.isSending ? Colors.grey : Colors.red,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                    border: Border.all(color: Colors.white, width: 8),
-                  ),
-                  child: const Text(
-                    'SEND SOS',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Cancel Button
-              TextButton(
-                onPressed: () {
-                  controller.cancelCountdown();
-                  Navigator.of(context).pop();
-                },
-                child: const Text(
-                  'CANCEL',
+    return WillPopScope(
+      onWillPop: () async {
+        // Prevent back button from dismissing without canceling timer
+        if (countdown > 0) {
+          _cancelSOS();
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.red.shade900,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Emergency Header
+                const Text(
+                  '🚨 EMERGENCY 🚨',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 32,
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Scaled Warning Icon
+                ScaleTransition(
+                  scale: Tween(begin: 0.9, end: 1.1).animate(
+                    CurvedAnimation(
+                        parent: scaleController, curve: Curves.ease),
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 150,
                     color: Colors.white,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 32),
+
+                // Countdown or Sending State
+                if (countdown > 0) ...[
+                  const Text(
+                    'Sending SOS in',
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ScaleTransition(
+                    scale: Tween(begin: 0.8, end: 1.0).animate(
+                      CurvedAnimation(
+                        parent: pulseController,
+                        curve: Curves.easeInOut,
+                      ),
+                    ),
+                    child: Text(
+                      '$countdown',
+                      style: const TextStyle(
+                        fontSize: 100,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Sending...',
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 48),
+
+                // Cancel Button (only show during countdown)
+                if (countdown > 0 && !isSending)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: ElevatedButton(
+                      onPressed: _cancelSOS,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.red.shade900,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        elevation: 8,
+                      ),
+                      child: const Text(
+                        'Cancel SOS',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Safety Info
+                const SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Text(
+                    countdown > 0
+                        ? 'Press Cancel within ${countdown}s to stop the alert'
+                        : 'Alert has been sent to your caregivers',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white60,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

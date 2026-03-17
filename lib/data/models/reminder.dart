@@ -244,4 +244,3 @@ class Reminder {
   DateTime? get completedAt =>
       completionHistory.isNotEmpty ? completionHistory.last : null;
 }
-

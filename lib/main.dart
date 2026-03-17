@@ -10,6 +10,7 @@ import 'package:memocare/core/services/fcm_service.dart';
 import 'package:memocare/core/services/hive_service.dart';
 import 'package:memocare/core/theme/memocare_theme.dart';
 import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/data/repositories/reminder_repository.dart';
 // import 'package:memocare/data/models/reminder.g.dart';
 // import 'package:memocare/data/models/reminder.g.dart';
 import 'package:memocare/features/auth/providers/auth_provider.dart';
@@ -75,6 +76,8 @@ void main() async {
   try {
     await container.read(reminderNotificationServiceProvider).init();
     await container.read(fcmServiceProvider).initialize();
+    // Fix 3: Reschedule all pending, in-the-future reminders after app restart
+    await container.read(reminderRepositoryProvider).rescheduleAllReminders();
   } catch (e) {
     debugPrint('Service initialization failed: $e');
   }

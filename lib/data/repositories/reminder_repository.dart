@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:memocare/services/reminder_notification_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:memocare/core/services/voice/voice_storage_service.dart';
 import 'package:memocare/data/datasources/local/local_reminder_datasource.dart';
 import 'package:memocare/data/models/reminder.dart';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:memocare/services/reminder_notification_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -114,6 +114,8 @@ class ReminderRepository {
       if (local.isNotEmpty) {
         debugPrint(
             '[ReminderRepository] Returning ${local.length} reminders from Hive');
+        // Fix 4: Also schedule notifications from Hive so reminders still fire offline
+        await scheduleFutureReminders(local);
         // We still sync in the background
         _syncFromSupabase(patientId).catchError((Object e) {
           debugPrint('[ReminderRepository] Background sync failed: $e');
@@ -181,16 +183,16 @@ class ReminderRepository {
   }
 
   /// Helper to schedule all future/pending reminders in the notification system
+  /// Fix 1: Only schedule reminders that are pending AND have a future reminderTime.
   Future<void> scheduleFutureReminders(List<Reminder> reminders) async {
-    final now = DateTime.now();
     int count = 0;
     for (final r in reminders) {
-      if (r.status == ReminderStatus.pending) {
-        if (r.repeatRule != ReminderFrequency.once ||
-            r.reminderTime.isAfter(now)) {
-          await _notificationService.scheduleReminder(r);
-          count++;
-        }
+      // Only schedule if still pending and time is in the future (or repeating)
+      if (r.status == ReminderStatus.pending &&
+          (r.repeatRule != ReminderFrequency.once ||
+              r.reminderTime.isAfter(DateTime.now()))) {
+        await _notificationService.scheduleReminder(r);
+        count++;
       }
     }
     if (count > 0) {
@@ -198,7 +200,30 @@ class ReminderRepository {
     }
   }
 
+  /// Fix 2: Reschedule all reminders after app restart by reading from Hive.
+  /// Call this from main.dart during init.
+  Future<void> rescheduleAllReminders() async {
+    try {
+      final reminders = await _localDatasource.getAllReminders();
+
+      final now = DateTime.now();
+
+      for (final reminder in reminders) {
+        if (reminder.status == ReminderStatus.pending &&
+            reminder.reminderTime.isAfter(now)) {
+          await _notificationService.scheduleReminder(reminder);
+        }
+      }
+
+      debugPrint(
+          '[ReminderRepository] Rescheduled ${reminders.length} reminders from Hive');
+    } catch (e) {
+      debugPrint('[ReminderRepository] Failed to reschedule reminders: $e');
+    }
+  }
+
   /// Downloads the remote voice audio to a local file if not already present.
+  /// Fix 5: Uses Supabase Storage download for Supabase-hosted voice notes.
   Future<Reminder> _ensureLocalAudio(Reminder reminder) async {
     if (reminder.localAudioPath != null &&
         reminder.localAudioPath!.isNotEmpty) {
@@ -218,15 +243,29 @@ class ReminderRepository {
       if (!await file.exists()) {
         debugPrint(
             '[ReminderRepository] Downloading voice audio for ${reminder.id}');
-        final response = await http.get(Uri.parse(reminder.voiceAudioUrl!));
-        if (response.statusCode == 200) {
-          await file.writeAsBytes(response.bodyBytes);
-          debugPrint('[ReminderRepository] Saved voice audio to $localPath');
-        } else {
-          debugPrint(
-              '[ReminderRepository] Failed to download voice audio (${response.statusCode})');
-          return reminder;
+
+        // Fix 5: Prefer Supabase Storage download for reliability
+        final url = reminder.voiceAudioUrl!;
+        Uint8List? bytes;
+
+        if (url.contains('supabase') || url.contains('voice-notes')) {
+          // Extract file path from the Supabase public URL
+          // e.g: https://<project>.supabase.co/storage/v1/object/public/voice-notes/<path>
+          final uri = Uri.parse(url);
+          final pathSegments = uri.pathSegments;
+          final bucketIndex = pathSegments.indexOf('voice-notes');
+          if (bucketIndex != -1 && bucketIndex + 1 < pathSegments.length) {
+            final filePath = pathSegments.sublist(bucketIndex + 1).join('/');
+            bytes =
+                await _supabase.storage.from('voice-notes').download(filePath);
+          }
         }
+
+        // Fallback to http if Supabase download was not applicable
+        bytes ??= (await http.get(Uri.parse(url))).bodyBytes;
+
+        await file.writeAsBytes(bytes);
+        debugPrint('[ReminderRepository] Saved voice audio to $localPath');
       }
       return reminder.copyWith(localAudioPath: localPath);
     } catch (e) {
@@ -387,7 +426,7 @@ class ReminderRepository {
           .from('reminders')
           .update(data)
           .eq('id', updatedReminder.id);
-      
+
       await _localDatasource.saveReminder(updatedReminder);
       debugPrint('[ReminderRepository] Updated reminder in Supabase ✅');
     } on PostgrestException catch (e) {

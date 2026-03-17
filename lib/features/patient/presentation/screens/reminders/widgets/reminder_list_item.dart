@@ -1,7 +1,7 @@
-import 'package:memocare/data/models/reminder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:memocare/data/models/reminder.dart';
 
 // import '../../../../data/models/reminder.dart';
 
@@ -189,4 +189,3 @@ class ReminderListItem extends ConsumerWidget {
     );
   }
 }
-

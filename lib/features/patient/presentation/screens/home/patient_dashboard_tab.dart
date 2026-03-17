@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/data/models/reminder.dart';
 import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:memocare/features/patient/presentation/screens/games/games_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/home/viewmodels/home_viewmodel.dart';
@@ -13,7 +14,7 @@ import 'package:memocare/features/patient/presentation/screens/home_location/pat
 import 'package:memocare/features/patient/presentation/screens/memories/memories_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/reminder_list_screen.dart';
-import 'package:memocare/features/patient/presentation/screens/sos/patient_sos_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
 
 /// Patient Dashboard Tab - Healthcare-grade dementia-friendly UI
 ///
@@ -183,7 +184,11 @@ class PatientDashboardTab extends ConsumerWidget {
   void _navigateToAddReminder(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddEditReminderScreen()),
+      MaterialPageRoute(
+          builder: (context) => const AddEditReminderScreen(
+                initialTitle: '',
+                initialType: ReminderType.task,
+              )),
     );
   }
 
@@ -217,13 +222,14 @@ class PatientDashboardTab extends ConsumerWidget {
   void _showSOSCountdown(BuildContext context, WidgetRef ref) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const PatientSOSScreen()),
+      MaterialPageRoute(
+          builder: (context) => const PatientEmergencyAlertScreen()),
     );
     showDialog(
       context: context,
       barrierDismissible: false,
       useSafeArea: false,
-      builder: (context) => const PatientSOSScreen(),
+      builder: (context) => const PatientEmergencyAlertScreen(),
     );
   }
 }

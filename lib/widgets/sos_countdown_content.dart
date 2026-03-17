@@ -1,6 +1,6 @@
-import 'package:memocare/features/patient/presentation/screens/sos/patient_sos_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
 
 import '../providers/emergency_alert_provider.dart';
 
@@ -33,7 +33,8 @@ class SOSCountdownContent extends ConsumerWidget {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const PatientSOSScreen()));
+                        builder: (context) =>
+                            const PatientEmergencyAlertScreen()));
               },
               child: _buildWarningIcon(sosState),
             ),

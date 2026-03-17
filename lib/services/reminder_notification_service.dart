@@ -151,6 +151,10 @@ class ReminderNotificationService {
       canScheduleExact = await _permissionService.isExactAlarmGranted;
     }
 
+    final scheduleMode = canScheduleExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+
     if (!canScheduleExact) {
       print(
           'Exact Alarm Permission Missing. Fallback to INEXACT mode for ${reminder.title}.');
@@ -188,7 +192,7 @@ class ReminderNotificationService {
               interruptionLevel: InterruptionLevel.critical,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: scheduleMode,
           matchDateTimeComponents: matchComponents,
           payload: reminder.id,
         );
@@ -214,7 +218,7 @@ class ReminderNotificationService {
               presentBadge: true,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: scheduleMode,
           matchDateTimeComponents: matchComponents,
           payload: reminder.id,
         );

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -62,7 +64,9 @@ class _ReminderCardState extends ConsumerState<ReminderCard> {
 
     try {
       setState(() => _isLoadingAudio = true);
-      if (localPath != null && localPath.isNotEmpty) {
+      if (localPath != null &&
+          localPath.isNotEmpty &&
+          await File(localPath).exists()) {
         await _player.setFilePath(localPath);
       } else if (url != null) {
         await _player.setUrl(url);

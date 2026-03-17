@@ -8,9 +8,8 @@ import 'package:memocare/data/repositories/location_repository.dart';
 import 'package:memocare/providers/service_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../data/models/user/profile.dart';
 import '../../features/auth/providers/auth_provider.dart';
-import '../../services/reminder_notification_service.dart';
+import '../services/notification/reminder_notification_service.dart';
 
 // Provide the LocationRepository
 final locationRepositoryProvider = Provider<LocationRepository>((ref) {
@@ -24,7 +23,8 @@ final locationTrackingServiceProvider =
   final locationRepo = ref.watch(locationRepositoryProvider);
   final notifService = ref.watch(reminderNotificationServiceProvider);
   final supabase = ref.watch(supabaseClientProvider);
-  return LocationTrackingService(locationRepo, notifService, supabase);
+  return LocationTrackingService(
+      locationRepo, notifService as ReminderNotificationService, supabase);
 });
 
 class LocationTrackingService {
@@ -56,8 +56,7 @@ class LocationTrackingService {
 
     _activePatientId = patientId;
 
-    // Requirement: Emit initial 'Safe' (0) immediately to prevent stuck loading
-    statusStreamController.add(currentStatus);
+    _activePatientId = patientId;
 
     // 1. Check permissions
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -124,6 +123,17 @@ class LocationTrackingService {
         timeLimit: const Duration(seconds: 10),
       );
 
+      // Save live location to database for caregiver tracking
+      try {
+        await _locationRepo.updateLiveLocation(
+          patientId: patientId,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+      } catch (e) {
+        print('Failed to save live location: $e');
+      }
+
       double distance = Geolocator.distanceBetween(
         _currentHome!.latitude,
         _currentHome!.longitude,
@@ -139,7 +149,15 @@ class LocationTrackingService {
         newStatus = 1; // Near boundary
       }
 
-      if (newStatus != currentStatus) {
+      // Check if this is the first real check
+      bool forceEmit = false;
+      if (currentStatus == 0 && distance <= _currentHome!.radiusMeters * 0.8) {
+        // If current status is 0, and newStatus is also 0, normally it wouldn't emit.
+        // We force an emit here so the UI knows we have evaluated the location safely.
+        forceEmit = true;
+      }
+
+      if (newStatus != currentStatus || forceEmit) {
         currentStatus = newStatus;
         statusStreamController.add(currentStatus);
       }
@@ -198,17 +216,18 @@ class LocationTrackingService {
 
 // Provider for observing safety status in UI
 // Refactored to auto-trigger tracking when patient profile is ready
-final safetyStatusProvider = StreamProvider<int>((ref) {
+final safetyStatusProvider = StreamProvider<int>((ref) async* {
   final service = ref.watch(locationTrackingServiceProvider);
   final profileAsync = ref.watch(userProfileProvider);
 
-  profileAsync.whenData((Profile? profile) {
-    if (profile != null && profile.role == 'patient') {
-      service.startTracking(profile.id);
-    }
-  });
+  final profile = profileAsync.valueOrNull;
+  if (profile != null && profile.role == 'patient') {
+    service.startTracking(profile.id);
+  }
 
-  return service.statusStreamController.stream;
+  await for (final status in service.statusStreamController.stream) {
+    yield status;
+  }
 });
 
 // Realtime Caregiver Alerts Stream Provider

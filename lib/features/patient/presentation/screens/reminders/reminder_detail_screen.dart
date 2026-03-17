@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:memocare/data/models/reminder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,7 +56,9 @@ class _ReminderDetailScreenState extends ConsumerState<ReminderDetailScreen> {
     try {
       setState(() => _isLoadingAudio = true);
       // Offline-first: prefer local file, fallback to remote URL
-      if (localPath != null && localPath.isNotEmpty) {
+      if (localPath != null &&
+          localPath.isNotEmpty &&
+          await File(localPath).exists()) {
         await _player.setFilePath(localPath);
       } else {
         await _player.setUrl(url!);
