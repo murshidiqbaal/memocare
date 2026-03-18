@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:memocare/data/models/reminder.dart';
-import 'package:memocare/providers/service_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/providers/service_providers.dart';
 
 import '../home/viewmodels/home_viewmodel.dart';
 

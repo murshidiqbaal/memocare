@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:vibration/vibration.dart';
 import 'package:memocare/data/models/reminder.dart';
+import 'package:vibration/vibration.dart';
+
 import '../home/viewmodels/home_viewmodel.dart';
 
 class AlarmScreen extends ConsumerStatefulWidget {

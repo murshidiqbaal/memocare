@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/models/reminder.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_provider.dart';
 import 'service_providers.dart';
 
@@ -148,12 +148,12 @@ class CreateReminderNotifier extends AsyncNotifier<void> {
             .maybeSingle();
 
         if (linkCheck == null) {
-          throw Exception('Validation Error: You are not linked to this patient.');
+          throw Exception(
+              'Validation Error: You are not linked to this patient.');
         }
       }
 
-      debugPrint(
-          '[CreateReminderNotifier] Creating Reminder:\n'
+      debugPrint('[CreateReminderNotifier] Creating Reminder:\n'
           '  Auth UID      = ${user.id}\n'
           '  Role          = $userRole\n'
           '  caregiver_id  = $resolvedCaregiverId\n'
@@ -185,7 +185,6 @@ class CreateReminderNotifier extends AsyncNotifier<void> {
     }
   }
 }
-
 
 /// ============================================================================
 /// COMPLETE REMINDER PROVIDER

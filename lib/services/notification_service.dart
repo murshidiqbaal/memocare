@@ -1,10 +1,11 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter/foundation.dart';
+
 import '../data/models/reminder.dart';
 
 class NotificationService {
@@ -61,8 +62,8 @@ class NotificationService {
       enableVibration: true,
     );
 
-    final androidPlugin = _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
+    final androidPlugin =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
       await androidPlugin.createNotificationChannel(channel);
@@ -77,10 +78,11 @@ class NotificationService {
 
     final scheduledDate = _nextInstanceOf(reminder);
     final now = tz.TZDateTime.now(tz.local);
-    
+
     // Skip if in the past
     if (scheduledDate.isBefore(now)) {
-      debugPrint('NotificationService: Skipping past reminder: ${reminder.title}');
+      debugPrint(
+          'NotificationService: Skipping past reminder: ${reminder.title}');
       return;
     }
 
@@ -92,23 +94,31 @@ class NotificationService {
         scheduledDate: scheduledDate,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            reminder.alarmEnabled ? 'reminder_alarm_channel' : 'reminder_channel',
+            reminder.alarmEnabled
+                ? 'reminder_alarm_channel_v2'
+                : 'reminder_channel',
             reminder.alarmEnabled ? 'Reminder Alarm' : 'Reminders',
-            channelDescription: reminder.alarmEnabled ? 'Medicine reminder alarms' : 'Standard medicine and task reminders',
+            channelDescription: reminder.alarmEnabled
+                ? 'Medicine reminder alarms'
+                : 'Standard medicine and task reminders',
             importance: Importance.max,
             priority: Priority.max,
             showWhen: true,
             fullScreenIntent: reminder.alarmEnabled,
-            category: reminder.alarmEnabled ? AndroidNotificationCategory.alarm : null,
+            category: reminder.alarmEnabled
+                ? AndroidNotificationCategory.alarm
+                : null,
             playSound: true,
             enableVibration: true,
-            sound: reminder.alarmEnabled ? const RawResourceAndroidNotificationSound('reminder_alarm') : null,
+            sound: reminder.alarmEnabled
+                ? const RawResourceAndroidNotificationSound('alarm')
+                : null,
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
-            sound: reminder.alarmEnabled ? 'reminder_alarm.mp3' : null,
+            sound: reminder.alarmEnabled ? 'alarm.mp3' : null,
             interruptionLevel: InterruptionLevel.critical,
           ),
         ),
@@ -116,7 +126,8 @@ class NotificationService {
         matchDateTimeComponents: _getMatchComponents(reminder.repeatRule),
         payload: reminder.id,
       );
-      debugPrint('NotificationService: Scheduled ${reminder.title} for $scheduledDate');
+      debugPrint(
+          'NotificationService: Scheduled ${reminder.title} for $scheduledDate');
     } catch (e) {
       debugPrint('NotificationService: Error scheduling ${reminder.title}: $e');
     }
@@ -124,7 +135,8 @@ class NotificationService {
 
   tz.TZDateTime _nextInstanceOf(Reminder reminder) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate = tz.TZDateTime.from(reminder.reminderTime, tz.local);
+    tz.TZDateTime scheduledDate =
+        tz.TZDateTime.from(reminder.reminderTime, tz.local);
 
     if (scheduledDate.isBefore(now)) {
       if (reminder.repeatRule == ReminderFrequency.daily) {
@@ -159,7 +171,8 @@ class NotificationService {
   Future<void> cancelReminder(Reminder reminder) async {
     final int id = reminder.notificationId ?? reminder.id.hashCode;
     await _notificationsPlugin.cancel(id: id);
-    debugPrint('NotificationService: Cancelled notification for: ${reminder.title}');
+    debugPrint(
+        'NotificationService: Cancelled notification for: ${reminder.title}');
   }
 
   Future<void> cancelReminderById(String id) async {
@@ -209,8 +222,8 @@ class NotificationService {
 
   Future<void> requestPermissions() async {
     if (Platform.isAndroid) {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       await androidPlugin?.requestNotificationsPermission();
       await androidPlugin?.requestExactAlarmsPermission();

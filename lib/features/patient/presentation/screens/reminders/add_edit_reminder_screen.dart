@@ -1,10 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:memocare/core/services/notification/notification_permission_service.dart';
 import 'package:memocare/data/models/reminder.dart';
 import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:memocare/providers/service_providers.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 // import '../../../../data/models/reminder.dart';
@@ -151,13 +150,14 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
 
       // 1. Resolve Caregiver Profile ID (caregiver_profiles.id)
       String resolvedCaregiverId = widget.existingReminder?.caregiverId ?? '';
-      
+
       if (resolvedCaregiverId.isEmpty) {
         // If we don't have a caregiverId yet, we need to find one.
         // For caregivers, it's their own profile.
         // For patients, it's their linked caregiver's profile.
         final caregiverRepo = ref.read(caregiverRepositoryProvider);
-        resolvedCaregiverId = await caregiverRepo.getOrCreateCaregiverProfile(currentUser.id);
+        resolvedCaregiverId =
+            await caregiverRepo.getOrCreateCaregiverProfile(currentUser.id);
       }
 
       // 2. Resolve Patient ID (patients.id)

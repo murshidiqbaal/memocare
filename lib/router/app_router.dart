@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memocare/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:memocare/features/auth/presentation/screens/biometric_login_screen.dart';
 import 'package:memocare/features/auth/presentation/screens/flutter_login_screen.dart';
@@ -14,12 +17,8 @@ import 'package:memocare/features/patient/presentation/screens/games/mini_games/
 import 'package:memocare/features/patient/presentation/screens/games/mini_games/reaction_tap_game_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/patient_main_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/alarm_screen.dart';
-import 'package:memocare/features/shared/presentation/screens/notification_test_screen.dart';
 import 'package:memocare/features/shared/presentation/screens/splash_screen.dart';
 import 'package:memocare/widgets/realtime_initializer.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -108,10 +107,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
 
         // ================= DEV =================
-        GoRoute(
-          path: '/notification-test',
-          builder: (context, state) => const NotificationTestScreen(),
-        ),
+        // GoRoute(
+        //   path: '/notification-test',
+        //   builder: (context, state) => const NotificationTestScreen(),
+        // ),
         // ================= LOCATION / SAFE ZONE =================
         GoRoute(
           path: '/patient-home-location/:patientId',

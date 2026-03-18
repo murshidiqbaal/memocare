@@ -1,16 +1,13 @@
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:memocare/core/config/supabase_config.dart';
-import 'package:memocare/core/services/fcm_service.dart';
 import 'package:memocare/core/services/hive_service.dart';
 import 'package:memocare/core/theme/memocare_theme.dart';
 import 'package:memocare/data/models/reminder.dart';
-import 'package:memocare/data/repositories/reminder_repository.dart';
 // import 'package:memocare/data/models/reminder.g.dart';
 // import 'package:memocare/data/models/reminder.g.dart';
 import 'package:memocare/features/auth/providers/auth_provider.dart';
@@ -19,6 +16,8 @@ import 'package:memocare/router/app_router.dart';
 import 'package:memocare/widgets/reliability_wrapper.dart';
 import 'package:memocare/widgets/safety_monitoring_wrapper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 // import 'data/models/reminder.g.dart';
 
@@ -27,7 +26,7 @@ void main() async {
 
   await dotenv.load(fileName: '.env');
 
-  // Hive Initialization
+  // // Hive Initialization
   try {
     debugPrint('🚀 Starting Hive initialization...');
     await Hive.initFlutter();
@@ -57,11 +56,14 @@ void main() async {
     debugPrint('❌ Hive initialization failed: $e');
   }
 
-  // Firebase
+  // Timezone Initialization
+  tz.initializeTimeZones();
   try {
-    await Firebase.initializeApp();
+    final location = tz.getLocation('Asia/Kolkata');
+    tz.setLocalLocation(location);
+    debugPrint('🕒 Timezone initialized to Asia/Kolkata');
   } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
+    debugPrint('❌ Timezone initialization failed: $e');
   }
 
   // Supabase
@@ -74,10 +76,16 @@ void main() async {
 
   // Initialize essential services that need early setup
   try {
-    await container.read(reminderNotificationServiceProvider).init();
-    await container.read(fcmServiceProvider).initialize();
+    final notificationService =
+        container.read(reminderNotificationServiceProvider);
+    await notificationService.init();
+
     // Fix 3: Reschedule all pending, in-the-future reminders after app restart
     await container.read(reminderRepositoryProvider).rescheduleAllReminders();
+
+    // Fix 4: Request battery optimization exemption so OEM doesn't kill alarms.
+    // This is a no-op if already granted or on a device that doesn't restrict it.
+    await notificationService.requestBatteryOptimizationExemption();
   } catch (e) {
     debugPrint('Service initialization failed: $e');
   }
@@ -85,8 +93,6 @@ void main() async {
   // Pre-read persistent state providers
   container.read(sessionPersistenceProvider);
   container.read(authStateChangesProvider);
-
-  FCMService.setNavigatorKey(rootNavigatorKey);
 
   runApp(
     UncontrolledProviderScope(

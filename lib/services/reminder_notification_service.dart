@@ -1,17 +1,26 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:memocare/data/models/reminder.dart';
-import 'package:memocare/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memocare/data/models/reminder.dart';
+import 'package:memocare/router/app_router.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../core/services/notification/notification_permission_service.dart';
 import '../data/datasources/local/local_reminder_datasource.dart';
+
+/// REQUIRED: Top-level background tap handler.
+/// Must be a top-level function (not a class method) with this pragma
+/// so the Dart VM isolate can locate it when the app is in the background.
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // Background taps are handled; navigation happens when the app resumes.
+  print('[BG] Notification tapped in background: ${notificationResponse.payload}');
+}
 
 class ReminderNotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
@@ -60,6 +69,8 @@ class ReminderNotificationService {
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
+      // Required for alarms to fire when app is in background/killed:
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
     // 4. Ensure Permissions (Android 13+, Exact Alarm, Battery Optimization)
@@ -91,18 +102,18 @@ class ReminderNotificationService {
 
     // Alarm Channel
     const alarmChannel = AndroidNotificationChannel(
-      'reminder_alarm_channel',
+      'reminder_alarm_channel_v3',
       'Reminder Alarm',
       description: 'Medicine reminder alarms',
       importance: Importance.max,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound('reminder_alarm'),
+      sound: RawResourceAndroidNotificationSound('alarm'),
       enableVibration: true,
     );
 
     await androidPlugin.createNotificationChannel(reminderChannel);
     await androidPlugin.createNotificationChannel(alarmChannel);
-    print('✅ Notification channels created');
+    print('✅ Notification channels created (v3)');
   }
 
   /// Handle notification tap to navigate to authorized alert screen
@@ -171,7 +182,7 @@ class ReminderNotificationService {
           scheduledDate: scheduledDate,
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
-              'reminder_alarm_channel',
+              'reminder_alarm_channel_v3',
               'Reminder Alarm',
               channelDescription: 'Emergency/Medical Alarms',
               importance: Importance.max,
@@ -179,7 +190,7 @@ class ReminderNotificationService {
               fullScreenIntent: true,
               category: AndroidNotificationCategory.alarm,
               playSound: true,
-              sound: const RawResourceAndroidNotificationSound('reminder_alarm'),
+              sound: const RawResourceAndroidNotificationSound('alarm'),
               vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
               enableVibration: true,
               visibility: NotificationVisibility.public,
@@ -346,5 +357,11 @@ class ReminderNotificationService {
   // Kept for backward compatibility
   Future<void> requestPermissions() async {
     await _permissionService.ensureNotificationsReady();
+  }
+
+  /// Request the OS to exclude this app from battery optimization so exact
+  /// alarms are not delayed or killed by Doze / OEM power managers.
+  Future<void> requestBatteryOptimizationExemption() async {
+    await _permissionService.requestIgnoreBatteryOptimizations();
   }
 }
