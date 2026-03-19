@@ -67,9 +67,9 @@ class CaregiverRepository {
             'full_name': fullName,
           })
           .select('id')
-          .single();
+          .maybeSingle();
 
-      final newId = response['id'] as String;
+      final newId = response!['id'] as String;
       debugPrint('[CaregiverRepo] Created caregiver_profiles id=$newId');
       return newId;
     } catch (e) {

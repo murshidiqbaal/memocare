@@ -1,7 +1,7 @@
 import 'package:memocare/core/services/realtime_service.dart';
 import 'package:memocare/data/models/sos_alert.dart';
 import 'package:memocare/features/caregiver/presentation/screens/dashboard/caregiver_dashboard_tab.dart';
-import 'package:memocare/features/caregiver/presentation/screens/dashboard/emergency_alert_screen.dart';
+import 'package:memocare/features/sos/presentation/screens/caregiver_alerts_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/memories/caregiver_memories_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/patients/caregiver_patients_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/profile/caregiver_profile_screen.dart';
@@ -88,7 +88,7 @@ class _CaregiverDashboardScreenState
           if (!mounted) return;
           Navigator.of(context).push(
             MaterialPageRoute(
-                builder: (_) => EmergencyAlertScreen(alert: alert)),
+                builder: (_) => const CaregiverAlertsScreen()),
           );
         },
         onDismiss: () => Navigator.of(ctx).pop(),

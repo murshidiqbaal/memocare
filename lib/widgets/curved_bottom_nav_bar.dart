@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/emergency_alert_provider.dart';
-import '../../widgets/sos_countdown_dialog.dart';
+import '../features/sos/presentation/screens/sos_button_screen.dart';
 
 class CurvedBottomNavBar extends ConsumerWidget {
   final int currentIndex;
@@ -89,12 +89,12 @@ class CurvedBottomNavBar extends ConsumerWidget {
   }
 
   void _handleSOSPress(BuildContext context, WidgetRef ref) {
-    ref.read(emergencySOSControllerProvider.notifier).startCountdown();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const SOSCountdownDialog(),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SosButtonScreen(),
+        fullscreenDialog: true,
+      ),
     );
   }
 }

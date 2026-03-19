@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:memocare/features/live_location/providers/live_location_provider.dart';
-import 'package:memocare/features/location/services/safezone_service.dart';
-import 'package:memocare/providers/active_patient_provider.dart';
-import 'package:memocare/providers/safe_zone_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:memocare/features/live_location/providers/live_location_provider.dart';
+import 'package:memocare/features/location/services/safezone_service.dart';
+import 'package:memocare/providers/active_patient_provider.dart';
+import 'package:memocare/providers/safe_zone_provider.dart';
 
 /// Caregiver's full-screen map showing:
 ///  • Patient's live location (real-time, from existing LiveLocationService)
@@ -92,10 +92,10 @@ class _CaregiverPatientMapScreenState
                       final dist = SafeZoneService.calculateDistance(
                         loc.latitude,
                         loc.longitude,
-                        zone.latitude,
-                        zone.longitude,
+                        zone.homeLat,
+                        zone.homeLng,
                       );
-                      final isOutside = dist > zone.radiusMeters;
+                      final isOutside = dist > zone.radius;
                       return Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Center(
@@ -166,19 +166,14 @@ class _CaregiverPatientMapScreenState
 
               return safeZoneAsync.when(
                 loading: () => _buildMap(
-                    patientLatLng: patientLatLng,
-                    homeLatLng: null,
-                    radiusMeters: 0),
+                    patientLatLng: patientLatLng, homeLatLng: null, radius: 0),
                 error: (_, __) => _buildMap(
-                    patientLatLng: patientLatLng,
-                    homeLatLng: null,
-                    radiusMeters: 0),
+                    patientLatLng: patientLatLng, homeLatLng: null, radius: 0),
                 data: (zone) => _buildMap(
                   patientLatLng: patientLatLng,
-                  homeLatLng: zone != null
-                      ? LatLng(zone.latitude, zone.longitude)
-                      : null,
-                  radiusMeters: zone?.radiusMeters.toDouble() ?? 0,
+                  homeLatLng:
+                      zone != null ? LatLng(zone.homeLat, zone.homeLng) : null,
+                  radius: zone?.radius.toDouble() ?? 0,
                 ),
               );
             },
@@ -245,7 +240,7 @@ class _CaregiverPatientMapScreenState
   Widget _buildMap({
     required LatLng patientLatLng,
     required LatLng? homeLatLng,
-    required double radiusMeters,
+    required double radius,
   }) {
     return FlutterMap(
       mapController: _mapController,
@@ -266,11 +261,11 @@ class _CaregiverPatientMapScreenState
         ),
 
         // Safe zone circle
-        if (homeLatLng != null && radiusMeters > 0)
+        if (homeLatLng != null && radius > 0)
           CircleLayer(circles: [
             CircleMarker(
               point: homeLatLng,
-              radius: radiusMeters,
+              radius: radius,
               useRadiusInMeter: true,
               color: Colors.blue.withValues(alpha: 0.12),
               borderColor: Colors.blue.shade400,

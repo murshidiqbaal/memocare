@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:memocare/data/models/safe_zone.dart';
-import 'package:memocare/features/location/models/safezone_alert.dart';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:memocare/data/models/patient_location.dart';
+import 'package:memocare/data/models/safe_zone.dart';
+import 'package:memocare/features/location/models/safezone_alert.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Continuously monitors a patient's location against their safe zone.
@@ -48,7 +49,8 @@ class SafeZoneService {
     _patientId = resolvedId;
     _currentZone = safeZone;
 
-    print('Starting SafeZone Monitoring for Patient: $resolvedId (Input: $patientId)');
+    print(
+        'Starting SafeZone Monitoring for Patient: $resolvedId (Input: $patientId)');
 
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
@@ -100,14 +102,14 @@ class SafeZoneService {
     final distance = calculateDistance(
       position.latitude,
       position.longitude,
-      _currentZone!.latitude,
-      _currentZone!.longitude,
+      _currentZone!.homeLat,
+      _currentZone!.homeLng,
     );
 
     debugPrint(
-        '[SafeZoneService] Distance from home: ${distance.toStringAsFixed(1)} m (radius: ${_currentZone!.radiusMeters} m)');
+        '[SafeZoneService] Distance from home: ${distance.toStringAsFixed(1)} m (radius: ${_currentZone!.radius} m)');
 
-    final isOutside = distance > _currentZone!.radiusMeters;
+    final isOutside = distance > _currentZone!.radius;
 
     if (isOutside && !_isOutsideZone) {
       _isOutsideZone = true;
@@ -125,16 +127,20 @@ class SafeZoneService {
   }
 
   Future<void> _uploadLocation(Position pos) async {
+    if (_patientId == null) return;
     try {
-      await _supabase.from('patient_locations').upsert(
-        {
-          'patient_id': _patientId,
-          'latitude': pos.latitude,
-          'longitude': pos.longitude,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        onConflict: 'patient_id',
+      final location = PatientLocation(
+        patientId: _patientId!,
+        lat: pos.latitude,
+        lng: pos.longitude,
+        updatedAt: DateTime.now().toUtc(),
       );
+      final payload = location.toJson();
+      debugPrint('[SafeZoneService] Upserting location payload: $payload');
+      await _supabase.from('patient_locations').upsert(
+            payload,
+            onConflict: 'patient_id',
+          );
     } catch (e) {
       debugPrint('[SafeZoneService] Location upload error: $e');
     }

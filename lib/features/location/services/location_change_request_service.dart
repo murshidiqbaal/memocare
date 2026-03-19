@@ -1,6 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:memocare/data/repositories/safe_zone_repository.dart';
 import 'package:memocare/features/location/models/location_change_request.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Manages the patient → caregiver location change approval flow.
@@ -29,7 +29,6 @@ class LocationChangeRequestService {
     required double longitude,
     required int radius,
   }) async {
-    // ─── LOGGING ──────────────────────────────────────────────────────────
     debugPrint('═══════════════════════════════════════════════');
     debugPrint('📍 SUBMITTING LOCATION REQUEST');
     debugPrint('Patient ID: $patientId');
@@ -39,32 +38,19 @@ class LocationChangeRequestService {
     debugPrint('═══════════════════════════════════════════════');
 
     try {
-      final response = await _supabase.functions.invoke(
-        'submit-location-request',
-        body: {
-          'patient_id': patientId,
-          'latitude': latitude,
-          'longitude': longitude,
-          'radius': radius,
-        },
-      );
+      await _supabase.from('location_change_requests').insert({
+        'patient_id': patientId,
+        'requested_latitude': latitude,
+        'requested_longitude': longitude,
+        'requested_radius_meters': radius,
+        'status': 'requested',
+        'created_at': DateTime.now().toIso8601String(),
+      });
 
-      if (response.status == 200 || response.status == 201) {
-        debugPrint(
-            '✅ SUCCESS: Location change request submitted successfully.');
-      } else {
-        debugPrint('❌ ERROR: Edge Function returned status ${response.status}');
-        debugPrint('Response body: ${response.data}');
-        throw Exception('Edge Function failed with status ${response.status}');
-      }
-    } on FunctionException catch (fe) {
-      debugPrint('❌ SUBMISSION FAILED (FunctionException)');
-      debugPrint('Status: ${fe.status}');
-      debugPrint('Details: ${fe.details}');
-      rethrow;
+      debugPrint("✅ SUCCESS: Location request inserted.");
     } catch (e) {
-      debugPrint('❌ SUBMISSION FAILED (Generic Exception)');
-      debugPrint('Error: $e');
+      debugPrint("❌ SUBMISSION FAILED");
+      debugPrint("Error: $e");
       rethrow;
     }
   }
@@ -101,7 +87,7 @@ class LocationChangeRequestService {
           .from('location_change_requests')
           .select()
           .eq('patient_id', patientId)
-          .eq('status', 'requested')
+          .eq('status', 'pending')
           .order('created_at', ascending: false);
 
       return (data as List)
@@ -132,7 +118,7 @@ class LocationChangeRequestService {
           .from('location_change_requests')
           .select()
           .inFilter('patient_id', patientIds)
-          .eq('status', 'requested')
+          .eq('status', 'pending')
           .order('created_at', ascending: false);
 
       return (data as List)
@@ -145,7 +131,7 @@ class LocationChangeRequestService {
   }
 
   /// Caregiver approves a request.
-  /// Updates `location_change_requests` status AND upserts the new `safe_zones` row.
+  /// Updates `location_change_requests` status AND upserts the new `patient_home_locations` row.
   Future<void> approveRequest({
     required String requestId,
     required String caregiverId,
@@ -166,6 +152,9 @@ class LocationChangeRequestService {
         longitude: request.requestedLongitude,
         radiusMeters: request.requestedRadiusMeters,
         label: label,
+        homeLat: request.requestedLatitude,
+        homeLng: request.requestedLongitude,
+        radius: 500,
       );
 
       debugPrint(

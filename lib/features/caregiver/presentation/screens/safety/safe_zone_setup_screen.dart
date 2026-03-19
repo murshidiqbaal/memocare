@@ -57,7 +57,7 @@ class _SafeZoneSetupScreenState extends ConsumerState<SafeZoneSetupScreen> {
       };
 
       await supabase
-          .from('safe_zones')
+          .from('patient_home_locations')
           .upsert(zoneData, onConflict: 'user_id, label');
 
       if (mounted) {

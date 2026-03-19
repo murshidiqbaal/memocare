@@ -2,8 +2,8 @@ import 'package:memocare/core/services/location_tracking_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
-// import '../../../../services/location_tracking_service.dart';
+import 'package:memocare/providers/location_providers.dart';
+import 'package:memocare/data/models/location_alert.dart';
 
 class PatientSafetyMonitorCard extends ConsumerWidget {
   final String patientId;

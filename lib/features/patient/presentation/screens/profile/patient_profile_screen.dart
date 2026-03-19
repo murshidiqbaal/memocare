@@ -1,5 +1,10 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:memocare/core/utils/profile_completion_helper.dart';
 import 'package:memocare/data/models/patient_profile.dart';
 import 'package:memocare/data/models/safe_zone.dart';
@@ -10,11 +15,6 @@ import 'package:memocare/features/patient/presentation/screens/profile/safe_zone
 import 'package:memocare/features/patient/presentation/screens/profile/viewmodels/patient_profile_viewmodel.dart';
 import 'package:memocare/providers/profile_photo_provider.dart';
 import 'package:memocare/widgets/editable_avatar.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 // ─── THEME ────────────────────────────────────────────────────────────────────
 class _T {
@@ -2256,11 +2256,11 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen>
         opacity: anim,
         child: SafeZonePickerScreen(
           patientId: patientId,
-          initialLatitude: zone?.latitude,
-          initialLongitude: zone?.longitude,
-          initialRadiusMeters: zone?.radiusMeters.toInt(),
-          existingZoneId: zone?.id,
-          initialLabel: zone?.label,
+          initialLatitude: zone?.homeLat,
+          initialLongitude: zone?.homeLng,
+          initialRadiusMeters: zone?.radius.toInt(),
+          existingZoneId: null,
+          initialLabel: null,
         ),
       ),
       transitionDuration: const Duration(milliseconds: 400),

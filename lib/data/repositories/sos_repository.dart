@@ -3,13 +3,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:memocare/core/errors/failures.dart';
 import 'package:memocare/core/providers/supabase_provider.dart';
 import 'package:memocare/data/models/sos_alert.dart';
 import 'package:memocare/features/safety/data/models/live_location.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -74,7 +74,8 @@ class SosRepository {
       final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
       final now = DateTime.now().toIso8601String();
 
-      print('Triggering SOS for Internal Patient ID: $patientId (Auth: $authId)');
+      print(
+          'Triggering SOS for Internal Patient ID: $patientId (Auth: $authId)');
 
       // Validate patient and caregiver UUIDs
       if (!isValidUuid(patientId)) {
@@ -103,7 +104,8 @@ class SosRepository {
     } catch (e) {
       if (kDebugMode) print('[SosRepo] triggerSOS Error: $e');
       await _enqueueOffline(
-        patientId: patientId, // Already resolved if we reached here, or handle elsewhere
+        patientId:
+            patientId, // Already resolved if we reached here, or handle elsewhere
         message: message,
       );
       return SosTriggerResult(sent: 0, queued: true, error: e.toString());
@@ -136,9 +138,9 @@ class SosRepository {
           'triggered_at': DateTime.now().toIso8601String(),
         })
         .select()
-        .single();
+        .maybeSingle();
 
-    return SosAlert.fromJson(response);
+    return SosAlert.fromJson(response!);
   }
 
   Future<Either<Failure, SosAlert>> sendEmergencyAlert() async {
@@ -153,14 +155,16 @@ class SosRepository {
           .eq('user_id', authId)
           .maybeSingle();
 
-      if (patientRow == null) return const Left(ServerFailure('Patient profile missing'));
+      if (patientRow == null)
+        return const Left(ServerFailure('Patient profile missing'));
       final String patientId = patientRow['id'];
 
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 3));
 
-      final alert = await createSosAlert(patientId, pos.latitude, pos.longitude);
+      final alert =
+          await createSosAlert(patientId, pos.latitude, pos.longitude);
       return Right(alert);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

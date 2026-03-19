@@ -33,9 +33,9 @@ class PatientRepository {
             'created_at': DateTime.now().toIso8601String(),
           })
           .select('id')
-          .single();
+          .maybeSingle();
 
-      return response['id'] as String;
+      return response!['id'] as String;
     } catch (e) {
       if (e is PostgrestException && e.code == '23503') {
         throw Exception(
@@ -61,8 +61,7 @@ class PatientRepository {
 
       // Row missing — auto-create.
       final user = _supabase.auth.currentUser;
-      final fullName =
-          user?.userMetadata?['full_name'] as String? ?? 'Patient';
+      final fullName = user?.userMetadata?['full_name'] as String? ?? 'Patient';
       debugPrint('[PatientRepo] Auto-creating patients row for $userId');
       final response = await _supabase
           .from('patients')
@@ -173,7 +172,8 @@ class PatientRepository {
       }
 
       // 4. Create the link
-      print('Connecting Caregiver ($caregiverId) to Patient ($patientId) via Invite');
+      print(
+          'Connecting Caregiver ($caregiverId) to Patient ($patientId) via Invite');
       await _supabase.from('caregiver_patient_links').insert({
         'caregiver_id': caregiverId,
         'patient_id': patientId,

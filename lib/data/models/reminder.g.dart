@@ -27,21 +27,24 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       description: fields[5] as String?,
       repeatRule: fields[7] as ReminderFrequency,
       status: fields[8] as ReminderStatus,
-      completionHistory: (fields[10] as List?)?.cast<DateTime>(),
-      isSnoozed: fields[11] as bool?,
+      completionHistory:
+          fields[10] == null ? [] : (fields[10] as List?)?.cast<DateTime>(),
+      isSnoozed: fields[11] == null ? false : fields[11] as bool?,
       snoozeDurationMinutes: fields[12] as int?,
       lastSnoozedAt: fields[13] as DateTime?,
       localAudioPath: fields[14] as String?,
       notificationId: fields[15] as int?,
       voiceAudioUrl: fields[16] as String?,
-      alarmEnabled: fields[17] as bool?,
+      alarmEnabled: fields[17] == null ? false : fields[17] as bool?,
+      createdBy: fields[18] == null ? '' : fields[18] as String,
+      createdRole: fields[19] == null ? 'patient' : fields[19] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, Reminder obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -77,7 +80,11 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       ..writeByte(16)
       ..write(obj.voiceAudioUrl)
       ..writeByte(17)
-      ..write(obj.alarmEnabled);
+      ..write(obj.alarmEnabled)
+      ..writeByte(18)
+      ..write(obj.createdBy)
+      ..writeByte(19)
+      ..write(obj.createdRole);
   }
 
   @override

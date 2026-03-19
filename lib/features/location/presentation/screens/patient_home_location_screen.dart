@@ -1,5 +1,3 @@
-import 'package:memocare/features/location/providers/safezone_providers.dart';
-import 'package:memocare/providers/safe_zone_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:memocare/features/location/providers/safezone_providers.dart';
+import 'package:memocare/providers/safe_zone_provider.dart';
 
 /// Patient can drag a map marker and set a radius to request a new home location.
 /// The save action submits a caregiver approval request — it does NOT update
@@ -134,8 +134,8 @@ class _PatientHomeLocationScreenState
       if (zone != null && _pickedLocation == null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           setState(() {
-            _pickedLocation = LatLng(zone.latitude, zone.longitude);
-            _radius = zone.radiusMeters.toDouble();
+            _pickedLocation = LatLng(zone.homeLat, zone.homeLng);
+            _radius = zone.radius.toDouble();
           });
         });
       }

@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS public.caregiver_patient_links (
 );
 
 -- 5. Safe Zones (Circular Geofences)
-CREATE TABLE IF NOT EXISTS public.safe_zones (
+CREATE TABLE IF NOT EXISTS public.patient_home_locations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     patient_id UUID NOT NULL REFERENCES public.patients(id) ON DELETE CASCADE,
     latitude DOUBLE PRECISION NOT NULL,
@@ -68,7 +68,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.caregivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.caregiver_patient_links ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.safe_zones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.patient_home_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.location_change_requests ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: Users can see all profiles (needed for search), only edit their own
@@ -76,11 +76,11 @@ CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR 
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- Safe Zones: Patient see own, Caregiver see linked patients
-CREATE POLICY "Patients view own safe zone" ON public.safe_zones FOR SELECT USING (auth.uid() = patient_id);
-CREATE POLICY "Caregivers view linked safe zones" ON public.safe_zones FOR SELECT USING (
+CREATE POLICY "Patients view own safe zone" ON public.patient_home_locations FOR SELECT USING (auth.uid() = patient_id);
+CREATE POLICY "Caregivers view linked safe zones" ON public.patient_home_locations FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM public.caregiver_patient_links 
-        WHERE caregiver_id = auth.uid() AND patient_id = public.safe_zones.patient_id
+        WHERE caregiver_id = auth.uid() AND patient_id = public.patient_home_locations.patient_id
     )
 );
 

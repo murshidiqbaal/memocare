@@ -31,13 +31,16 @@ class PatientLocation {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'patient_id': patientId,
-        'latitude': latitude,
-        'longitude': longitude,
-        'updated_at': updatedAt.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'patient_id': patientId,
+      'latitude': latitude,
+      'longitude': longitude,
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+    if (id.isNotEmpty) map['id'] = id;
+    return map;
+  }
 
   PatientLocation copyWith({
     String? id,

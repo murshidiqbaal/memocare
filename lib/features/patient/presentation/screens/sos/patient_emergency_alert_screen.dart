@@ -71,7 +71,8 @@ class _PatientEmergencyAlertScreenState
   }
 
   Future<void> _sendSOS() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
     if (user == null) {
       debugPrint('Error: No authenticated user found');
@@ -97,18 +98,43 @@ class _PatientEmergencyAlertScreenState
       // Strong haptic feedback when sending
       HapticFeedback.heavyImpact();
 
-      final response =
-          await Supabase.instance.client.from('sos_messages').insert({
+      // Step 1: Look up linked caregiver
+      final linkResponse = await supabase
+          .from('caregiver_patient_links')
+          .select('caregiver_id')
+          .eq('patient_id', user.id)
+          .maybeSingle();
+
+      if (linkResponse == null) {
+        debugPrint('No caregiver linked to this patient.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No caregiver linked. Please contact support.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      final caregiverId = linkResponse['caregiver_id'] as String;
+
+      // Step 2: Insert SOS message with correct schema columns
+      await supabase.from('sos_messages').insert({
         'patient_id': user.id,
-        'message_text': 'Emergency SOS Alert',
-        'message_type': 'EMERGENCY',
+        'caregiver_id': caregiverId,
         'status': 'pending',
+        'triggered_at': DateTime.now().toUtc().toIso8601String(),
+        'location_lat': 0.0,
+        'location_lng': 0.0,
+        'note': 'Manual Emergency SOS Alert',
       });
 
-      debugPrint('SOS sent successfully: $response');
+      debugPrint('SOS sent successfully');
 
       if (mounted) {
-        // Show success feedback
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🚨 Emergency alert sent to caregivers'),
@@ -117,14 +143,13 @@ class _PatientEmergencyAlertScreenState
           ),
         );
 
-        // Close after brief delay
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
           Navigator.pop(context);
         }
       }
     } on PostgrestException catch (e) {
-      debugPrint('Postgres error sending SOS: ${e.message}');
+      debugPrint('Postgres error sending SOS: ${e.message} | code: ${e.code}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

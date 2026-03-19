@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:memocare/providers/active_patient_provider.dart';
 import 'package:memocare/widgets/patient_selector_dropdown.dart';
+import 'package:memocare/providers/service_providers.dart';
 
 // import '../../../providers/active_patient_provider.dart';
 // import '../../../widgets/patient_selector_dropdown.dart';
@@ -133,11 +134,12 @@ class CaregiverRemindersScreen extends ConsumerWidget {
                             );
                           },
                           onDelete: () => viewModel.deleteReminder(reminder.id),
-                          onPlayAudio: () {
+                          onPlayAudio: () async {
+                            final audioService = ref.read(voicePlaybackServiceProvider);
                             ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content: Text('Playing voice note...')));
-                            // In real app, play audio here using VM or helper
+                            await audioService.playReminderVoice(reminder);
                           },
                         ),
                       );

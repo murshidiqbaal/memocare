@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:memocare/core/services/location_tracking_service.dart';
-import 'package:memocare/data/models/patient_home_location.dart';
+import 'package:memocare/data/repositories/safe_zone_repository.dart';
 
 // CHANGES MADE:
 // 1. Added _hasExistingLocation flag to track if home location is already set
@@ -46,15 +46,14 @@ class _PatientSetHomeLocationScreenState
   /// CHANGED: New method to load from database first, then fallback to current location
   Future<void> _loadPatientHomeLocation() async {
     try {
-      final repo = ref.read(locationRepositoryProvider);
-      final existingLocation =
-          await repo.getPatientHomeLocation(widget.patientId);
+      final repo = ref.read(safeZoneRepositoryProvider);
+      final existingLocation = await repo.getPatientSafeZone(widget.patientId);
 
       if (existingLocation != null) {
         // Home location already exists - load it and disable editing
         setState(() {
           _selectedLocation =
-              LatLng(existingLocation.latitude, existingLocation.longitude);
+              LatLng(existingLocation.homeLat, existingLocation.homeLng);
           _hasExistingLocation = true; // PREVENTS EDITING
           _isLoading = false;
         });
@@ -124,13 +123,18 @@ class _PatientSetHomeLocationScreenState
 
     setState(() => _isLoading = true);
     try {
-      final repo = ref.read(locationRepositoryProvider);
-      await repo.upsertPatientHomeLocation(PatientHomeLocation(
+      final repo = ref.read(safeZoneRepositoryProvider);
+      await repo.upsertSafeZone(
         patientId: widget.patientId,
-        latitude: _selectedLocation!.latitude,
+        homeLat: _selectedLocation!.latitude,
+        homeLng: _selectedLocation!.longitude,
+        radius: _radiusMeters,
+        latitude:
+            _selectedLocation!.latitude, // Redundant but required by method
         longitude: _selectedLocation!.longitude,
         radiusMeters: _radiusMeters.toInt(),
-      ));
+        label: 'Home',
+      );
 
       final trackingSvc = ref.read(locationTrackingServiceProvider);
       await trackingSvc.startTracking(widget.patientId);

@@ -49,8 +49,8 @@ class LocationRequestRepository {
       'reviewed_at': now,
     }).eq('id', request.id);
 
-    // 2. Update patient_safe_zones
-    await _supabase.from('patient_safe_zones').upsert({
+    // 2. Update patient_patient_home_locations
+    await _supabase.from('patient_patient_home_locations').upsert({
       'patient_id': request.patientId,
       'latitude': request.requestedLatitude,
       'longitude': request.requestedLongitude,

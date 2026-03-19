@@ -1,192 +1,143 @@
-import 'dart:convert';
+import 'dart:async';
+import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:memocare/providers/service_providers.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:memocare/services/reminder_notification_service.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../utils/uuid_validator.dart';
+import '../../../data/models/sos_message.dart';
+import '../../../providers/supabase_provider.dart';
+import '../../features/sos/data/repositories/sos_system_repository.dart';
 
 final sosServiceProvider = Provider<SosService>((ref) {
-  return SosService(ref.watch(supabaseClientProvider));
+  return SosService(
+    ref.watch(supabaseClientProvider),
+    ref.watch(sosSystemRepositoryProvider),
+    ref.watch(reminderNotificationServiceProvider),
+  );
 });
 
 class SosService {
   final SupabaseClient _supabase;
-  static const _offlineQueueKey = 'offline_sos_queue';
+  final SosSystemRepository _sosRepo;
+  final ReminderNotificationService _notifService;
 
-  SosService(this._supabase) {
-    _syncOfflineQueue();
+  StreamSubscription<UserAccelerometerEvent>? _accelSub;
+
+  String? _activePatientId;
+  DateTime? _lastSosTime;
+  
+  // Shake detection state
+  DateTime? _lastShakeTime;
+  int _shakeCount = 0;
+  static const double _shakeThreshold = 25.0; // ~2.5G
+
+  SosService(this._supabase, this._sosRepo, this._notifService);
+
+  void startSafetyMonitoring(String patientId) {
+    _activePatientId = patientId;
+
+    // Combined sensor monitoring (Shake + Fall)
+    _accelSub?.cancel();
+    _accelSub = userAccelerometerEventStream(
+        samplingPeriod: const Duration(milliseconds: 100) // Increased frequency for shake
+    ).listen((UserAccelerometerEvent event) {
+      // Calculate magnitude
+      double magnitude =
+          sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+
+      // 1. Shake Detection Logic
+      if (magnitude > _shakeThreshold) {
+        final now = DateTime.now();
+        // If within 500ms of last shake, it's a continuing shake
+        if (_lastShakeTime != null && now.difference(_lastShakeTime!).inMilliseconds < 500) {
+          _shakeCount++;
+        } else {
+          _shakeCount = 1;
+        }
+        _lastShakeTime = now;
+
+        if (_shakeCount >= 3) {
+          _triggerEmergency('Shake SOS Triggered');
+          _shakeCount = 0;
+        }
+      }
+
+      // 2. Fall Detection Logic (Sudden high-impact)
+      if (magnitude > 35.0) { // Higher threshold for fall/impact
+        _triggerEmergency('Fall Detected (Automated SOS)');
+      }
+    });
   }
 
-  Future<void> triggerSOS({required String patientId}) async {
-    Position? position;
+  void stopSafetyMonitoring() {
+    _accelSub?.cancel();
+    _activePatientId = null;
+  }
+
+  Future<void> triggerManualSos() async {
+    await _triggerEmergency('Manual SOS Button Pressed');
+  }
+
+  Future<void> triggerSafeZoneBreach() async {
+    await _triggerEmergency('Patient left safe zone');
+  }
+
+  Future<void> _triggerEmergency(String note) async {
+    if (_activePatientId == null) return;
+
+    // Prevent spamming (throttle to 1 SOS per minute automatically)
+    if (_lastSosTime != null &&
+        DateTime.now().difference(_lastSosTime!).inMinutes < 1) {
+      return;
+    }
+
     try {
-      final hasPermission = await Geolocator.checkPermission();
-      if (hasPermission == LocationPermission.always ||
-          hasPermission == LocationPermission.whileInUse) {
-        position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high);
-      }
-    } catch (_) {}
-
-    final lat = position?.latitude;
-    final lng = position?.longitude;
-
-    try {
-      if (!isValidUuid(patientId)) {
-        throw Exception('Invalid patient ID');
-      }
-
-      // Fetch linked caregivers to insert individual SOS alerts per caregiver
-      final links = await _supabase
+      // Get Caregiver ID
+      final linkResponse = await _supabase
           .from('caregiver_patient_links')
           .select('caregiver_id')
-          .eq('patient_id', patientId);
+          .eq('patient_id', _activePatientId as Object)
+          .maybeSingle();
 
-      List<Map<String, dynamic>> payloads = [];
+      if (linkResponse == null) return;
+      final caregiverId = linkResponse['caregiver_id'] as String;
 
-      final validCaregivers = links
-          .map((l) => l['caregiver_id'] as String?)
-          .where(isValidUuid)
-          .toList();
-
-      if (validCaregivers.isEmpty) {
-        throw Exception('Invalid caregiver ID');
+      // Get Location
+      double lat = 0.0, lng = 0.0;
+      try {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 5),
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      } catch (e) {
+        // Fallback or ignore if location fails
       }
 
-      for (var caregiverId in validCaregivers) {
-        payloads.add({
-          'patient_id': patientId,
-          'caregiver_id': caregiverId,
-          'location_lat': lat,
-          'location_lng': lng,
-          'status': 'active',
-        });
-      }
-
-      await _processInsert(payloads);
-
-      // Invoke Email Edge Function
-      await _supabase.functions.invoke(
-        'send-sos-email',
-        body: {'patient_id': patientId},
+      final sos = SosMessage(
+        patientId: _activePatientId!,
+        caregiverId: caregiverId,
+        triggeredAt: DateTime.now().toUtc(),
+        locationLat: lat,
+        locationLng: lng,
+        note: note,
       );
 
-      _syncOfflineQueue();
+      await _sosRepo.insertSosMessage(sos);
+      _lastSosTime = DateTime.now();
+
+      // Notify Patient Locally
+      await _notifService.showEmergencyNotification(
+        title: 'SOS Sent!',
+        body: 'Emergency alert sent to caregiver: $note',
+      );
     } catch (e) {
-      if (kDebugMode) {
-        print('Failed to upload SOS. Queueing offline. Error: $e');
-      }
-
-      // If we don't have a valid patient ID, we shouldn't even queue it.
-      if (!isValidUuid(patientId)) return;
-
-      List<Map<String, dynamic>> fallbackPayloads = [
-        {
-          'patient_id': patientId,
-          'caregiver_id':
-              null, // Need to make sure this doesn't break later sync
-          'location_lat': lat,
-          'location_lng': lng,
-          'status': 'active',
-        }
-      ];
-      await _queueOfflineSOS(fallbackPayloads);
-    }
-  }
-
-  void sandboxPayloads(List<dynamic> links, String patientId, double? lat,
-      double? lng, List<Map<String, dynamic>> payloads) {
-    for (var link in links) {
-      payloads.add({
-        'patient_id': patientId,
-        'caregiver_id': link['caregiver_id'],
-        'location_lat': lat,
-        'location_lng': lng,
-        'status': 'active',
-      });
-    }
-  }
-
-  Future<void> updateSosStatus(String alertId, String newStatus) async {
-    await _supabase
-        .from('sos_messages')
-        .update({'status': newStatus}).eq('id', alertId);
-  }
-
-  Future<void> _processInsert(List<Map<String, dynamic>> payloads) async {
-    await _supabase.from('sos_messages').insert(payloads);
-  }
-
-  Future<void> _queueOfflineSOS(List<Map<String, dynamic>> payloads) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final List<String> queue = prefs.getStringList(_offlineQueueKey) ?? [];
-      for (var p in payloads) {
-        queue.add(jsonEncode(p));
-      }
-      await prefs.setStringList(_offlineQueueKey, queue);
-    } catch (e) {
-      if (kDebugMode) print('Failed to write to SharedPreferences: $e');
-    }
-  }
-
-  Future<void> _syncOfflineQueue() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final List<String>? queue = prefs.getStringList(_offlineQueueKey);
-
-      if (queue == null || queue.isEmpty) return;
-
-      final List<String> remainingQueue = [];
-      for (final encoded in queue) {
-        try {
-          final sosData = jsonDecode(encoded) as Map<String, dynamic>;
-          final patientId = sosData['patient_id'] as String?;
-          if (!isValidUuid(patientId)) continue; // Discard invalid offline data
-
-          // Refetch caregiver links if possible to map out properly on reconnect
-          final links = await _supabase
-              .from('caregiver_patient_links')
-              .select('caregiver_id')
-              .eq('patient_id', patientId!);
-
-          final validCaregivers = links
-              .map((l) => l['caregiver_id'] as String?)
-              .where(isValidUuid)
-              .toList();
-
-          if (validCaregivers.isEmpty) continue; // Still no valid caregiver
-
-          List<Map<String, dynamic>> payloads = [];
-          for (var cid in validCaregivers) {
-            payloads.add({
-              'patient_id': patientId,
-              'caregiver_id': cid,
-              'location_lat': sosData['location_lat'],
-              'location_lng': sosData['location_lng'],
-              'status': sosData['status'] ?? 'active',
-            });
-          }
-
-          if (payloads.isNotEmpty) {
-            await _processInsert(payloads);
-          }
-        } catch (e) {
-          remainingQueue.add(encoded);
-        }
-      }
-
-      if (remainingQueue.isEmpty) {
-        await prefs.remove(_offlineQueueKey);
-      } else {
-        await prefs.setStringList(_offlineQueueKey, remainingQueue);
-      }
-    } catch (e) {
-      if (kDebugMode) print('Offline SOS sync failed: $e');
+      print('Failed to trigger SOS: $e');
     }
   }
 }

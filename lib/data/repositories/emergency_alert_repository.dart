@@ -55,12 +55,13 @@ class EmergencyAlertRepository {
             'status': 'sent',
             'latitude': position?.latitude,
             'longitude': position?.longitude,
-            'created_by': user.id, // Track who actually triggered it (usually the patient)
+            'created_by': user
+                .id, // Track who actually triggered it (usually the patient)
           })
           .select()
-          .single();
+          .maybeSingle();
 
-      return Right(EmergencyAlert.fromJson(response));
+      return Right(EmergencyAlert.fromJson(response!));
     } catch (e) {
       return Left(ServerFailure('Failed to send emergency alert: $e'));
     }
@@ -295,10 +296,11 @@ class EmergencyAlertRepository {
       final profile = await _supabase
           .from('profiles')
           .select('phone_number')
-          .eq('id', caregiverId) // Assuming profiles.id is caregiver_id here, which is correct if it points to the profiles table. Wait, caregiver_id in links usually points to caregiver_profiles.id.
-          .single();
+          .eq('id',
+              caregiverId) // Assuming profiles.id is caregiver_id here, which is correct if it points to the profiles table. Wait, caregiver_id in links usually points to caregiver_profiles.id.
+          .maybeSingle();
 
-      return Right(profile['phone_number'] as String?);
+      return Right(profile!['phone_number'] as String?);
     } catch (e) {
       return Left(ServerFailure('Failed to get caregiver phone: $e'));
     }

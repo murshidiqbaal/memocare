@@ -1,73 +1,58 @@
 class SafeZone {
-  final String id;
   final String patientId;
-  final double latitude;
-  final double longitude;
+  final double homeLat;
+  final double homeLng;
+  final double radius;
+  final String id;
   final int radiusMeters;
   final String label;
   final DateTime createdAt;
+  final double latitude;
   final DateTime updatedAt;
+  final double longitude;
 
   SafeZone({
-    required this.id,
     required this.patientId,
-    required this.latitude,
-    required this.longitude,
+    required this.homeLat,
+    required this.homeLng,
+    this.radius = 50.0,
+    required this.id,
     required this.radiusMeters,
     required this.label,
     required this.createdAt,
+    required this.latitude,
     required this.updatedAt,
+    required this.longitude,
   });
 
   factory SafeZone.fromJson(Map<String, dynamic> json) {
     return SafeZone(
-      id: json['id'] as String,
-      patientId: json['patient_id'] as String,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
-      radiusMeters: (json['radius_meters'] as num).toInt(),
-      label: json['label'] as String? ?? 'Home',
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : DateTime.now(),
+      patientId:
+          json['patient_id'] as String? ?? (json['patientId'] as String? ?? ''),
+      homeLat: (json['home_lat'] ?? json['homeLat'] ?? 0.0) as double,
+      homeLng: (json['home_lng'] ?? json['homeLng'] ?? 0.0) as double,
+      radius: (json['radius'] ?? 50.0) as double,
+      id: json['id'] as String? ?? (json['id'] as String? ?? ''),
+      radiusMeters:
+          json['radiusMeters'] as int? ?? (json['radiusMeters'] as int? ?? 0),
+      label: json['label'] as String? ?? (json['label'] as String? ?? ''),
+      createdAt: json['createdAt'] as DateTime? ??
+          (json['createdAt'] as DateTime? ?? DateTime.now()),
+      latitude:
+          json['latitude'] as double? ?? (json['latitude'] as double? ?? 0.0),
+      updatedAt: json['updatedAt'] as DateTime? ??
+          (json['updatedAt'] as DateTime? ?? DateTime.now()),
+      longitude:
+          json['longitude'] as double? ?? (json['longitude'] as double? ?? 0.0),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
       'patient_id': patientId,
-      'latitude': latitude,
-      'longitude': longitude,
-      'radius_meters': radiusMeters,
-      'label': label,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'home_lat': homeLat,
+      'home_lng': homeLng,
+      'radius': radius,
     };
-  }
-
-  SafeZone copyWith({
-    String? id,
-    String? patientId,
-    double? latitude,
-    double? longitude,
-    int? radiusMeters,
-    String? label,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return SafeZone(
-      id: id ?? this.id,
-      patientId: patientId ?? this.patientId,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      radiusMeters: radiusMeters ?? this.radiusMeters,
-      label: label ?? this.label,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
   }
 }

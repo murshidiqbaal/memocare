@@ -15,13 +15,13 @@ import 'package:memocare/data/datasources/local/local_reminder_datasource.dart';
 import 'package:memocare/data/models/reminder.dart';
 import 'package:memocare/data/repositories/caregiver_repository.dart';
 import 'package:memocare/data/repositories/dashboard_repository.dart';
-import 'package:memocare/data/repositories/location_repository.dart';
 import 'package:memocare/data/repositories/memory_repository.dart';
 import 'package:memocare/data/repositories/patient_connection_repository.dart';
 import 'package:memocare/data/repositories/patient_profile_repository.dart';
 import 'package:memocare/data/repositories/patient_repository.dart';
-import 'package:memocare/data/repositories/people_repository.dart';
 import 'package:memocare/data/repositories/reminder_repository.dart';
+import 'package:memocare/data/repositories/people_repository.dart';
+import 'package:memocare/data/repositories/safe_zone_repository.dart';
 import 'package:memocare/data/repositories/sos_repository.dart';
 import 'package:memocare/data/repositories/voice_assistant_repository.dart';
 import 'package:memocare/providers/supabase_provider.dart';
@@ -219,9 +219,8 @@ final patientRepositoryProvider = Provider<PatientRepository>((ref) {
   final supabase = ref.watch(supabaseClientProvider);
   return PatientRepository(supabase);
 });
-final locationRepositoryProvider = Provider<LocationRepository>((ref) {
-  final supabase = ref.watch(supabaseClientProvider);
-  return LocationRepository(supabase);
+final locationRepositoryProvider = Provider<SafeZoneRepository>((ref) {
+  return ref.watch(safeZoneRepositoryProvider);
 });
 
 // TTS Service Provider

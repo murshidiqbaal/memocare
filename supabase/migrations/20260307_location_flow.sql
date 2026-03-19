@@ -1,6 +1,6 @@
--- 1. Create patient_safe_zones Table
+-- 1. Create patient_patient_home_locations Table
 -- Stores the actual approved circular geofence for a patient.
-CREATE TABLE IF NOT EXISTS public.patient_safe_zones (
+CREATE TABLE IF NOT EXISTS public.patient_patient_home_locations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   patient_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   latitude DOUBLE PRECISION NOT NULL,
@@ -25,14 +25,14 @@ CREATE TABLE IF NOT EXISTS public.location_change_requests (
 );
 
 -- 3. Enable RLS
-ALTER TABLE public.patient_safe_zones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.patient_patient_home_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.location_change_requests ENABLE ROW LEVEL SECURITY;
 
 -- 4. RLS Policies
 
 -- Patient can read their own safe zone
 CREATE POLICY patient_view_safe_zone
-ON public.patient_safe_zones
+ON public.patient_patient_home_locations
 FOR SELECT
 USING (auth.uid() = patient_id);
 
@@ -56,12 +56,12 @@ USING (auth.uid() = caregiver_id);
 
 -- Caregiver can view linked patient safe zone (helper policy)
 CREATE POLICY caregiver_view_safe_zone
-ON public.patient_safe_zones
+ON public.patient_patient_home_locations
 FOR SELECT
 USING (
   EXISTS (
     SELECT 1 FROM public.location_change_requests
-    WHERE public.location_change_requests.patient_id = public.patient_safe_zones.patient_id
+    WHERE public.location_change_requests.patient_id = public.patient_patient_home_locations.patient_id
       AND public.location_change_requests.caregiver_id = auth.uid()
   )
 );

@@ -2,8 +2,8 @@
 
 import 'dart:math' as math;
 
-import 'package:memocare/providers/active_patient_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/providers/active_patient_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // import 'package:memocare/features/caregiver/providers/caregiver_dashboard_providers.dart';
@@ -97,8 +97,8 @@ final patientStatusProvider =
 
   // ── 2. Latest location ──────────────────────────────────────────────────
   final locRows = await db
-      .from('patient_home_locations')
-      .select('latitude, longitude, updated_at')
+      .from('patient_locations')
+      .select('lat, lng, updated_at')
       .eq('patient_id', patientId)
       .order('updated_at', ascending: false)
       .limit(1) as List;
@@ -109,8 +109,8 @@ final patientStatusProvider =
 
   if (locRows.isNotEmpty) {
     final loc = locRows.first as Map<String, dynamic>;
-    lat = _dbl(loc, 'latitude');
-    lng = _dbl(loc, 'longitude');
+    lat = _dbl(loc, 'lat');
+    lng = _dbl(loc, 'lng');
     lastActive =
         DateTime.tryParse(_str(loc, 'updated_at') ?? '') ?? DateTime.now();
     if (lat != null && lng != null) {
@@ -121,7 +121,7 @@ final patientStatusProvider =
   // ── 3. Safe zone ────────────────────────────────────────────────────────
   // Columns: home_lat, home_lng, radius
   final szRows = await db
-      .from('safe_zones')
+      .from('patient_home_locations')
       .select('home_lat, home_lng, radius')
       .eq('patient_id', patientId)
       .limit(1) as List;

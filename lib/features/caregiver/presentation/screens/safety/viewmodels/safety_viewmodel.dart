@@ -39,6 +39,8 @@ class MockSafetyService {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         latitude: 37.422,
-        longitude: -122.084);
+        longitude: -122.084,
+        homeLat: 37.422,
+        homeLng: -122.084);
   }
 }

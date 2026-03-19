@@ -117,10 +117,9 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
     final success =
         await ref.read(safeZoneControllerProvider.notifier).saveSafeZone(
               patientId: widget.patientId,
-              latitude: _selectedLocation!.latitude,
-              longitude: _selectedLocation!.longitude,
-              radiusMeters: _currentRadius,
-              label: widget.initialLabel ?? 'Home',
+              homeLat: _selectedLocation!.latitude,
+              homeLng: _selectedLocation!.longitude,
+              radius: _currentRadius.toDouble(),
               existingId: widget.existingZoneId,
             );
 

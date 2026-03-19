@@ -1,4 +1,4 @@
-import 'package:memocare/data/models/patient_live_location.dart';
+import 'package:memocare/data/models/patient_location.dart';
 import 'package:memocare/providers/location_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -34,7 +34,7 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
     with TickerProviderStateMixin {
   final MapController _mapController = MapController();
 
-  ProviderSubscription<AsyncValue<PatientLiveLocation?>>? _locationSub;
+  ProviderSubscription<AsyncValue<PatientLocation?>>? _locationSub;
 
   LatLng? _currentPosition;
   bool _isFirstLocation = true;
@@ -44,7 +44,7 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
   void initState() {
     super.initState();
     // Listen outside build to avoid full widget rebuild on each tick
-    _locationSub = ref.listenManual<AsyncValue<PatientLiveLocation?>>(
+    _locationSub = ref.listenManual<AsyncValue<PatientLocation?>>(
       patientLiveLocationProvider(widget.patientId),
       (previous, next) {
         next.whenData((location) {
@@ -60,8 +60,8 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
     super.dispose();
   }
 
-  void _updateLocation(PatientLiveLocation location) {
-    final newPos = LatLng(location.latitude, location.longitude);
+  void _updateLocation(PatientLocation location) {
+    final newPos = LatLng(location.lat, location.lng);
     if (!mounted) return;
 
     setState(() => _currentPosition = newPos);
@@ -102,7 +102,7 @@ class _LivePatientMapState extends ConsumerState<LivePatientMap>
           }
 
           final pos = _currentPosition ??
-              LatLng(location!.latitude, location.longitude);
+              LatLng(location!.lat, location.lng);
 
           return Stack(
             children: [

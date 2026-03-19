@@ -37,10 +37,9 @@ class SafeZoneController extends StateNotifier<SafeZoneState> {
 
   Future<bool> saveSafeZone({
     required String patientId,
-    required double latitude,
-    required double longitude,
-    required int radiusMeters,
-    required String label,
+    required double homeLat,
+    required double homeLng,
+    required double radius,
     String? existingId,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -51,10 +50,13 @@ class SafeZoneController extends StateNotifier<SafeZoneState> {
 
       await _repository.upsertSafeZone(
         patientId: patientId,
-        latitude: latitude,
-        longitude: longitude,
-        radiusMeters: radiusMeters,
-        label: label,
+        homeLat: homeLat,
+        homeLng: homeLng,
+        radius: radius,
+        label: 'Home',
+        latitude: homeLat,
+        longitude: homeLng,
+        radiusMeters: 5,
       );
 
       // Invalidate the cache so listeners naturally refetch the new zone
