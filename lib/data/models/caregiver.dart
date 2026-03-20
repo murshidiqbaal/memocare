@@ -126,6 +126,7 @@ class Caregiver {
       'user_id': userId,
       'full_name': fullName,
       'phone': phone,
+      'phone_number': phone,
       'relationship': relationship,
       'notification_enabled': notificationEnabled,
       'profile_photo_url': profilePhotoUrl,

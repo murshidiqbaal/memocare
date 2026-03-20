@@ -285,8 +285,8 @@ class RealtimeService {
           caregiverId: alert.caregiverId,
           triggeredAt: alert.createdAt ?? DateTime.now(),
           status: 'active',
-          locationLat: alert.latitude,
-          locationLng: alert.longitude,
+          latitude: alert.latitude,
+          longitude: alert.longitude,
           note: 'Geofence Breach',
           message: 'Safe zone breach detected',
         );

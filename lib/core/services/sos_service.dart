@@ -82,8 +82,32 @@ class SosService {
     await _triggerEmergency('Manual SOS Button Pressed');
   }
 
-  Future<void> triggerSafeZoneBreach() async {
-    await _triggerEmergency('Patient left safe zone');
+  Future<void> triggerSafeZoneBreach({
+    required String patientId,
+    required double lat,
+    required double lng,
+  }) async {
+    print('SOS Service: Triggering immediate breach SOS for $patientId');
+    try {
+      await _supabase.from('sos_messages').insert({
+        'patient_id': patientId,
+        'lat': lat,
+        'lng': lng,
+        'status': 'active',
+        'triggered_at': DateTime.now().toUtc().toIso8601String(),
+      });
+      
+      // Update local last SOS time to prevent other triggers from spamming
+      _lastSosTime = DateTime.now();
+      
+      // Notify Patient Locally
+      await _notifService.showEmergencyNotification(
+        title: 'SOS Sent!',
+        body: 'Emergency alert sent automatically.',
+      );
+    } catch (e) {
+      print('Failed to trigger immediate SOS: $e');
+    }
   }
 
   Future<void> _triggerEmergency(String note) async {
@@ -96,15 +120,14 @@ class SosService {
     }
 
     try {
-      // Get Caregiver ID
+      // Get Caregiver ID (optional for message, but good for linking)
       final linkResponse = await _supabase
           .from('caregiver_patient_links')
           .select('caregiver_id')
           .eq('patient_id', _activePatientId as Object)
           .maybeSingle();
 
-      if (linkResponse == null) return;
-      final caregiverId = linkResponse['caregiver_id'] as String;
+      final caregiverId = linkResponse?['caregiver_id'] as String?;
 
       // Get Location
       double lat = 0.0, lng = 0.0;
@@ -116,25 +139,24 @@ class SosService {
         lat = pos.latitude;
         lng = pos.longitude;
       } catch (e) {
-        // Fallback or ignore if location fails
+        // Fallback
       }
 
-      final sos = SosMessage(
-        patientId: _activePatientId!,
-        caregiverId: caregiverId,
-        triggeredAt: DateTime.now().toUtc(),
-        locationLat: lat,
-        locationLng: lng,
-        note: note,
-      );
+      await _supabase.from('sos_messages').insert({
+        'patient_id': _activePatientId,
+        'lat': lat,
+        'lng': lng,
+        'status': 'active',
+        'note': note,
+        'triggered_at': DateTime.now().toUtc().toIso8601String(),
+      });
 
-      await _sosRepo.insertSosMessage(sos);
       _lastSosTime = DateTime.now();
 
       // Notify Patient Locally
       await _notifService.showEmergencyNotification(
         title: 'SOS Sent!',
-        body: 'Emergency alert sent to caregiver: $note',
+        body: 'Emergency alert sent: $note',
       );
     } catch (e) {
       print('Failed to trigger SOS: $e');

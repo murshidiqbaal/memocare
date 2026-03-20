@@ -1,6 +1,6 @@
-import 'package:memocare/data/models/user/patient_profile.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/data/models/user/patient_profile.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // import '../../../../data/models/patient_profile.dart';
@@ -59,12 +59,13 @@ final patientCaregiversProvider =
 
     if (patientId.isEmpty) return [];
 
-    final data = await supabase
-        .from('caregiver_patient_links')
-        .select('*, caregiver_profiles!caregiver_id(*)')
-        .eq('patient_id', patientId)
-        .order('linked_at', ascending: true);
+  final data = await supabase
+      .from('caregiver_patient_links')
+      .select('*, caregiver_profiles(*)')
+      .eq('patient_id', patientId)
+      .order('linked_at');
 
-    return List<Map<String, dynamic>>.from(data ?? []);
-  },
-);
+  debugPrint("CARE LINKS RESULT: $data");
+
+  return List<Map<String, dynamic>>.from(data);
+});

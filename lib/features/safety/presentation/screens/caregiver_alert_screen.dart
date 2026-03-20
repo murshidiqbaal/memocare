@@ -1,11 +1,11 @@
-import 'package:memocare/data/models/sos_alert.dart';
-import 'package:memocare/features/safety/presentation/controllers/sos_controller.dart';
-import 'package:memocare/features/safety/presentation/screens/live_map_screen.dart';
-import 'package:memocare/providers/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:memocare/data/models/sos_alert.dart';
+import 'package:memocare/features/safety/presentation/controllers/sos_controller.dart';
+import 'package:memocare/features/safety/presentation/screens/live_map_screen.dart';
+import 'package:memocare/providers/providers.dart';
 
 class CaregiverAlertScreen extends ConsumerWidget {
   const CaregiverAlertScreen({super.key});
@@ -75,7 +75,7 @@ class CaregiverAlertScreen extends ConsumerWidget {
 
   Widget _buildAlertCard(
       BuildContext context, SosAlert alert, String patientName) {
-    final timeStr = DateFormat('h:mm a').format(alert.createdAt.toLocal());
+    final timeStr = DateFormat('h:mm a').format(alert.triggeredAt.toLocal());
 
     return Card(
       color: Colors.red.shade50,

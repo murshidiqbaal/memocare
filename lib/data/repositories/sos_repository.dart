@@ -72,10 +72,11 @@ class SosRepository {
 
       final (lat, lng) = await _safeLocation();
       final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
-      final now = DateTime.now().toIso8601String();
+      final now = DateTime.now().toUtc().toIso8601String();
 
-      print(
-          'Triggering SOS for Internal Patient ID: $patientId (Auth: $authId)');
+      if (kDebugMode) {
+        print('Triggering SOS for Internal Patient ID: $patientId (Auth: $authId)');
+      }
 
       // Validate patient and caregiver UUIDs
       if (!isValidUuid(patientId)) {
@@ -84,7 +85,7 @@ class SosRepository {
 
       final validCaregivers = caregiverIds.where(isValidUuid).toList();
       if (validCaregivers.isEmpty) {
-        throw Exception('Invalid caregiver ID');
+        throw Exception('No linked caregivers found to notify');
       }
 
       final payloads = _buildPayloads(
@@ -104,8 +105,7 @@ class SosRepository {
     } catch (e) {
       if (kDebugMode) print('[SosRepo] triggerSOS Error: $e');
       await _enqueueOffline(
-        patientId:
-            patientId, // Already resolved if we reached here, or handle elsewhere
+        patientId: patientId,
         message: message,
       );
       return SosTriggerResult(sent: 0, queued: true, error: e.toString());
@@ -127,20 +127,17 @@ class SosRepository {
         .insert({
           'id': _uuid.v4(),
           'patient_id': patientId,
-          // createSosAlert doesn't seem to pass a caregiver_id in legacy, but
-          // to suppress the error we'd ideally fetch it. However, if it's omitted
-          // to rely on triggerSOS instead, let's just make sure it doesn't fail
-          // if there is a caregiver column. If it's omitted, Supabase handles it.
-          'location_lat': lat,
-          'location_lng': long,
+          'lat': lat,
+          'lng': long,
           'status': 'active',
           'message': message ?? _defaultMessage,
-          'triggered_at': DateTime.now().toIso8601String(),
+          'triggered_at': DateTime.now().toUtc().toIso8601String(),
         })
         .select()
         .maybeSingle();
 
-    return SosAlert.fromJson(response!);
+    if (response == null) throw Exception('Failed to create SOS alert');
+    return SosAlert.fromJson(response);
   }
 
   Future<Either<Failure, SosAlert>> sendEmergencyAlert() async {
@@ -155,8 +152,9 @@ class SosRepository {
           .eq('user_id', authId)
           .maybeSingle();
 
-      if (patientRow == null)
+      if (patientRow == null) {
         return const Left(ServerFailure('Patient profile missing'));
+      }
       final String patientId = patientRow['id'];
 
       final pos = await Geolocator.getCurrentPosition(
@@ -179,12 +177,12 @@ class SosRepository {
       'patient_id': patientId,
       'latitude': lat,
       'longitude': long,
-      'recorded_at': DateTime.now().toIso8601String(),
+      'recorded_at': DateTime.now().toUtc().toIso8601String(),
     });
 
     await _supabase
         .from(_tableName)
-        .update({'location_lat': lat, 'location_lng': long})
+        .update({'lat': lat, 'lng': long})
         .eq('patient_id', patientId)
         .inFilter('status', ['active', 'sent', 'pending']);
   }
@@ -194,14 +192,14 @@ class SosRepository {
   Future<void> acknowledgeAlert(String alertId) async {
     await _supabase.from(_tableName).update({
       'status': 'acknowledged',
-      'acknowledged_at': DateTime.now().toIso8601String(),
+      'acknowledged_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', alertId);
   }
 
   Future<void> resolveAlert(String alertId) async {
     await _supabase.from(_tableName).update({
       'status': 'resolved',
-      'resolved_at': DateTime.now().toIso8601String(),
+      'resolved_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', alertId);
   }
 
@@ -240,7 +238,7 @@ class SosRepository {
     await for (final rows in stream) {
       yield rows
           .where((r) => r['status'] == 'pending' || r['status'] == 'active')
-          .map((r) => SosAlert.fromJson(_normaliseRow(r)))
+          .map((r) => SosAlert.fromJson(r))
           .toList();
     }
   }
@@ -255,7 +253,7 @@ class SosRepository {
             ascending: false);
 
     return (rows as List)
-        .map((r) => SosAlert.fromJson(_normaliseRow(r)))
+        .map((r) => SosAlert.fromJson(r))
         .toList();
   }
 
@@ -338,7 +336,7 @@ class SosRepository {
     required String now,
   }) {
     if (caregiverIds.isEmpty) {
-      return []; // Return empty instead of invalid caregiverId insert
+      return []; 
     }
     return caregiverIds
         .map((cId) => {
@@ -347,8 +345,8 @@ class SosRepository {
               'caregiver_id': cId,
               'message': message,
               'status': 'active',
-              'location_lat': lat,
-              'location_lng': lng,
+              'lat': lat,
+              'lng': lng,
               'triggered_at': now,
             })
         .toList();
@@ -362,7 +360,7 @@ class SosRepository {
       queue.add(jsonEncode({
         'patient_id': patientId,
         'message': message,
-        'queued_at': DateTime.now().toIso8601String(),
+        'queued_at': DateTime.now().toUtc().toIso8601String(),
       }));
       await prefs.setStringList(_offlineKey, queue);
     } catch (_) {}
@@ -383,7 +381,7 @@ class SosRepository {
           if (patientId.isEmpty) continue;
 
           final caregiverIds = await _fetchLinkedCaregiverIds(patientId);
-          final now = DateTime.now().toIso8601String();
+          final now = DateTime.now().toUtc().toIso8601String();
 
           if (!isValidUuid(patientId)) continue;
           final validCaregivers = caregiverIds.where(isValidUuid).toList();
@@ -411,15 +409,6 @@ class SosRepository {
         await prefs.setStringList(_offlineKey, remaining);
       }
     } catch (_) {}
-  }
-
-  Map<String, dynamic> _normaliseRow(Map<String, dynamic> row) {
-    final map = Map<String, dynamic>.from(row);
-    map['triggered_at'] ??=
-        row['created_at'] ?? DateTime.now().toIso8601String();
-    map['latitude'] ??= row['location_lat'];
-    map['longitude'] ??= row['location_lng'];
-    return map;
   }
 }
 

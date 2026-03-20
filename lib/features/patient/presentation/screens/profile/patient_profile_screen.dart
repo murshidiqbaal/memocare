@@ -2032,7 +2032,8 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen>
                       final photo = cp['profile_photo_url']?.toString();
                       final rel = cp['relationship']?.toString();
                       final phone =
-                          cp['phone_number']?.toString() ?? 'No phone number';
+                          (cp['phone_number'] ?? cp['phone'])?.toString() ??
+                              'No phone number';
 
                       return TweenAnimationBuilder<double>(
                         tween: Tween(begin: 0, end: 1),

@@ -62,7 +62,7 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
 
       // Fetch from game_analytics
       final rows = await db
-          .from('game_analytics')
+          .from('game_analytics_daily')
           .select()
           .eq('patient_id', patientId)
           .limit(1);

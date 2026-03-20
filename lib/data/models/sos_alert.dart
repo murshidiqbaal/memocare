@@ -3,7 +3,7 @@ class SosAlert {
   final String patientId;
   final String? caregiverId;
   final String? message;
-  final String status; // active | acknowledged | resolved | sent | cancelled
+  final String status; // active | acknowledged | resolved | sent | cancelled | pending
   final DateTime triggeredAt;
   final DateTime? acknowledgedAt;
   final DateTime? resolvedAt;
@@ -22,45 +22,31 @@ class SosAlert {
     required this.triggeredAt,
     this.acknowledgedAt,
     this.resolvedAt,
-    double? latitude,
-    double? longitude,
-    double? locationLat,
-    double? locationLng,
+    this.latitude,
+    this.longitude,
     this.note,
     this.patientName,
     this.patientPhone,
-  })  : latitude = latitude ?? locationLat,
-        longitude = longitude ?? locationLng;
-
-  // Compatibility getters for old field names
-  double? get locationLat => latitude;
-  double? get locationLng => longitude;
-  DateTime get createdAt => triggeredAt;
+  });
 
   factory SosAlert.fromJson(Map<String, dynamic> json) {
-    // Created At mapping - support multiple possible keys
-    final createdAtStr = (json['created_at'] ??
-        json['triggered_at'] ??
-        json['sent_at']) as String?;
-    final triggeredAt =
-        createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now();
-
     return SosAlert(
       id: (json['id'] ?? '') as String,
       patientId: (json['patient_id'] ?? '') as String,
       caregiverId: json['caregiver_id'] as String?,
       message: json['message'] as String?,
       status: (json['status'] ?? 'active') as String,
-      triggeredAt: triggeredAt,
+      triggeredAt: json['triggered_at'] != null
+          ? DateTime.parse(json['triggered_at'] as String)
+          : DateTime.now(),
       acknowledgedAt: json['acknowledged_at'] != null
           ? DateTime.tryParse(json['acknowledged_at'] as String)
           : null,
       resolvedAt: json['resolved_at'] != null
           ? DateTime.tryParse(json['resolved_at'] as String)
           : null,
-      latitude: (json['latitude'] ?? json['location_lat'] as num?)?.toDouble(),
-      longitude:
-          (json['longitude'] ?? json['location_lng'] as num?)?.toDouble(),
+      latitude: (json['lat'] as num?)?.toDouble(),
+      longitude: (json['lng'] as num?)?.toDouble(),
       note: json['note'] as String?,
       patientName: json['patient_name'] as String?,
       patientPhone: json['patient_phone'] as String?,
@@ -74,20 +60,18 @@ class SosAlert {
       'caregiver_id': caregiverId,
       'message': message,
       'status': status,
-      'created_at': triggeredAt.toIso8601String(),
+      'triggered_at': triggeredAt.toIso8601String(),
       'acknowledged_at': acknowledgedAt?.toIso8601String(),
       'resolved_at': resolvedAt?.toIso8601String(),
-      'latitude': latitude,
-      'longitude': longitude,
-      'location_lat': latitude, // compatibility
-      'location_lng': longitude, // compatibility
+      'lat': latitude,
+      'lng': longitude,
       'note': note,
       'patient_name': patientName,
       'patient_phone': patientPhone,
     };
   }
 
-  // Helper getters for compatibility and logic
+  // Helper getters for logic
   bool get isActive =>
       status == 'active' || status == 'sent' || status == 'pending';
   bool get isResolved => status == 'resolved' || status == 'acknowledged';

@@ -15,7 +15,7 @@ class PeopleRepository {
   Future<List<Person>> getPeople(String patientId) async {
     try {
       final data = await _supabase
-          .from('people_cards')
+          .from('memory_cards')
           .select()
           .eq('patient_id', patientId);
 
@@ -46,7 +46,7 @@ class PeopleRepository {
         person.copyWith(voiceAudioUrl: voiceUrl, photoUrl: photoUrl);
 
     try {
-      await _supabase.from('people_cards').insert(updatedPerson.toJson());
+      await _supabase.from('memory_cards').insert(updatedPerson.toJson());
     } catch (e) {
       print('Add person failed: $e');
       throw Exception('Database sync failed: $e');
@@ -70,7 +70,7 @@ class PeopleRepository {
 
     try {
       await _supabase
-          .from('people_cards')
+          .from('memory_cards')
           .update(updatedPerson.toJson())
           .eq('id', person.id);
     } catch (e) {
@@ -81,7 +81,7 @@ class PeopleRepository {
 
   Future<void> deletePerson(String id) async {
     try {
-      await _supabase.from('people_cards').delete().eq('id', id);
+      await _supabase.from('memory_cards').delete().eq('id', id);
     } catch (e) {
       print('Delete person failed: $e');
       throw Exception('Delete failed: $e');

@@ -42,7 +42,7 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
 
     // Fallback to SOS trigger location if live location isn't available yet
     final initialPos =
-        LatLng(widget.alert.locationLat, widget.alert.locationLng);
+        LatLng(widget.alert.latitude, widget.alert.longitude);
 
     // Process Safe Zone
     List<CircleMarker> circles = [];
@@ -170,7 +170,7 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
                         const Icon(Icons.person, size: 20, color: Colors.grey),
                         const SizedBox(width: 8),
                         Text(
-                          'Patient: ${widget.alert.patientId.substring(0, 6)}...',
+                          'Patient ID: ${widget.alert.patientId.substring(0, 8)}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],

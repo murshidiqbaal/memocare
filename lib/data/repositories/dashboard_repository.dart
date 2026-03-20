@@ -109,7 +109,7 @@ class DashboardRepository {
           .eq('patient_id', patientId);
 
       final peopleCards = await _supabase
-          .from('people_cards')
+          .from('memory_cards')
           .select()
           .eq('patient_id', patientId);
 

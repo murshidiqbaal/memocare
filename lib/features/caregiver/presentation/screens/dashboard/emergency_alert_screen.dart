@@ -1,12 +1,11 @@
-import 'package:memocare/core/services/call_service.dart';
-import 'package:memocare/data/repositories/sos_repository.dart';
-import 'package:memocare/providers/connection_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
-
+import 'package:memocare/core/services/call_service.dart';
 import 'package:memocare/data/models/sos_alert.dart';
+import 'package:memocare/data/repositories/sos_repository.dart';
+import 'package:memocare/providers/connection_providers.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmergencyAlertScreen extends ConsumerStatefulWidget {
   final SosAlert alert;
@@ -76,8 +75,8 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
   }
 
   void _openMap() async {
-    final lat = widget.alert.locationLat;
-    final lng = widget.alert.locationLng;
+    final lat = widget.alert.latitude;
+    final lng = widget.alert.longitude;
     if (lat == null || lng == null) return;
 
     final uri =
@@ -173,8 +172,8 @@ class _EmergencyAlertScreenState extends ConsumerState<EmergencyAlertScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _ActionButton(
-                      onPressed: (widget.alert.locationLat != null &&
-                              widget.alert.locationLng != null)
+                      onPressed: (widget.alert.latitude != null &&
+                              widget.alert.longitude != null)
                           ? _openMap
                           : null,
                       icon: Icons.map,

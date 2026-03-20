@@ -4,31 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:memocare/data/models/patient_location.dart';
 import 'package:memocare/data/models/safe_zone.dart';
-
-// import '../models/patient_location.dart';
-// import '../models/safe_zone.dart';
 import '../../data/repositories/safe_zone_repository.dart';
-// import '../../features/live_location/data/patient_location_model.dart' hide PatientLocation;
 import '../../features/sos/data/repositories/sos_system_repository.dart';
-import '../../providers/active_patient_provider.dart';
-import 'sos_service.dart';
 
 // Provide the LocationTrackingService
 final locationTrackingServiceProvider =
     Provider<LocationTrackingService>((ref) {
   final safeZoneRepo = ref.watch(safeZoneRepositoryProvider);
   final sosSysRepo = ref.watch(sosSystemRepositoryProvider);
-  final sosService = ref.watch(sosServiceProvider);
-  return LocationTrackingService(safeZoneRepo, sosSysRepo, sosService);
+  return LocationTrackingService(safeZoneRepo, sosSysRepo);
 });
 
 class LocationTrackingService {
   final SafeZoneRepository _safeZoneRepo;
   final SosSystemRepository _sosSysRepo;
-  final SosService _sosService;
 
   Timer? _trackingTimer;
-  DateTime? _lastBreachAlertTime;
   SafeZone? _currentHome;
   String? _activePatientId;
 
@@ -38,8 +29,7 @@ class LocationTrackingService {
   final StreamController<int> statusStreamController =
       StreamController<int>.broadcast();
 
-  LocationTrackingService(
-      this._safeZoneRepo, this._sosSysRepo, this._sosService);
+  LocationTrackingService(this._safeZoneRepo, this._sosSysRepo);
 
   Future<void> startTracking(String patientId) async {
     // Prevent duplicate start
@@ -74,10 +64,10 @@ class LocationTrackingService {
     // Start 10-second interval logic
     _trackingTimer?.cancel();
     _trackingTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
-      await _checkLocation(patientId);
+      await _checkLocation();
     });
 
-    await _checkLocation(patientId);
+    await _checkLocation();
   }
 
   void stopTracking() {
@@ -86,74 +76,29 @@ class LocationTrackingService {
     _activePatientId = null;
   }
 
-  Future<void> _checkLocation(String patientId) async {
+  Future<void> _checkLocation() async {
+    if (_activePatientId == null) return;
+
     try {
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 5),
       );
 
-      // Save live location to patient_locations
-      final location = PatientLocation(
-        patientId: patientId,
-        lat: position.latitude,
-        lng: position.longitude,
-        updatedAt: DateTime.now().toUtc(),
+      // Save live tracking update
+      await _sosSysRepo.upsertPatientLocation(
+        PatientLocation(
+          patientId: _activePatientId!,
+          lat: position.latitude,
+          lng: position.longitude,
+          updatedAt: DateTime.now().toUtc(),
+        ),
       );
-      print(
-          'LocationTrackingService: Upserting location payload: ${location.toJson()}');
-      await _sosSysRepo.upsertPatientLocation(location);
-
-      // Re-fetch safe zone if missing
-      if (_currentHome == null) {
-        _currentHome = await _safeZoneRepo.getPatientSafeZone(patientId);
-        if (_currentHome == null) {
-          if (currentStatus != -1) {
-            currentStatus = -1;
-            statusStreamController.add(currentStatus);
-          }
-          return;
-        }
-      }
-
-      double distance = Geolocator.distanceBetween(
-        _currentHome!.latitude,
-        _currentHome!.longitude,
-        position.latitude,
-        position.longitude,
-      );
-
-      int newStatus = 0;
-      if (distance > _currentHome!.radiusMeters * 1.2) {
-        newStatus = 2; // Outside
-      } else if (distance > _currentHome!.radiusMeters) {
-        newStatus = 1; // Near boundary
-      }
-
-      bool forceEmit = (currentStatus == 0 && newStatus == 0);
-
-      if (newStatus != currentStatus || forceEmit) {
-        currentStatus = newStatus;
-        statusStreamController.add(currentStatus);
-      }
-
-      // Check breach
-      if (currentStatus == 2) {
-        print('🚨 SAFE ZONE BREACH DETECTED - Distance: ${distance.toStringAsFixed(1)}m');
-        await _handleBreach();
-      }
+      
+      print('LocationTrackingService: Upserting location payload for $_activePatientId');
     } catch (e) {
-      // Ignore single timeouts
+      print('Location tracking error: $e');
     }
-  }
-
-  Future<void> _handleBreach() async {
-    if (_lastBreachAlertTime != null &&
-        DateTime.now().difference(_lastBreachAlertTime!).inMinutes < 5) {
-      return; // Thrashing protection
-    }
-    await _sosService.triggerSafeZoneBreach();
-    _lastBreachAlertTime = DateTime.now();
   }
 
   static double calculateDistance(

@@ -1,14 +1,14 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:memocare/core/services/realtime_service.dart';
 import 'package:memocare/data/models/sos_alert.dart';
 import 'package:memocare/features/caregiver/presentation/screens/dashboard/caregiver_dashboard_tab.dart';
-import 'package:memocare/features/sos/presentation/screens/caregiver_alerts_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/memories/caregiver_memories_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/patients/caregiver_patients_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/profile/caregiver_profile_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/reminders/caregiver_reminders_screen.dart';
+import 'package:memocare/features/sos/presentation/screens/caregiver_alerts_screen.dart';
 import 'package:memocare/providers/sos_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 class _DS {
@@ -87,8 +87,7 @@ class _CaregiverDashboardScreenState
           Navigator.of(ctx).pop();
           if (!mounted) return;
           Navigator.of(context).push(
-            MaterialPageRoute(
-                builder: (_) => const CaregiverAlertsScreen()),
+            MaterialPageRoute(builder: (_) => const CaregiverAlertsScreen()),
           );
         },
         onDismiss: () => Navigator.of(ctx).pop(),
@@ -349,14 +348,13 @@ class _SosAlertDialog extends StatelessWidget {
                     label: 'Triggered',
                     value: _formatTime(alert.triggeredAt),
                   ),
-                  if (alert.locationLat != null &&
-                      alert.locationLng != null) ...[
+                  if (alert.latitude != null && alert.longitude != null) ...[
                     const SizedBox(height: 8),
                     _InfoRow(
                       icon: Icons.location_on_rounded,
                       label: 'Location',
                       value:
-                          '${alert.locationLat!.toStringAsFixed(4)}, ${alert.locationLng!.toStringAsFixed(4)}',
+                          '${alert.latitude!.toStringAsFixed(4)}, ${alert.longitude!.toStringAsFixed(4)}',
                     ),
                   ],
                   const SizedBox(height: 24),

@@ -4,9 +4,9 @@ class SosAlert {
   final String? caregiverId;
   final double? latitude;
   final double? longitude;
-  final String status; // active | acknowledged | resolved | sent | cancelled
+  final String status; // active | acknowledged | resolved | sent | cancelled | pending
   final String? message;
-  final DateTime createdAt;
+  final DateTime createdAt; // Note: triggered_at in DB
   final DateTime? resolvedAt;
   final DateTime? acknowledgedAt;
   final String? patientName;
@@ -28,24 +28,22 @@ class SosAlert {
   });
 
   factory SosAlert.fromJson(Map<String, dynamic> json) {
-    // Normalise incoming fields from different possible tables/versions
+    // Normalise incoming fields to match the internal model
     final id = (json['id'] ?? '') as String;
     final patientId = (json['patient_id'] ?? '') as String;
     final caregiverId = json['caregiver_id'] as String?;
 
-    // Location mapping
-    final latitude = (json['latitude'] ?? json['location_lat']) as double?;
-    final longitude = (json['longitude'] ?? json['location_lng']) as double?;
+    // Location mapping from DB schema
+    final latitude = (json['lat'] as num?)?.toDouble();
+    final longitude = (json['lng'] as num?)?.toDouble();
 
     final status = (json['status'] ?? 'active') as String;
     final message = json['message'] as String?;
 
-    // Created At mapping
-    final createdAtStr = (json['created_at'] ??
-        json['triggered_at'] ??
-        json['sent_at']) as String?;
+    // Time mapping from DB schema (triggered_at)
+    final triggeredAtStr = (json['triggered_at'] ?? json['created_at']) as String?;
     final createdAt =
-        createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now();
+        triggeredAtStr != null ? DateTime.parse(triggeredAtStr) : DateTime.now();
 
     final resolvedAtStr = json['resolved_at'] as String?;
     final resolvedAt =
@@ -79,11 +77,11 @@ class SosAlert {
       'id': id,
       'patient_id': patientId,
       'caregiver_id': caregiverId,
-      'latitude': latitude,
-      'longitude': longitude,
+      'lat': latitude,
+      'lng': longitude,
       'status': status,
       'message': message,
-      'created_at': createdAt.toIso8601String(),
+      'triggered_at': createdAt.toIso8601String(),
       'resolved_at': resolvedAt?.toIso8601String(),
       'acknowledged_at': acknowledgedAt?.toIso8601String(),
       'patient_name': patientName,
@@ -91,10 +89,10 @@ class SosAlert {
     };
   }
 
-  // Helper getters for compatibility
+  // Helper getters
   bool get isActive =>
       status == 'active' || status == 'sent' || status == 'pending';
-  bool get isResolved => status == 'resolved';
+  bool get isResolved => status == 'resolved' || status == 'acknowledged';
   bool get isCancelled => status == 'cancelled';
 
   String get timeElapsedFormatted {

@@ -12,7 +12,7 @@ import 'package:uuid/uuid.dart';
 
 class SosRepository {
   final SupabaseClient _supabase;
-  static const _tableName = 'sos_alerts'; // Canonical table
+  static const _tableName = 'sos_messages';
   final _uuid = const Uuid();
 
   SosRepository(this._supabase);
@@ -26,11 +26,11 @@ class SosRepository {
         .insert({
           'id': _uuid.v4(),
           'patient_id': patientId,
-          'latitude': lat,
-          'longitude': long,
+          'lat': lat,
+          'lng': long,
           'status': 'active',
-          'message': message ?? 'SOS emergency triggered',
-          'created_at': DateTime.now().toIso8601String(),
+          'note': message ?? 'SOS emergency triggered',
+          'triggered_at': DateTime.now().toUtc().toIso8601String(),
         })
         .select()
         .single();
@@ -47,15 +47,15 @@ class SosRepository {
       'patient_id': patientId,
       'latitude': lat,
       'longitude': long,
-      'recorded_at': DateTime.now().toIso8601String(),
+      'recorded_at': DateTime.now().toUtc().toIso8601String(),
     });
 
     // 2. Update active alert for quick reference
     await _supabase
         .from(_tableName)
         .update({
-          'latitude': lat,
-          'longitude': long,
+          'lat': lat,
+          'lng': long,
         })
         .eq('patient_id', patientId)
         .inFilter('status', ['active', 'sent', 'pending']);
@@ -66,14 +66,14 @@ class SosRepository {
   Future<void> resolveSosAlert(String alertId) async {
     await _supabase.from(_tableName).update({
       'status': 'resolved',
-      'resolved_at': DateTime.now().toIso8601String(),
+      'resolved_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', alertId);
   }
 
   Future<void> acknowledgeAlert(String alertId) async {
     await _supabase.from(_tableName).update({
       'status': 'acknowledged',
-      'acknowledged_at': DateTime.now().toIso8601String(),
+      'acknowledged_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', alertId);
   }
 
@@ -95,7 +95,7 @@ class SosRepository {
         .from(_tableName)
         .stream(primaryKey: ['id'])
         .inFilter('status', ['active', 'sent', 'pending'])
-        .order('created_at', ascending: false)
+        .order('triggered_at', ascending: false)
         .map((data) => data.map((json) => SosAlert.fromJson(json)).toList());
   }
 
@@ -114,7 +114,7 @@ class SosRepository {
 
   Stream<List<SosAlert>> streamActiveAlerts() => watchActiveAlerts();
 
-  // --- Legacy Support (Compatibility for other parts of the app) ---
+  // --- Legacy Support ---
 
   Future<void> resolveAlert(String alertId) => resolveSosAlert(alertId);
 
@@ -130,11 +130,23 @@ class SosRepository {
             sent: 0, queued: false, error: 'User not logged in');
       }
 
+      // Resolve internal patient ID
+      final patientRow = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      
+      if (patientRow == null) {
+        return const SosTriggerResult(sent: 0, queued: false, error: 'Patient profile not found');
+      }
+      final patientId = patientRow['id'] as String;
+
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 5));
 
-      await createSosAlert(user.id, pos.latitude, pos.longitude,
+      await createSosAlert(patientId, pos.latitude, pos.longitude,
           message: message);
 
       return const SosTriggerResult(sent: 1, queued: false, error: null);
@@ -148,11 +160,21 @@ class SosRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) return const Left(AuthFailure('No user'));
 
+      // Resolve internal patient ID
+      final patientRow = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      
+      if (patientRow == null) return const Left(ServerFailure('Patient profile missing'));
+      final patientId = patientRow['id'] as String;
+
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 3));
 
-      final alert = await createSosAlert(user.id, pos.latitude, pos.longitude);
+      final alert = await createSosAlert(patientId, pos.latitude, pos.longitude);
       return Right(alert);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

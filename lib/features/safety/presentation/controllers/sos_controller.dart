@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:memocare/data/models/sos_alert.dart';
-import 'package:memocare/data/repositories/sos_repository.dart';
+import 'package:memocare/features/safety/data/repositories/sos_repository.dart';
 import 'package:memocare/features/safety/data/models/live_location.dart';
 import 'package:memocare/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // --- State ---
 
@@ -16,9 +17,12 @@ final activeSosAlertProvider = StateProvider<SosAlert?>((ref) => null);
 class SosController extends StateNotifier<AsyncValue<void>> {
   final SosRepository _repository;
   final Ref _ref;
+  final SupabaseClient _supabase;
   StreamSubscription<Position>? _positionStreamSubscription;
 
-  SosController(this._repository, this._ref) : super(const AsyncData(null));
+  SosController(this._repository, this._ref) 
+      : _supabase = Supabase.instance.client,
+        super(const AsyncData(null));
 
   /// Start an SOS alert
   Future<void> triggerSos() async {
@@ -27,7 +31,17 @@ class SosController extends StateNotifier<AsyncValue<void>> {
       final user = _ref.read(currentUserProvider);
       if (user == null) throw Exception('User not logged in');
 
-      // 1. Get current location
+      // 1. Resolve internal patient_id from Auth user ID
+      final patientRow = await _supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      
+      if (patientRow == null) throw Exception('Patient profile not found');
+      final patientId = patientRow['id'] as String;
+
+      // 2. Get current location
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         await Geolocator.requestPermission();
@@ -35,20 +49,20 @@ class SosController extends StateNotifier<AsyncValue<void>> {
 
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-      );
+      ).timeout(const Duration(seconds: 5));
 
-      // 2. Create Alert in DB
+      // 3. Create Alert in DB
       final alert = await _repository.createSosAlert(
-        user.id,
+        patientId,
         position.latitude,
         position.longitude,
       );
 
-      // 3. Update local state
-      _ref.read(activeSosAlertProvider.notifier).state = alert as SosAlert?;
+      // 4. Update local state
+      _ref.read(activeSosAlertProvider.notifier).state = alert;
 
-      // 4. Start tracking location
-      _startLocationTracking(user.id);
+      // 5. Start tracking location
+      _startLocationTracking(patientId);
 
       state = const AsyncData(null);
     } catch (e, st) {
@@ -56,8 +70,7 @@ class SosController extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  /// Stop tracking and mark resolved (Patient side if implemented, or just stop tracking)
-  /// Typically caregiver resolves it, but patient might want to cancel.
+  /// Stop tracking and mark resolved
   Future<void> cancelSos() async {
     final alert = _ref.read(activeSosAlertProvider);
     if (alert != null) {

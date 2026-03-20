@@ -135,7 +135,7 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
     if (_dismissed) return const SizedBox.shrink();
 
     final alert = widget.alert;
-    final elapsed = DateTime.now().difference(alert.createdAt);
+    final elapsed = DateTime.now().difference(alert.triggeredAt);
     final elapsedStr =
         elapsed.inMinutes < 1 ? 'Just now' : '${elapsed.inMinutes} min ago';
 
@@ -161,7 +161,7 @@ class _SosBannerCardState extends ConsumerState<_SosBannerCard>
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
                 children: [
-                  // Pulsing dot
+                   // Pulsing dot
                   AnimatedBuilder(
                     animation: _pulseAnim,
                     builder: (_, __) => Opacity(
