@@ -31,6 +31,20 @@ final userProfileProvider = FutureProvider<Profile?>((ref) async {
   return result.fold((l) => null, (r) => r);
 });
 
+final currentPatientIdProvider = FutureProvider<String?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return null;
+
+  final supabase = Supabase.instance.client;
+  final response = await supabase
+      .from('patients')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+  return response?['id'] as String?;
+});
+
 class AuthController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {

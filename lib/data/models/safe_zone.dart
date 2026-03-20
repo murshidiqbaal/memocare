@@ -1,8 +1,5 @@
 class SafeZone {
   final String patientId;
-  final double homeLat;
-  final double homeLng;
-  final double radius;
   final String id;
   final int radiusMeters;
   final String label;
@@ -13,9 +10,6 @@ class SafeZone {
 
   SafeZone({
     required this.patientId,
-    required this.homeLat,
-    required this.homeLng,
-    this.radius = 50.0,
     required this.id,
     required this.radiusMeters,
     required this.label,
@@ -27,32 +21,26 @@ class SafeZone {
 
   factory SafeZone.fromJson(Map<String, dynamic> json) {
     return SafeZone(
-      patientId:
-          json['patient_id'] as String? ?? (json['patientId'] as String? ?? ''),
-      homeLat: (json['home_lat'] ?? json['homeLat'] ?? 0.0) as double,
-      homeLng: (json['home_lng'] ?? json['homeLng'] ?? 0.0) as double,
-      radius: (json['radius'] ?? 50.0) as double,
+      patientId: json['patient_id'] as String? ?? (json['patientId'] as String? ?? ''),
       id: json['id'] as String? ?? (json['id'] as String? ?? ''),
-      radiusMeters:
-          json['radiusMeters'] as int? ?? (json['radiusMeters'] as int? ?? 0),
+      radiusMeters: json['radius_meters'] as int? ?? (json['radiusMeters'] as int? ?? 1000),
       label: json['label'] as String? ?? (json['label'] as String? ?? ''),
-      createdAt: json['createdAt'] as DateTime? ??
-          (json['createdAt'] as DateTime? ?? DateTime.now()),
-      latitude:
-          json['latitude'] as double? ?? (json['latitude'] as double? ?? 0.0),
-      updatedAt: json['updatedAt'] as DateTime? ??
-          (json['updatedAt'] as DateTime? ?? DateTime.now()),
-      longitude:
-          json['longitude'] as double? ?? (json['longitude'] as double? ?? 0.0),
+      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) ?? DateTime.now() : DateTime.now(),
+      latitude: json['latitude'] as double? ?? (json['latitude'] as double? ?? 0.0),
+      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) ?? DateTime.now() : DateTime.now(),
+      longitude: json['longitude'] as double? ?? (json['longitude'] as double? ?? 0.0),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'patient_id': patientId,
-      'home_lat': homeLat,
-      'home_lng': homeLng,
-      'radius': radius,
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius_meters': radiusMeters,
+      'label': label,
+      'updated_at': updatedAt.toUtc().toIso8601String(),
     };
   }
 }
+

@@ -52,9 +52,9 @@ class EmergencyAlertRepository {
           .from('emergency_alerts')
           .insert({
             'patient_id': patientId,
-            'status': 'sent',
-            'latitude': position?.latitude,
-            'longitude': position?.longitude,
+            'status': 'active',
+            'lat': position?.latitude,
+            'lng': position?.longitude,
             'created_by': user
                 .id, // Track who actually triggered it (usually the patient)
           })
@@ -118,7 +118,7 @@ class EmergencyAlertRepository {
           .from('emergency_alerts')
           .select()
           .eq('patient_id', patientId)
-          .eq('status', 'sent')
+          .eq('status', 'active')
           .order('created_at', ascending: false);
 
       return (response as List)
@@ -162,7 +162,7 @@ class EmergencyAlertRepository {
           .from('emergency_alerts')
           .select()
           .inFilter('patient_id', patientIds)
-          .eq('status', 'sent')
+          .eq('status', 'active')
           .order('created_at', ascending: false);
 
       return (response as List)
@@ -220,7 +220,7 @@ class EmergencyAlertRepository {
 
       await for (final data in stream) {
         yield (data as List)
-            .where((json) => json['status'] == 'sent')
+            .where((json) => json['status'] == 'active')
             .map((json) => EmergencyAlert.fromJson(json))
             .toList();
       }

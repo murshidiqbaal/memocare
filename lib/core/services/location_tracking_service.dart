@@ -117,16 +117,16 @@ class LocationTrackingService {
       }
 
       double distance = Geolocator.distanceBetween(
-        _currentHome!.homeLat,
-        _currentHome!.homeLng,
+        _currentHome!.latitude,
+        _currentHome!.longitude,
         position.latitude,
         position.longitude,
       );
 
       int newStatus = 0;
-      if (distance > _currentHome!.radius) {
+      if (distance > _currentHome!.radiusMeters * 1.2) {
         newStatus = 2; // Outside
-      } else if (distance > _currentHome!.radius * 0.8) {
+      } else if (distance > _currentHome!.radiusMeters) {
         newStatus = 1; // Near boundary
       }
 
@@ -139,6 +139,7 @@ class LocationTrackingService {
 
       // Check breach
       if (currentStatus == 2) {
+        print('🚨 SAFE ZONE BREACH DETECTED - Distance: ${distance.toStringAsFixed(1)}m');
         await _handleBreach();
       }
     } catch (e) {
@@ -167,9 +168,8 @@ class LocationTrackingService {
 }
 
 // Provider for observing safety status in UI
-final safetyStatusProvider = StreamProvider<int>((ref) {
-  final patientId = ref.watch(activePatientIdProvider);
-  if (patientId == null || patientId.isEmpty) {
+final safetyStatusProvider = StreamProvider.family<int, String>((ref, patientId) {
+  if (patientId.isEmpty) {
     return Stream.value(-1);
   }
 
@@ -177,52 +177,62 @@ final safetyStatusProvider = StreamProvider<int>((ref) {
   final szRepo = ref.watch(safeZoneRepositoryProvider);
 
   final controller = StreamController<int>();
-
   PatientLocation? lastLoc;
   SafeZone? lastZone;
 
-  void emitStatus() {
-    if (controller.isClosed) return;
-
-    if (lastLoc == null || lastZone == null) {
-      controller.add(-1);
-      return;
-    }
+  int computeStatus() {
+    if (lastLoc == null || lastZone == null) return -1;
 
     final distance = LocationTrackingService.calculateDistance(
       lastLoc!.lat,
       lastLoc!.lng,
-      lastZone!.homeLat,
-      lastZone!.homeLng,
+      lastZone!.latitude,
+      lastZone!.longitude,
     );
 
-    int status = -1;
-    if (distance <= lastZone!.radius) {
-      status = 0; // Safe at Home
-    } else if (distance <= lastZone!.radius * 1.2) {
-      status = 1; // Near Boundary
+    if (distance <= lastZone!.radiusMeters) {
+      return 0; // Safe at Home
+    } else if (distance <= lastZone!.radiusMeters * 1.2) {
+      return 1; // Near Boundary
     } else {
-      status = 2; // Outside Safe Zone
+      return 2; // Outside Safe Zone
     }
-
-    controller.add(status);
   }
 
-  final locSub = sosRepo.streamPatientLocation(patientId).listen((loc) {
-    lastLoc = loc;
-    emitStatus();
-  });
+  Future<void> init() async {
+    try {
+      // 1. Fetch initial data from both tables
+      lastLoc = await sosRepo.getLatestPatientLocation(patientId);
+      lastZone = await szRepo.getPatientSafeZone(patientId);
+      
+      final initialStatus = computeStatus();
+      print('SafetyStatusProvider($patientId): Initial Load - Loc: $lastLoc, Zone: $lastZone, Status: $initialStatus');
+      controller.add(initialStatus);
 
-  final zoneSub = szRepo.streamPatientSafeZone(patientId).listen((zone) {
-    lastZone = zone;
-    emitStatus();
-  });
+      // 2. Subscribe to realtime updates
+      final locSub = sosRepo.streamPatientLocation(patientId).listen((loc) {
+        print('SafetyStatusProvider($patientId): Realtime Location Update: $loc');
+        lastLoc = loc;
+        if (!controller.isClosed) controller.add(computeStatus());
+      });
 
-  ref.onDispose(() {
-    locSub.cancel();
-    zoneSub.cancel();
-    controller.close();
-  });
+      final zoneSub = szRepo.streamPatientSafeZone(patientId).listen((zone) {
+        print('SafetyStatusProvider($patientId): Realtime SafeZone Update: $zone');
+        lastZone = zone;
+        if (!controller.isClosed) controller.add(computeStatus());
+      });
 
+      ref.onDispose(() {
+        locSub.cancel();
+        zoneSub.cancel();
+        controller.close();
+      });
+    } catch (e) {
+      print('SafetyStatusProvider($patientId) Error: $e');
+      if (!controller.isClosed) controller.add(-1);
+    }
+  }
+
+  init();
   return controller.stream;
 });

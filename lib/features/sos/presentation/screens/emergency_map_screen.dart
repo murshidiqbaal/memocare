@@ -50,8 +50,8 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
       final sz = safeZoneAsync.value as SafeZone;
       circles.add(
         CircleMarker(
-          point: LatLng(sz.homeLat, sz.homeLng),
-          radius: sz.radius,
+          point: LatLng(sz.latitude, sz.longitude),
+          radius: sz.radiusMeters.toDouble(),
           useRadiusInMeter: true,
           color: Colors.blue.withValues(alpha: 0.2),
           borderColor: Colors.blue.shade800,

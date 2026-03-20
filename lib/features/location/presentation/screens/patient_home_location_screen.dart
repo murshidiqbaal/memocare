@@ -134,8 +134,8 @@ class _PatientHomeLocationScreenState
       if (zone != null && _pickedLocation == null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           setState(() {
-            _pickedLocation = LatLng(zone.homeLat, zone.homeLng);
-            _radius = zone.radius.toDouble();
+            _pickedLocation = LatLng(zone.latitude, zone.longitude);
+            _radius = zone.radiusMeters.toDouble();
           });
         });
       }

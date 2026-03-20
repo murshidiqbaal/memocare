@@ -152,9 +152,6 @@ class LocationChangeRequestService {
         longitude: request.requestedLongitude,
         radiusMeters: request.requestedRadiusMeters,
         label: label,
-        homeLat: request.requestedLatitude,
-        homeLng: request.requestedLongitude,
-        radius: 500,
       );
 
       debugPrint(

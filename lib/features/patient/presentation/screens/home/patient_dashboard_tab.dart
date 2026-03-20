@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/core/services/location_tracking_service.dart';
 import 'package:memocare/data/models/reminder.dart';
 import 'package:memocare/features/auth/providers/auth_provider.dart';
 import 'package:memocare/features/patient/presentation/screens/games/games_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/home/viewmodels/home_viewmodel.dart';
-import 'package:memocare/features/patient/presentation/screens/home/widgets/caregiver_dash_card.dart';
 import 'package:memocare/features/patient/presentation/screens/home/widgets/memory_highlight_widget.dart';
 import 'package:memocare/features/patient/presentation/screens/home/widgets/offline_status_widget.dart';
 import 'package:memocare/features/patient/presentation/screens/home/widgets/patient_app_bar_widget.dart';
@@ -16,6 +16,7 @@ import 'package:memocare/features/patient/presentation/screens/memories/memories
 import 'package:memocare/features/patient/presentation/screens/reminders/add_edit_reminder_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/reminder_list_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Patient Dashboard Tab - Healthcare-grade dementia-friendly UI
 ///
@@ -40,11 +41,42 @@ import 'package:memocare/features/patient/presentation/screens/sos/patient_emerg
 /// - EmergencySOSCard (separated red emergency card)
 /// - MemoryHighlightCard (emotional recall design)
 /// - FloatingActionButton (elder-friendly action)
-class PatientDashboardTab extends ConsumerWidget {
+class PatientDashboardTab extends ConsumerStatefulWidget {
   const PatientDashboardTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PatientDashboardTab> createState() =>
+      _PatientDashboardTabState();
+}
+
+final userId = Supabase.instance.client.auth.currentUser!.id;
+
+class _PatientDashboardTabState extends ConsumerState<PatientDashboardTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startTrackingIfPossible();
+    });
+  }
+
+  void _startTrackingIfPossible() {
+    final patientId = ref.read(currentPatientIdProvider).value;
+    if (patientId != null) {
+      print('PatientDashboardTab: Starting location tracking for $patientId');
+      ref.read(locationTrackingServiceProvider).startTracking(userId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Watch patientId to trigger tracking if it loads later
+    ref.listen(currentPatientIdProvider, (previous, next) {
+      if (next.value != null && previous?.value == null) {
+        _startTrackingIfPossible();
+      }
+    });
+
     final homeState = ref.watch(homeViewModelProvider);
     final profileAsync = ref.watch(userProfileProvider);
     final scale = MediaQuery.of(context).size.width / 375.0;
@@ -83,7 +115,7 @@ class PatientDashboardTab extends ConsumerWidget {
                         ],
 
                         // Caregiver Card (Top of Dashboard)
-                        const CaregiverDashCard(), // Added widget
+                        // const CaregiverDashCard(), // Added widget
 
                         // Safety Status Card
                         if (profileAsync.value != null) ...[
@@ -219,18 +251,11 @@ class PatientDashboardTab extends ConsumerWidget {
     );
   }
 
-  /// Show emergency SOS countdown dialog
-  void _showSOSCountdown(BuildContext context, WidgetRef ref) {
+  void _showSOSCountdown(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
           builder: (context) => const PatientEmergencyAlertScreen()),
-    );
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      useSafeArea: false,
-      builder: (context) => const PatientEmergencyAlertScreen(),
     );
   }
 }

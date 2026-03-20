@@ -127,10 +127,10 @@ class _LiveTrackingScreenState extends ConsumerState<LiveTrackingScreen> {
                     circles: [
                       CircleMarker(
                         point: LatLng(
-                          _safeZone!.homeLat,
-                          _safeZone!.homeLng,
+                          _safeZone!.latitude,
+                          _safeZone!.longitude,
                         ),
-                        radius: _safeZone!.radius.toDouble(),
+                        radius: _safeZone!.radiusMeters.toDouble(),
                         useRadiusInMeter: true,
                         color: Colors.teal.withOpacity(0.1),
                         borderColor: Colors.teal,

@@ -102,14 +102,14 @@ class SafeZoneService {
     final distance = calculateDistance(
       position.latitude,
       position.longitude,
-      _currentZone!.homeLat,
-      _currentZone!.homeLng,
+      _currentZone!.latitude,
+      _currentZone!.longitude,
     );
 
     debugPrint(
-        '[SafeZoneService] Distance from home: ${distance.toStringAsFixed(1)} m (radius: ${_currentZone!.radius} m)');
+        '[SafeZoneService] Distance from home: ${distance.toStringAsFixed(1)} m (radius: ${_currentZone!.radiusMeters} m)');
 
-    final isOutside = distance > _currentZone!.radius;
+    final isOutside = distance > _currentZone!.radiusMeters;
 
     if (isOutside && !_isOutsideZone) {
       _isOutsideZone = true;

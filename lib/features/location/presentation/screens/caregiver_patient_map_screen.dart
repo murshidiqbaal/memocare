@@ -92,10 +92,10 @@ class _CaregiverPatientMapScreenState
                       final dist = SafeZoneService.calculateDistance(
                         loc.latitude,
                         loc.longitude,
-                        zone.homeLat,
-                        zone.homeLng,
+                        zone.latitude,
+                        zone.longitude,
                       );
-                      final isOutside = dist > zone.radius;
+                      final isOutside = dist > zone.radiusMeters;
                       return Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Center(
@@ -171,9 +171,10 @@ class _CaregiverPatientMapScreenState
                     patientLatLng: patientLatLng, homeLatLng: null, radius: 0),
                 data: (zone) => _buildMap(
                   patientLatLng: patientLatLng,
-                  homeLatLng:
-                      zone != null ? LatLng(zone.homeLat, zone.homeLng) : null,
-                  radius: zone?.radius.toDouble() ?? 0,
+                  homeLatLng: zone != null
+                      ? LatLng(zone.latitude, zone.longitude)
+                      : null,
+                  radius: zone?.radiusMeters.toDouble() ?? 0,
                 ),
               );
             },

@@ -12,7 +12,7 @@ class SafetyStatusCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final statusStatus = ref.watch(safetyStatusProvider);
+    final statusStatus = ref.watch(safetyStatusProvider(patientId));
 
     return Card(
       elevation: 4,

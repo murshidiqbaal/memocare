@@ -119,10 +119,9 @@ final patientStatusProvider =
   }
 
   // ── 3. Safe zone ────────────────────────────────────────────────────────
-  // Columns: home_lat, home_lng, radius
   final szRows = await db
       .from('patient_home_locations')
-      .select('home_lat, home_lng, radius')
+      .select('latitude, longitude, radius_meters')
       .eq('patient_id', patientId)
       .limit(1) as List;
 
@@ -130,9 +129,9 @@ final patientStatusProvider =
 
   if (szRows.isNotEmpty && lat != null && lng != null) {
     final sz = szRows.first as Map<String, dynamic>;
-    final homeLat = _dbl(sz, 'home_lat');
-    final homeLng = _dbl(sz, 'home_lng');
-    final radius = _dbl(sz, 'radius') ?? 200.0;
+    final homeLat = _dbl(sz, 'latitude');
+    final homeLng = _dbl(sz, 'longitude');
+    final radius = _dbl(sz, 'radius_meters') ?? 1000.0;
 
     if (homeLat != null && homeLng != null) {
       final dist = _haversine(lat, lng, homeLat, homeLng);

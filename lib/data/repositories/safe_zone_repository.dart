@@ -10,7 +10,7 @@ final safeZoneRepositoryProvider = Provider<SafeZoneRepository>((ref) {
 
 class SafeZoneRepository {
   final SupabaseClient _supabase;
-  static const _tableName = 'patient_home_locations';
+  static const _tableName = 'safe_zones';
 
   SafeZoneRepository(this._supabase);
 
@@ -41,9 +41,6 @@ class SafeZoneRepository {
 
   Future<void> upsertSafeZone({
     required String patientId,
-    required double homeLat,
-    required double homeLng,
-    required double radius,
     required double latitude,
     required double longitude,
     required int radiusMeters,
@@ -52,10 +49,12 @@ class SafeZoneRepository {
     try {
       await _supabase.from(_tableName).upsert({
         'patient_id': patientId,
-        'home_lat': homeLat,
-        'home_lng': homeLng,
-        'radius': radius,
-      });
+        'latitude': latitude,
+        'longitude': longitude,
+        'radius_meters': radiusMeters,
+        'label': label,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'patient_id');
     } catch (e) {
       print('Error upserting safe zone: $e');
       rethrow;

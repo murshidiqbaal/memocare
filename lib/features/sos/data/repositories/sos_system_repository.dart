@@ -15,6 +15,24 @@ class SosSystemRepository {
 
   // --- SOS Message CRUD ---
 
+  Future<SosMessage?> getLatestSosMessage(String patientId) async {
+    try {
+      final response = await _supabase
+          .from('sos_messages')
+          .select()
+          .eq('patient_id', patientId)
+          .order('triggered_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return SosMessage.fromJson(response);
+    } catch (e) {
+      print('Error fetching latest SOS message: $e');
+      return null;
+    }
+  }
+
   Future<void> insertSosMessage(SosMessage message) async {
     try {
       await _supabase.from('sos_messages').insert(message.toJson());
@@ -50,6 +68,24 @@ class SosSystemRepository {
 
   // --- Patient Location Tracking ---
 
+  Future<PatientLocation?> getLatestPatientLocation(String patientId) async {
+    try {
+      final response = await _supabase
+          .from('patient_locations')
+          .select()
+          .eq('patient_id', patientId)
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return PatientLocation.fromJson(response);
+    } catch (e) {
+      print('Error fetching latest patient location: $e');
+      return null;
+    }
+  }
+
   Future<void> upsertPatientLocation(PatientLocation location) async {
     try {
       final payload = location.toJson();
@@ -67,7 +103,7 @@ class SosSystemRepository {
   Stream<PatientLocation?> streamPatientLocation(String patientId) {
     return _supabase
         .from('patient_locations')
-        .stream(primaryKey: ['id'])
+        .stream(primaryKey: ['patient_id'])
         .eq('patient_id', patientId)
         .map((data) {
       if (data.isEmpty) return null;

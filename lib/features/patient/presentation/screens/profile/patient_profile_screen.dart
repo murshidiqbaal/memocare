@@ -2256,9 +2256,9 @@ class _PatientProfileScreenState extends ConsumerState<PatientProfileScreen>
         opacity: anim,
         child: SafeZonePickerScreen(
           patientId: patientId,
-          initialLatitude: zone?.homeLat,
-          initialLongitude: zone?.homeLng,
-          initialRadiusMeters: zone?.radius.toInt(),
+          initialLatitude: zone?.latitude,
+          initialLongitude: zone?.longitude,
+          initialRadiusMeters: zone?.radiusMeters.toInt(),
           existingZoneId: null,
           initialLabel: null,
         ),

@@ -1,7 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PatientEmergencyAlertScreen extends StatefulWidget {
@@ -98,15 +98,52 @@ class _PatientEmergencyAlertScreenState
       // Strong haptic feedback when sending
       HapticFeedback.heavyImpact();
 
-      // Step 1: Look up linked caregiver
+      // Step 1: Resolve internal patient_id from Auth ID
+      final patientResponse = await supabase
+          .from('patients')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (patientResponse == null) {
+        debugPrint('Error: Patient profile not found for user ${user.id}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error: Patient profile not found.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      final patientId = patientResponse['id'] as String;
+
+      // Step 2: Try to get real-time location (don't block if fails)
+      double lat = 0.0;
+      double lng = 0.0;
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 5),
+        );
+        lat = position.latitude;
+        lng = position.longitude;
+      } catch (e) {
+        debugPrint('Location lookup failed for SOS: $e');
+      }
+
+      // Step 3: Look up linked caregiver using internal patientId
       final linkResponse = await supabase
           .from('caregiver_patient_links')
           .select('caregiver_id')
-          .eq('patient_id', user.id)
+          .eq('patient_id', patientId)
           .maybeSingle();
 
       if (linkResponse == null) {
-        debugPrint('No caregiver linked to this patient.');
+        debugPrint('No caregiver linked to patient $patientId');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -121,14 +158,14 @@ class _PatientEmergencyAlertScreenState
 
       final caregiverId = linkResponse['caregiver_id'] as String;
 
-      // Step 2: Insert SOS message with correct schema columns
+      // Step 4: Insert SOS message into 'sos_messages' table
       await supabase.from('sos_messages').insert({
-        'patient_id': user.id,
+        'patient_id': patientId,
         'caregiver_id': caregiverId,
         'status': 'pending',
         'triggered_at': DateTime.now().toUtc().toIso8601String(),
-        'location_lat': 0.0,
-        'location_lng': 0.0,
+        'location_lat': lat,
+        'location_lng': lng,
         'note': 'Manual Emergency SOS Alert',
       });
 

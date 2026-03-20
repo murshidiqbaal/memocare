@@ -12,7 +12,7 @@ class SosMessage {
     this.id,
     required this.patientId,
     required this.caregiverId,
-    this.status = 'pending',
+    this.status = 'active',
     required this.triggeredAt,
     required this.locationLat,
     required this.locationLng,
@@ -30,8 +30,8 @@ class SosMessage {
           : (json['triggeredAt'] != null 
               ? DateTime.parse(json['triggeredAt'] as String)
               : DateTime.now()),
-      locationLat: (json['location_lat'] ?? json['locationLat'] ?? 0.0) as double,
-      locationLng: (json['location_lng'] ?? json['locationLng'] ?? 0.0) as double,
+      locationLat: (json['lat'] ?? json['locationLat'] ?? 0.0) as double,
+      locationLng: (json['lng'] ?? json['locationLng'] ?? 0.0) as double,
       note: json['note'] as String?,
     );
   }
@@ -42,8 +42,8 @@ class SosMessage {
       'caregiver_id': caregiverId,
       'status': status,
       'triggered_at': triggeredAt.toIso8601String(),
-      'location_lat': locationLat,
-      'location_lng': locationLng,
+      'lat': locationLat,
+      'lng': locationLng,
       'note': note,
     };
     // Only include 'id' if it's already set — let Supabase auto-generate it otherwise

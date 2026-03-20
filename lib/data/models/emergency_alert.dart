@@ -1,6 +1,6 @@
 /// Emergency alert status enum
 enum EmergencyAlertStatus {
-  sent,
+  active,
   cancelled,
   resolved,
 }
@@ -37,15 +37,15 @@ class EmergencyAlert {
       id: json['id'] as String,
       patientId: json['patient_id'] as String,
       caregiverId: json['caregiver_id'] as String?,
-      status: _statusFromString(json['status'] as String? ?? 'sent'),
+      status: _statusFromString(json['status'] as String? ?? 'active'),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
       resolvedAt: json['resolved_at'] != null
           ? DateTime.tryParse(json['resolved_at'] as String)
           : null,
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
+      latitude: (json['lat'] as num?)?.toDouble(),
+      longitude: (json['lng'] as num?)?.toDouble(),
       patientName: json['patient_name'] as String?,
       patientPhone: json['patient_phone'] as String?,
     );
@@ -58,7 +58,7 @@ class EmergencyAlert {
       case 'resolved':
         return EmergencyAlertStatus.resolved;
       default:
-        return EmergencyAlertStatus.sent;
+        return EmergencyAlertStatus.active;
     }
   }
 
@@ -68,8 +68,8 @@ class EmergencyAlert {
         return 'cancelled';
       case EmergencyAlertStatus.resolved:
         return 'resolved';
-      case EmergencyAlertStatus.sent:
-        return 'sent';
+      case EmergencyAlertStatus.active:
+        return 'active';
     }
   }
 
@@ -81,8 +81,8 @@ class EmergencyAlert {
       'status': _statusToString(status),
       'created_at': createdAt.toIso8601String(),
       'resolved_at': resolvedAt?.toIso8601String(),
-      'latitude': latitude,
-      'longitude': longitude,
+      'lat': latitude,
+      'lng': longitude,
       'patient_name': patientName,
       'patient_phone': patientPhone,
     };
@@ -115,7 +115,7 @@ class EmergencyAlert {
   }
 
   /// Check if alert is active
-  bool get isActive => status == EmergencyAlertStatus.sent;
+  bool get isActive => status == EmergencyAlertStatus.active;
 
   /// Check if alert is resolved
   bool get isResolved => status == EmergencyAlertStatus.resolved;

@@ -1,9 +1,9 @@
-import 'package:memocare/providers/safe_zone_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:memocare/providers/safe_zone_provider.dart';
 
 // import '../../../providers/safe_zone_provider.dart';
 
@@ -57,24 +57,23 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      if (!mounted) return;
       setState(() => _isLoadingLocation = false);
       _showErrorSnackBar('Location services are disabled.');
       return;
     }
 
     permission = await Geolocator.checkPermission();
+
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        setState(() => _isLoadingLocation = false);
-        _showErrorSnackBar('Location permissions are denied');
-        return;
-      }
     }
 
-    if (permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
       setState(() => _isLoadingLocation = false);
-      _showErrorSnackBar('Location permissions are permanently denied.');
+      _showErrorSnackBar('Location permission denied.');
       return;
     }
 
@@ -82,13 +81,19 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+
+      if (!mounted) return;
+
       final loc = LatLng(position.latitude, position.longitude);
+
       setState(() {
         _selectedLocation = loc;
         _isLoadingLocation = false;
       });
+
       _mapController.move(loc, 16.0);
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
       setState(() => _isLoadingLocation = false);
       _showErrorSnackBar('Unable to determine location');
     }
@@ -117,9 +122,9 @@ class _SafeZonePickerScreenState extends ConsumerState<SafeZonePickerScreen> {
     final success =
         await ref.read(safeZoneControllerProvider.notifier).saveSafeZone(
               patientId: widget.patientId,
-              homeLat: _selectedLocation!.latitude,
-              homeLng: _selectedLocation!.longitude,
-              radius: _currentRadius.toDouble(),
+              latitude: _selectedLocation!.latitude,
+              longitude: _selectedLocation!.longitude,
+              radiusMeters: _currentRadius,
               existingId: widget.existingZoneId,
             );
 

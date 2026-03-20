@@ -50,10 +50,9 @@ class _PatientSetHomeLocationScreenState
       final existingLocation = await repo.getPatientSafeZone(widget.patientId);
 
       if (existingLocation != null) {
-        // Home location already exists - load it and disable editing
         setState(() {
           _selectedLocation =
-              LatLng(existingLocation.homeLat, existingLocation.homeLng);
+              LatLng(existingLocation.latitude, existingLocation.longitude);
           _hasExistingLocation = true; // PREVENTS EDITING
           _isLoading = false;
         });
@@ -126,11 +125,7 @@ class _PatientSetHomeLocationScreenState
       final repo = ref.read(safeZoneRepositoryProvider);
       await repo.upsertSafeZone(
         patientId: widget.patientId,
-        homeLat: _selectedLocation!.latitude,
-        homeLng: _selectedLocation!.longitude,
-        radius: _radiusMeters,
-        latitude:
-            _selectedLocation!.latitude, // Redundant but required by method
+        latitude: _selectedLocation!.latitude,
         longitude: _selectedLocation!.longitude,
         radiusMeters: _radiusMeters.toInt(),
         label: 'Home',
