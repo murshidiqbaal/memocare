@@ -102,11 +102,15 @@ class HomeState {
         .toList();
   }
 
-  List<Reminder> get completedReminders {
+  List<Reminder> get historyReminders {
     return reminders
-        .where((r) => r.status == ReminderStatus.completed)
+        .where((r) =>
+            r.status == ReminderStatus.completed ||
+            r.status == ReminderStatus.missed)
         .toList();
   }
+
+  List<Reminder> get completedReminders => historyReminders; // Alias for compatibility
 }
 
 // --- ViewModel ---
@@ -271,19 +275,19 @@ final homeViewModelProvider =
   final reminderRepo = ref.watch(reminderRepositoryProvider);
   final safetyRepo = ref.watch(sosRepositoryProvider);
 
-  // We wait for the box to be ready before initializing the ViewModel's data
-  final boxAsync = ref.watch(reminderBoxProvider);
+  // 1. Listen for the resolved patient ID for the current logged-in user
+  final patientIdAsync = ref.watch(currentPatientIdProvider);
 
   final viewModel = HomeViewModel(reminderRepo, safetyRepo);
 
-  final user = ref.watch(currentUserProvider);
+  // 2. Initialize reminders only when patientId is available
+  patientIdAsync.whenData((patientId) {
+    if (patientId != null) {
+      viewModel.loadReminders(patientId);
+    }
+  });
 
-  if (user != null) {
-    boxAsync.whenData((_) {
-      viewModel.loadReminders(user.id);
-    });
-  }
-
+  // 3. Realtime updates
   ref.listen(patientRemindersStreamProvider, (prev, next) {
     next.whenData((reminders) {
       viewModel.updateRemindersFromRealtime(reminders);

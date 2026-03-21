@@ -24,8 +24,7 @@ class PatientSosRepository {
     }
 
     // --- STEP 1: Resolve internal patient_id (patients.id) ---
-    // The schema expects patients.id, so we must resolve it from auth.users.id
-    if (kDebugMode) print("SOS DEBUG resolve patient_id for auth_uid: ${user.id}");
+    debugPrint('[SOS Repository] 🔍 Resolving patient_id for auth_uid: ${user.id}');
     
     final patientResponse = await _supabase
         .from('patients')
@@ -34,38 +33,19 @@ class PatientSosRepository {
         .maybeSingle();
 
     if (patientResponse == null) {
-      if (kDebugMode) print("SOS DEBUG ERROR: Patient profile not found for user ${user.id}");
+      debugPrint('[SOS Repository] ❌ ERROR: Patient profile not found for user ${user.id}');
       throw Exception('Patient profile not found');
     }
 
     final patientId = patientResponse['id'] as String;
-    if (kDebugMode) print("SOS DEBUG resolved patient_id: $patientId");
+    debugPrint('[SOS Repository] ✅ Resolved patient_id: $patientId');
 
-    // --- STEP 2: Fetch linked caregiver_id ---
-    if (kDebugMode) print("SOS DEBUG lookup caregiver for patient_id: $patientId");
-    
-    final link = await _supabase
-        .from('caregiver_patient_links')
-        .select('caregiver_id')
-        .eq('patient_id', patientId)
-        .maybeSingle();
-
-    final caregiverId = link?['caregiver_id'] as String?;
-    if (kDebugMode) {
-      if (caregiverId != null) {
-        print("SOS DEBUG found caregiver_id: $caregiverId");
-      } else {
-        print("SOS DEBUG WARNING: No linked caregiver found for this patient.");
-      }
-    }
-
-    // --- STEP 3: Capture location safely ---
+    // --- STEP 2: Capture location safely ---
     double? lat;
     double? lng;
     try {
-      if (kDebugMode) print("SOS DEBUG capturing location...");
+      debugPrint('[SOS Repository] 📍 Capturing location...');
       
-      // Check/Request permissions first
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -75,45 +55,56 @@ class PatientSosRepository {
           permission == LocationPermission.whileInUse) {
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
-        ).timeout(const Duration(seconds: 3));
+        ).timeout(const Duration(seconds: 4));
         
         lat = position.latitude;
         lng = position.longitude;
-        if (kDebugMode) print("SOS DEBUG location captured: $lat, $lng");
+        debugPrint('[SOS Repository] ✅ Location captured: $lat, $lng');
       } else {
-        if (kDebugMode) print("SOS DEBUG location denied, sending without coordinates.");
+        debugPrint('[SOS Repository] ⚠️ Location permission denied.');
       }
     } catch (e) {
-       if (kDebugMode) print("SOS DEBUG location lookup failed or timed out: $e");
+       debugPrint('[SOS Repository] ⚠️ Location lookup failed/timed out: $e');
     }
 
-    // --- STEP 4 & 5: Correct insert query with debug logging ---
-    final Map<String, dynamic> insertPayload = {
+    // --- STEP 3: Fetch ALL linked caregivers ---
+    debugPrint('[SOS Repository] 👥 Fetching linked caregivers for patient: $patientId');
+    
+    final linksResponse = await _supabase
+        .from('caregiver_patient_links')
+        .select('caregiver_id')
+        .eq('patient_id', patientId);
+
+    final List<String?> caregiverIds = (linksResponse as List)
+        .map((l) => l['caregiver_id'] as String?)
+        .toList();
+
+    if (caregiverIds.isEmpty) {
+      debugPrint('[SOS Repository] ⚠️ No linked caregivers found. Sending global alert (caregiver_id: null).');
+      caregiverIds.add(null);
+    } else {
+      debugPrint('[SOS Repository] ✅ Found ${caregiverIds.length} linked caregiver(s).');
+    }
+
+    // --- STEP 4: Insert payloads for each caregiver ---
+    final now = DateTime.now().toUtc().toIso8601String();
+    final List<Map<String, dynamic>> payloads = caregiverIds.map((cId) => {
       'patient_id': patientId,
-      'caregiver_id': caregiverId, // Can be null as per user requirement Step 2
+      'caregiver_id': cId,
       'lat': lat,
       'lng': lng,
-      'triggered_at': DateTime.now().toUtc().toIso8601String(),
-      'status': 'pending',
+      'triggered_at': now,
+      'status': 'active', 
       'note': note ?? 'Manual Emergency SOS Alert',
-    };
-
-    if (kDebugMode) {
-      print("SOS DEBUG patient_id: $patientId");
-      print("SOS DEBUG caregiver_id: $caregiverId");
-      print("SOS DEBUG inserting into $_tableName: $insertPayload");
-    }
+      'message': note ?? 'Manual Emergency SOS Alert',
+    }).toList();
 
     try {
-      final response = await _supabase
-          .from(_tableName)
-          .insert(insertPayload)
-          .select()
-          .single();
-
-      if (kDebugMode) print("SOS INSERT RESULT: $response");
+      debugPrint('[SOS Repository] 📤 Inserting SOS payloads into $_tableName...');
+      await _supabase.from(_tableName).insert(payloads);
+      debugPrint('[SOS Repository] 🚀 SOS ALERT SENT SUCCESSFULLY TO ${payloads.length} RECIPIENTS');
     } catch (e) {
-      if (kDebugMode) print("SOS DEBUG ERROR during insert: $e");
+      debugPrint('[SOS Repository] ❌ ERROR during database insert: $e');
       rethrow;
     }
   }

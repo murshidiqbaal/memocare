@@ -239,6 +239,7 @@ class _AddEditReminderScreenState extends ConsumerState<AddEditReminderScreen> {
         notificationId: stableNotificationId,
         alarmEnabled: _alarmEnabled,
         createdBy: widget.existingReminder?.createdBy ?? currentUser.id,
+        createdRole: widget.existingReminder?.createdRole ?? 'patient',
       );
 
       try {

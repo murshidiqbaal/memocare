@@ -18,8 +18,7 @@ class ReminderListScreen extends ConsumerWidget {
     final homeState = ref.watch(homeViewModelProvider);
     final viewModel = ref.read(homeViewModelProvider.notifier);
 
-    // Get user profile for reloading
-    final user = ref.watch(currentUserProvider);
+    // 2. Get patient profile for reloading
 
     return DefaultTabController(
       length: 3,
@@ -39,8 +38,9 @@ class ReminderListScreen extends ConsumerWidget {
           actions: [
             IconButton(
               onPressed: () {
-                if (user != null) {
-                  viewModel.loadReminders(user.id);
+                final patientId = ref.read(currentPatientIdProvider).value;
+                if (patientId != null) {
+                  viewModel.loadReminders(patientId);
                 }
               },
               icon: const Icon(Icons.refresh, color: Colors.teal),

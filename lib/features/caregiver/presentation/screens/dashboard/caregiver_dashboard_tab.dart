@@ -13,6 +13,7 @@ import 'package:memocare/features/caregiver/presentation/screens/dashboard/widge
 import 'package:memocare/features/caregiver/presentation/screens/dashboard/widgets/patient_status_card_widget.dart';
 import 'package:memocare/features/caregiver/presentation/screens/dashboard/widgets/sos_alert_banner.dart';
 import 'package:memocare/features/caregiver/presentation/screens/dashboard/widgets/weekly_analytics_card.dart';
+import 'package:memocare/features/caregiver/presentation/screens/profile/caregiver_profile_screen.dart';
 import 'package:memocare/features/caregiver/presentation/screens/reminders/caregiver_reminder_viewmodel.dart';
 import 'package:memocare/features/caregiver/presentation/screens/reminders/caregiver_reminders_screen.dart';
 import 'package:memocare/features/location/providers/safezone_providers.dart';
@@ -182,8 +183,10 @@ class _CaregiverDashboardTabState extends ConsumerState<CaregiverDashboardTab>
         patientName: dashState.selectedPatientName,
         isOffline: isOffline,
         unreadAlerts: unreadAlerts,
-        onNotificationTap: () => context.push('/notification-test'),
-        onProfileTap: () => context.push('/caregiver-profile'),
+        // onNotificationTap: () => context.push('/notification-test'),
+        onProfileTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CaregiverProfileScreen()),
+        ),
       ),
       // floatingActionButton:
       //     hasPatient ? _PremiumFab(onPressed: _navigateToAddReminder) : null,
@@ -536,8 +539,9 @@ class _NoPatientSelectedMap extends StatelessWidget {
 class _PatientCard extends StatelessWidget {
   final Patient patient;
   final VoidCallback onTap;
+  final userId = Supabase.instance.client.auth.currentUser!.id;
 
-  const _PatientCard({required this.patient, required this.onTap});
+  _PatientCard({required this.patient, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -608,14 +612,23 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String patientName;
   final bool isOffline;
   final int unreadAlerts;
-  final VoidCallback onNotificationTap;
+  // final VoidCallback onNotificationTap;
   final VoidCallback onProfileTap;
+  final userId = Supabase.instance.client.auth.currentUser!.id;
 
-  const _PremiumAppBar({
+//   final profile = await Supabase.instance.client
+//     .from('profiles')
+//     .select('avatar_url')
+//     .eq('id', userId)
+//     .single();
+
+// final imageUrl = profile['avatar_url'];
+
+  _PremiumAppBar({
     required this.patientName,
     required this.isOffline,
     required this.unreadAlerts,
-    required this.onNotificationTap,
+    // required this.onNotificationTap,
     required this.onProfileTap,
   });
 
@@ -840,11 +853,11 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
 
               // Notification bell
-              _AppBarIconButton(
-                icon: Icons.notifications_outlined,
-                onTap: onNotificationTap,
-                badge: unreadAlerts > 0 ? unreadAlerts : null,
-              ),
+              // _AppBarIconButton(
+              //   icon: Icons.notifications_outlined,
+              //   // onTap: onNotificationTap,
+              //   badge: unreadAlerts > 0 ? unreadAlerts : null,
+              // ),
 
               // Profile avatar
               GestureDetector(
@@ -854,24 +867,19 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        _DS.teal100,
-                        _DS.teal200,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'CG',
-                      style: TextStyle(
-                        color: _DS.teal900,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      '',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return Container(
+                          color: _DS.teal100,
+                          child: const Icon(Icons.person, color: _DS.teal700),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -889,19 +897,19 @@ class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 class _AppBarIconButton extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  // final VoidCallback onTap;
   final int? badge;
 
   const _AppBarIconButton({
     required this.icon,
-    required this.onTap,
+    // required this.onTap,
     this.badge,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      // onTap: onTap,
       child: Container(
         width: 38,
         height: 38,

@@ -152,7 +152,7 @@ class _ReminderCardState extends ConsumerState<ReminderCard> {
 
     // 4. Resolve Creator Label (Part 3)
     final String? creatorLabel =
-        reminder.createdRole == 'caregiver' ? "Added by caregiver" : null;
+        reminder.createdRole == 'caregiver' ? "Caregiver" : null;
 
     return InkWell(
       onTap: () => _navigateToDetails(context),
@@ -235,7 +235,7 @@ class _ReminderCardState extends ConsumerState<ReminderCard> {
                           Text(
                             creatorLabel,
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 8,
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF6C63FF),
                             ),

@@ -6,10 +6,10 @@
 
 import 'dart:math' as math;
 
-import 'package:memocare/features/caregiver/presentation/screens/analytics/models/analytics_stats.dart';
-import 'package:memocare/features/caregiver/presentation/screens/analytics/viewmodels/analytics_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:memocare/features/caregiver/presentation/screens/analytics/models/analytics_stats.dart';
+import 'package:memocare/features/caregiver/presentation/screens/analytics/viewmodels/analytics_viewmodel.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 class _C {
@@ -138,32 +138,32 @@ class AnalyticsDashboardScreen extends ConsumerWidget {
                           const SizedBox(height: 14),
                           ...stats.insights
                               .map((i) => _InsightCard(insight: i)),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 20),
                         ],
 
                         // ── Reminder adherence ────────────────────────────
                         _sectionLabel('Reminder Performance'),
                         const SizedBox(height: 14),
                         _AdherenceCard(stats: stats),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
 
                         // ── Cognitive / games ─────────────────────────────
                         _sectionLabel('Cognitive Engagement'),
                         const SizedBox(height: 14),
                         _CognitiveCard(stats: stats),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
 
                         // ── Safety breaches ───────────────────────────────
                         _sectionLabel('Safety Zone Monitoring'),
                         const SizedBox(height: 14),
                         _SafetyCard(stats: stats),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
 
                         // ── Memory journal ────────────────────────────────
                         _sectionLabel('Memory Journal'),
                         const SizedBox(height: 14),
                         _JournalCard(stats: stats),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
 
                         // ── Suggestions ───────────────────────────────────
                         if (stats.suggestions.isNotEmpty) ...[
@@ -360,7 +360,7 @@ class _StatCard extends StatelessWidget {
           Text(
             item.value,
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 20,
               fontWeight: FontWeight.w900,
               color: item.color,
               letterSpacing: -0.5,
@@ -369,7 +369,7 @@ class _StatCard extends StatelessWidget {
           Text(
             item.label,
             style: const TextStyle(
-                fontSize: 12, color: _C.ink400, fontWeight: FontWeight.w500),
+                fontSize: 10, color: _C.ink400, fontWeight: FontWeight.w500),
           ),
         ],
       ),
