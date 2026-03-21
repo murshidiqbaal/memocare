@@ -11,10 +11,7 @@ import 'package:memocare/features/caregiver/presentation/screens/dashboard/careg
 import 'package:memocare/features/location/presentation/screens/caregiver_location_requests_screen.dart';
 import 'package:memocare/features/location/presentation/screens/caregiver_patient_map_screen.dart';
 import 'package:memocare/features/location/presentation/screens/patient_home_location_screen.dart';
-import 'package:memocare/features/patient/presentation/screens/connections/patient_connections_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/games/games_screen.dart';
-import 'package:memocare/features/patient/presentation/screens/games/mini_games/memory_match_game_screen.dart';
-import 'package:memocare/features/patient/presentation/screens/games/mini_games/reaction_tap_game_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/patient_main_screen.dart';
 import 'package:memocare/features/patient/presentation/screens/reminders/alarm_screen.dart';
 import 'package:memocare/features/shared/presentation/screens/splash_screen.dart';
@@ -69,19 +66,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               const RealtimeInitializer(child: GamesScreen()),
         ),
 
-        // 🃏 Memory Match
-        GoRoute(
-          path: '/games/memory-match',
-          builder: (context, state) =>
-              const RealtimeInitializer(child: MemoryMatchGameScreen()),
-        ),
+        // // 🃏 Memory Match
+        // GoRoute(
+        //   path: '/games/memory-match',
+        //   builder: (context, state) =>
+        //       const RealtimeInitializer(child: MemoryMatchGameScreen()),
+        // ),
 
-        // ⚡ Reaction Tap
-        GoRoute(
-          path: '/games/reaction-tap',
-          builder: (context, state) =>
-              const RealtimeInitializer(child: ReactionTapGameScreen()),
-        ),
+        // // ⚡ Reaction Tap
+        // GoRoute(
+        //   path: '/games/reaction-tap',
+        //   builder: (context, state) =>
+        //       const RealtimeInitializer(child: ReactionTapGameScreen()),
+        // ),
 
         // ================= CAREGIVER =================
         GoRoute(
@@ -90,10 +87,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               const RealtimeInitializer(child: CaregiverDashboardScreen()),
         ),
 
-        GoRoute(
-          path: '/patient-connections',
-          builder: (context, state) => const PatientConnectionsScreen(),
-        ),
+        // GoRoute(
+        //   path: '/patient-connections',
+        //   builder: (context, state) => const PatientConnectionsScreen(),
+        // ),
 
         GoRoute(
           path: '/caregiver-connections',

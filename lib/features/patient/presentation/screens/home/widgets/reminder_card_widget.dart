@@ -215,7 +215,7 @@ class _ReminderCardState extends ConsumerState<ReminderCard> {
                 children: [
                   // Attribution Badge
                   if (creatorLabel != null && creatorLabel.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
@@ -228,7 +228,7 @@ class _ReminderCardState extends ConsumerState<ReminderCard> {
                         children: [
                           const Icon(
                             Icons.person_add_outlined,
-                            size: 14,
+                            size: 8,
                             color: Color(0xFF6C63FF),
                           ),
                           const SizedBox(width: 4),

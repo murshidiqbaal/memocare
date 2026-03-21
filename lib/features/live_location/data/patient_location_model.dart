@@ -25,8 +25,8 @@ class PatientLocation {
     return PatientLocation(
       id: json['id'] as String? ?? '',
       patientId: json['patient_id'] as String? ?? '',
-      latitude: _parseDouble(json['latitude']) ?? 0.0,
-      longitude: _parseDouble(json['longitude']) ?? 0.0,
+      latitude: _parseDouble(json['lat']) ?? 0.0,
+      longitude: _parseDouble(json['lng']) ?? 0.0,
       updatedAt: _parseDateTime(json['updated_at']),
     );
   }
@@ -34,8 +34,8 @@ class PatientLocation {
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
       'patient_id': patientId,
-      'latitude': latitude,
-      'longitude': longitude,
+      'lat': latitude,
+      'lng': longitude,
       'updated_at': updatedAt.toUtc().toIso8601String(),
     };
     if (id.isNotEmpty) map['id'] = id;

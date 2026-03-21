@@ -45,8 +45,8 @@ class SosAlert {
       resolvedAt: json['resolved_at'] != null
           ? DateTime.tryParse(json['resolved_at'] as String)
           : null,
-      latitude: (json['lat'] as num?)?.toDouble(),
-      longitude: (json['lng'] as num?)?.toDouble(),
+      latitude: (json['location_lat'] as num? ?? json['lat'] as num?)?.toDouble(),
+      longitude: (json['location_lng'] as num? ?? json['lng'] as num?)?.toDouble(),
       note: json['note'] as String?,
       patientName: json['patient_name'] as String?,
       patientPhone: json['patient_phone'] as String?,

@@ -24,7 +24,8 @@ class PatientSosRepository {
     }
 
     // --- STEP 1: Resolve internal patient_id (patients.id) ---
-    debugPrint('[SOS Repository] 🔍 Resolving patient_id for auth_uid: ${user.id}');
+    print('--- RESOLVING PATIENT ID ---');
+    print('[SOS Repository] auth_uid: ${user.id}');
     
     final patientResponse = await _supabase
         .from('patients')
@@ -33,18 +34,18 @@ class PatientSosRepository {
         .maybeSingle();
 
     if (patientResponse == null) {
-      debugPrint('[SOS Repository] ❌ ERROR: Patient profile not found for user ${user.id}');
+      print('[SOS Repository] ❌ ERROR: Patient profile not found for user ${user.id}');
       throw Exception('Patient profile not found');
     }
 
     final patientId = patientResponse['id'] as String;
-    debugPrint('[SOS Repository] ✅ Resolved patient_id: $patientId');
+    print('[SOS Repository] ✅ Resolved patient_id: $patientId');
 
     // --- STEP 2: Capture location safely ---
     double? lat;
     double? lng;
     try {
-      debugPrint('[SOS Repository] 📍 Capturing location...');
+      print('[SOS Repository] 📍 Capturing location...');
       
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -59,16 +60,16 @@ class PatientSosRepository {
         
         lat = position.latitude;
         lng = position.longitude;
-        debugPrint('[SOS Repository] ✅ Location captured: $lat, $lng');
+        print('[SOS Repository] ✅ Location captured: $lat, $lng');
       } else {
-        debugPrint('[SOS Repository] ⚠️ Location permission denied.');
+        print('[SOS Repository] ⚠️ Location permission denied.');
       }
     } catch (e) {
-       debugPrint('[SOS Repository] ⚠️ Location lookup failed/timed out: $e');
+       print('[SOS Repository] ⚠️ Location lookup failed/timed out: $e');
     }
 
     // --- STEP 3: Fetch ALL linked caregivers ---
-    debugPrint('[SOS Repository] 👥 Fetching linked caregivers for patient: $patientId');
+    print('[SOS Repository] 👥 Fetching linked caregivers for patient: $patientId');
     
     final linksResponse = await _supabase
         .from('caregiver_patient_links')
@@ -80,10 +81,10 @@ class PatientSosRepository {
         .toList();
 
     if (caregiverIds.isEmpty) {
-      debugPrint('[SOS Repository] ⚠️ No linked caregivers found. Sending global alert (caregiver_id: null).');
+      print('[SOS Repository] ⚠️ No linked caregivers found. Sending global alert (caregiver_id: null).');
       caregiverIds.add(null);
     } else {
-      debugPrint('[SOS Repository] ✅ Found ${caregiverIds.length} linked caregiver(s).');
+      print('[SOS Repository] ✅ Found ${caregiverIds.length} linked caregiver(s).');
     }
 
     // --- STEP 4: Insert payloads for each caregiver ---
@@ -94,17 +95,23 @@ class PatientSosRepository {
       'lat': lat,
       'lng': lng,
       'triggered_at': now,
-      'status': 'active', 
+      'status': 'active',
       'note': note ?? 'Manual Emergency SOS Alert',
-      'message': note ?? 'Manual Emergency SOS Alert',
     }).toList();
 
     try {
-      debugPrint('[SOS Repository] 📤 Inserting SOS payloads into $_tableName...');
-      await _supabase.from(_tableName).insert(payloads);
-      debugPrint('[SOS Repository] 🚀 SOS ALERT SENT SUCCESSFULLY TO ${payloads.length} RECIPIENTS');
+      print('[SOS Repository] 📤 Inserting SOS payloads into $_tableName...');
+      print('[SOS Repository] Payload sample: ${payloads.first}');
+      
+      final response = await _supabase.from(_tableName).insert(payloads).select();
+      
+      print('[SOS Repository] 🚀 SOS ALERT SENT SUCCESSFULLY. Inserted rows: ${response.length}');
     } catch (e) {
-      debugPrint('[SOS Repository] ❌ ERROR during database insert: $e');
+      print('[SOS Repository] ❌ ERROR during database insert: $e');
+      if (e is PostgrestException) {
+        print('[SOS Repository] Postgrest Error Details: ${e.message} (Code: ${e.code})');
+        print('[SOS Repository] Hint: ${e.hint}');
+      }
       rethrow;
     }
   }

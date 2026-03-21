@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../providers/emergency_alert_provider.dart';
-import '../features/sos/presentation/screens/sos_button_screen.dart';
+import 'package:memocare/features/patient/presentation/screens/sos/patient_emergency_alert_screen.dart';
 
 class CurvedBottomNavBar extends ConsumerWidget {
   final int currentIndex;
@@ -92,7 +90,7 @@ class CurvedBottomNavBar extends ConsumerWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const SosButtonScreen(),
+        builder: (context) => PatientEmergencyAlertScreen(),
         fullscreenDialog: true,
       ),
     );

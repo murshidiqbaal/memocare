@@ -15,6 +15,8 @@
 //   • All heavy fetching is async-safe: guarded against disposed state.
 //   • No print() in production — uses debugPrint with assert gate.
 // ─────────────────────────────────────────────────────────────────────────────
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:memocare/data/models/caregiver_patient_link.dart';
 import 'package:memocare/data/models/dashboard_stats.dart';
 import 'package:memocare/data/models/patient.dart';
@@ -23,8 +25,6 @@ import 'package:memocare/data/models/voice_query.dart';
 import 'package:memocare/data/repositories/dashboard_repository.dart';
 import 'package:memocare/providers/active_patient_provider.dart';
 import 'package:memocare/providers/service_providers.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Support models
